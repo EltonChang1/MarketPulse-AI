@@ -69,7 +69,8 @@ Use these filenames for the screenshots (stored under `docs/images/`) to match t
 - `marketpulse-detail-period-selector.png` — Detail page showing prediction period selector and forecast summary.
 - `marketpulse-chart-trend-overlay.png` — Candlestick chart with SMA overlays and top-right trend label.
 - `marketpulse-technical-indicators.png` — Technical indicators cards (MA, momentum, Bollinger Bands).
-- `marketpulse-comprehensive-analysis-news.png` — Comprehensive analysis + latest news section.
+- `marketpulse-comprehensive-analysis.png` — Comprehensive analysis (financial summary, sentiment, risks/opportunities).
+- `marketpulse-latest-news.png` — Latest news feed list for the selected stock.
 
 See the full walkthrough in `USERGUIDE.md`.
 

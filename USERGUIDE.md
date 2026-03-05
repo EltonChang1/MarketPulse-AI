@@ -46,12 +46,20 @@ MarketPulse AI provides live stock + news analysis for the top 10 US companies w
 ---
 
 ### 5) Comprehensive Analysis + News
-![Comprehensive Analysis and News](docs/images/marketpulse-comprehensive-analysis-news.png)
+![Comprehensive Analysis](docs/images/marketpulse-comprehensive-analysis.png)
 
 **What this shows**
 - Financial summary and news analysis sections
 - Risk factors and opportunities
+
+---
+
+### 6) Latest News Feed
+![Latest News Feed](docs/images/marketpulse-latest-news.png)
+
+**What this shows**
 - Latest news feed for the selected symbol
+- Clickable article links with source/timestamp context
 
 ## Run Locally
 
