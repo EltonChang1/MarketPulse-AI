@@ -1,7 +1,7 @@
 import axios from "axios";
 
 export async function fetchQuoteAndHistory(symbol) {
-  const chartUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?range=3mo&interval=1d`;
+  const chartUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?range=2y&interval=1d`;
 
   const chartResponse = await axios.get(chartUrl, {
     headers: {
@@ -16,24 +16,41 @@ export async function fetchQuoteAndHistory(symbol) {
   }
 
   const timestamps = result.timestamp || [];
-  const closes = result.indicators?.quote?.[0]?.close || [];
+  const quote = result.indicators?.quote?.[0] || {};
+  const opens = quote.open || [];
+  const highs = quote.high || [];
+  const lows = quote.low || [];
+  const closes = quote.close || [];
+  const volumes = quote.volume || [];
 
   const history = timestamps
     .map((t, i) => ({
       date: new Date(t * 1000).toISOString().split("T")[0],
+      time: t,
+      open: opens[i],
+      high: highs[i],
+      low: lows[i],
       close: closes[i],
+      volume: volumes[i],
     }))
-    .filter((point) => typeof point.close === "number");
+    .filter((point) => 
+      typeof point.close === "number" && 
+      typeof point.open === "number" &&
+      typeof point.high === "number" &&
+      typeof point.low === "number"
+    );
 
-  if (history.length < 20) {
+  if (history.length < 250) {
     throw new Error(`Insufficient history for ${symbol}`);
   }
 
-  const currentPrice = result.meta?.regularMarketPrice ?? history[history.length - 1].close;
-  const previousClose =
-    result.meta?.chartPreviousClose ??
-    result.meta?.previousClose ??
-    history[history.length - 2].close;
+  // Get the most recent trading day's data
+  const latestData = history[history.length - 1];
+  const previousData = history[history.length - 2];
+  
+  // Use the latest close as current price, and previous day's close for comparison
+  const currentPrice = latestData.close;
+  const previousClose = previousData.close;
 
   return {
     symbol,
@@ -41,5 +58,6 @@ export async function fetchQuoteAndHistory(symbol) {
     previousClose,
     marketCap: null,
     history,
+    candlestickData: history,
   };
 }

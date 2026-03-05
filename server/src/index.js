@@ -2,10 +2,10 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 
-import { estimateNewsImpact } from "./services/analysisService.js";
+import { estimateNewsImpact, generateComprehensiveAnalysis } from "./services/analysisService.js";
 import { fetchQuoteAndHistory } from "./services/marketService.js";
 import { fetchLatestNews } from "./services/newsService.js";
-import { predictOneWeekPrice } from "./services/technicalService.js";
+import { predictMultipleTimeframes } from "./services/technicalService.js";
 
 dotenv.config();
 
@@ -18,6 +18,11 @@ const TOP_COMPANIES = [
   { symbol: "NVDA", companyName: "NVIDIA" },
   { symbol: "AMZN", companyName: "Amazon" },
   { symbol: "GOOGL", companyName: "Alphabet" },
+  { symbol: "META", companyName: "Meta Platforms" },
+  { symbol: "BRK-B", companyName: "Berkshire Hathaway" },
+  { symbol: "TSLA", companyName: "Tesla" },
+  { symbol: "AVGO", companyName: "Broadcom" },
+  { symbol: "JPM", companyName: "JPMorgan Chase" },
 ];
 
 app.use(cors());
@@ -33,13 +38,20 @@ app.get("/api/companies", (_req, res) => {
 
 async function analyzeCompany(symbol, companyName) {
   const market = await fetchQuoteAndHistory(symbol);
-  const technicalForecast = predictOneWeekPrice(market.history, market.currentPrice);
-  const news = await fetchLatestNews(companyName, symbol);
+  const technicalForecast = predictMultipleTimeframes(market.history, market.currentPrice);
+  const news = await fetchLatestNews(companyName, symbol, 10);
   const sentiment = await estimateNewsImpact({
     symbol,
     companyName,
     newsItems: news,
     technicalForecast,
+  });
+  const comprehensiveAnalysis = await generateComprehensiveAnalysis({
+    symbol,
+    companyName,
+    newsItems: news,
+    technicalForecast,
+    currentPrice: market.currentPrice,
   });
 
   return {
@@ -53,6 +65,8 @@ async function analyzeCompany(symbol, companyName) {
     marketCap: market.marketCap,
     sentiment,
     technicalForecast,
+    comprehensiveAnalysis,
+    candlestickData: market.candlestickData,
     news,
     updatedAt: new Date().toISOString(),
   };
@@ -81,7 +95,7 @@ app.get("/api/analyze/:symbol", async (req, res) => {
 
     if (!company) {
       return res.status(404).json({
-        message: `Symbol not in top-5 list. Allowed: ${TOP_COMPANIES.map((c) => c.symbol).join(", ")}`,
+        message: `Symbol not in top-10 list. Allowed: ${TOP_COMPANIES.map((c) => c.symbol).join(", ")}`,
       });
     }
 

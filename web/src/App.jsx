@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import StockDetailView from "./components/StockDetailView";
 
 const REFRESH_MS = 60_000;
 
@@ -31,11 +32,19 @@ function scoreBadge(impact) {
   return "badge neutral";
 }
 
+function trendImpactFromDirection(direction) {
+  if (direction === "up") return "positive";
+  if (direction === "down") return "negative";
+  return "neutral";
+}
+
 export default function App() {
   const [payload, setPayload] = useState(null);
   const [selected, setSelected] = useState("AAPL");
+  const [detailView, setDetailView] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
 
   async function loadData() {
     try {
@@ -59,17 +68,31 @@ export default function App() {
   }, []);
 
   const stocks = payload?.data || [];
+  const filteredStocks = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return stocks;
+    return stocks.filter(
+      (item) =>
+        item.symbol.toLowerCase().includes(normalized) ||
+        item.companyName.toLowerCase().includes(normalized)
+    );
+  }, [stocks, query]);
+
   const selectedStock = useMemo(
     () => stocks.find((item) => item.symbol === selected) || stocks[0],
     [stocks, selected]
   );
+
+  if (detailView && selectedStock) {
+    return <StockDetailView stock={selectedStock} onBack={() => setDetailView(false)} />;
+  }
 
   return (
     <div className="container">
       <header className="header">
         <div>
           <h1>MarketPulse AI</h1>
-          <p>Top-5 US market cap stocks: live data + news + LLM sentiment + 1-week prediction.</p>
+          <p>Top-10 US market cap stocks: live data + news + LLM sentiment + multi-timeframe prediction.</p>
         </div>
         <button onClick={loadData} disabled={loading}>
           {loading ? "Loading..." : "Refresh"}
@@ -78,75 +101,47 @@ export default function App() {
 
       {error ? <div className="error">{error}</div> : null}
 
+      <section className="overview-controls">
+        <input
+          type="text"
+          className="stock-filter"
+          placeholder="Filter stocks by symbol or company..."
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          aria-label="Filter stocks"
+        />
+      </section>
+
       <section className="cards">
-        {stocks.map((item) => (
+        {filteredStocks.map((item) => {
+          const weekDirection = item.technicalForecast?.predictions?.week?.direction;
+          const trendImpact = trendImpactFromDirection(weekDirection);
+
+          return (
           <button
             key={item.symbol}
             className={`card ${selected === item.symbol ? "active" : ""}`}
-            onClick={() => setSelected(item.symbol)}
+            onClick={() => {
+              setSelected(item.symbol);
+              setDetailView(true);
+            }}
           >
             <div className="row">
               <h3>{item.symbol}</h3>
-              <span className={scoreBadge(item.sentiment?.impact)}>{item.sentiment?.impact || "neutral"}</span>
+              <div className="badge-wrap">
+                <span className={scoreBadge(trendImpact)}>{trendImpact}</span>
+                <span className="badge-caption">(1W trend)</span>
+              </div>
             </div>
             <p className="company">{item.companyName}</p>
             <p className="price">{formatCurrency(item.currentPrice)}</p>
             <p className={item.dayChangePct >= 0 ? "up" : "down"}>{formatPercent(item.dayChangePct)}</p>
-            <p className="sub">Market cap: {marketCapLabel(item.marketCap)}</p>
+            <p className="sub">1 Week: {formatCurrency(item.technicalForecast?.predictions?.week?.predictedPrice)}</p>
           </button>
-        ))}
+        );})}
       </section>
 
-      {selectedStock ? (
-        <section className="detail">
-          <h2>
-            {selectedStock.companyName} ({selectedStock.symbol})
-          </h2>
-          <div className="grid">
-            <div className="panel">
-              <h4>Prediction (1 Week)</h4>
-              <p className="value">{formatCurrency(selectedStock.technicalForecast?.predictedPriceInWeek)}</p>
-              <p className={selectedStock.technicalForecast?.expectedMovePct >= 0 ? "up" : "down"}>
-                {formatPercent(selectedStock.technicalForecast?.expectedMovePct)} expected move
-              </p>
-              <p>Direction: {selectedStock.technicalForecast?.direction}</p>
-            </div>
-
-            <div className="panel">
-              <h4>News Impact</h4>
-              <p className={scoreBadge(selectedStock.sentiment?.impact)}>{selectedStock.sentiment?.impact}</p>
-              <p>Confidence: {Math.round((selectedStock.sentiment?.confidence || 0) * 100)}%</p>
-              <p>{selectedStock.sentiment?.summary}</p>
-            </div>
-
-            <div className="panel">
-              <h4>Technical Indicators</h4>
-              <ul>
-                <li>SMA 5: {selectedStock.technicalForecast?.indicators?.sma5}</li>
-                <li>SMA 20: {selectedStock.technicalForecast?.indicators?.sma20}</li>
-                <li>RSI 14: {selectedStock.technicalForecast?.indicators?.rsi14}</li>
-                <li>MACD: {selectedStock.technicalForecast?.indicators?.macd}</li>
-                <li>MACD Signal: {selectedStock.technicalForecast?.indicators?.macdSignal}</li>
-                <li>30d Trend: {formatPercent(selectedStock.technicalForecast?.indicators?.trendPct30d)}</li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="panel news">
-            <h4>Latest News</h4>
-            <ul>
-              {(selectedStock.news || []).map((item, idx) => (
-                <li key={`${item.link}-${idx}`}>
-                  <a href={item.link} target="_blank" rel="noreferrer">
-                    {item.title}
-                  </a>
-                  <span>{item.pubDate ? new Date(item.pubDate).toLocaleString() : ""}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-      ) : null}
+      {filteredStocks.length === 0 ? <div className="error">No stocks match your filter.</div> : null}
 
       <footer>
         <small>
