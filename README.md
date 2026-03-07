@@ -39,8 +39,9 @@ A full-stack website that tracks the **top 10 largest US companies by market cap
    cp .env.example server/.env
    ```
 
-3. (Optional) Add Gemini key in `server/.env`:
+3. (Optional) Add API key in `server/.env`:
    ```env
+   #for demonstrate
    Default_Gemini_API_Key=your_key_here
    GEMINI_PROJECT_ID=projects/YOUR_PROJECT_NUMBER
    ```
@@ -76,5 +77,5 @@ See the full walkthrough in `USERGUIDE.md`.
 
 ## Notes
 
-- If `Default_Gemini_API_Key` is missing, sentiment analysis automatically falls back to a keyword-based heuristic.
+- If `API_Key` is missing, sentiment analysis automatically falls back to a keyword-based heuristic.
 - This project is for educational/demo usage and not financial advice.

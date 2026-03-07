@@ -368,6 +368,32 @@ footer {
   margin: 0 0 12px 0;
 }
 
+.marker-controls {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.marker-control {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.marker-control label {
+  font-size: 0.8rem;
+  color: #667085;
+  font-weight: 600;
+}
+
+.marker-control select {
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: #fff;
+  color: #101828;
+}
+
 .chart-container {
   width: 100%;
   height: 500px;
@@ -376,6 +402,13 @@ footer {
 
 .chart-wrapper {
   position: relative;
+}
+
+.prediction-basis {
+  font-size: 0.82rem;
+  color: #344054;
+  margin-bottom: 8px;
+  line-height: 1.4;
 }
 
 .chart-trend-label {
@@ -443,6 +476,30 @@ footer {
   width: 24px;
   height: 3px;
   background: #00897B;
+  display: inline-block;
+}
+
+.legend-item.trend::before {
+  content: "";
+  width: 24px;
+  height: 3px;
+  background: #7a5af8;
+  display: inline-block;
+}
+
+.legend-item.support::before {
+  content: "";
+  width: 24px;
+  height: 3px;
+  background: #12b76a;
+  display: inline-block;
+}
+
+.legend-item.resistance::before {
+  content: "";
+  width: 24px;
+  height: 3px;
+  background: #f04438;
   display: inline-block;
 }
 

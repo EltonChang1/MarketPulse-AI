@@ -1,4 +1,3 @@
-import { useState } from "react";
 import CandlestickChart from "./CandlestickChart";
 
 function formatCurrency(value) {
@@ -16,14 +15,22 @@ function formatPercent(value) {
   return `${sign}${value.toFixed(2)}%`;
 }
 
-export default function StockDetailView({ stock, onBack }) {
-  const [selectedPrediction, setSelectedPrediction] = useState("week");
+export default function StockDetailView({
+  stock,
+  onBack,
+  selectedPrediction,
+  onSelectedPredictionChange,
+  markerSettings,
+  onMarkerSettingsChange,
+}) {
 
   if (!stock) return null;
 
   const predictions = stock.technicalForecast?.predictions || {};
   const indicators = stock.technicalForecast?.indicators || {};
   const indicatorSeries = stock.technicalForecast?.indicatorSeries || {};
+  const patternMatches = stock.technicalForecast?.patternMatches || [];
+  const predictionBasis = stock.technicalForecast?.predictionBasis || {};
   const analysis = stock.comprehensiveAnalysis || {};
 
   const predictionButtons = [
@@ -35,6 +42,17 @@ export default function StockDetailView({ stock, onBack }) {
   ];
 
   const currentPrediction = predictions[selectedPrediction];
+  const markers = markerSettings?.markers ?? 10;
+  const perIndicator = markerSettings?.perIndicator ?? 3;
+
+  const updateMarkerSetting = (key, value) => {
+    if (!onMarkerSettingsChange) return;
+    onMarkerSettingsChange({
+      markers,
+      perIndicator,
+      [key]: Number(value),
+    });
+  };
 
   return (
     <div className="detail-view">
@@ -64,7 +82,7 @@ export default function StockDetailView({ stock, onBack }) {
             <button
               key={btn.key}
               className={`prediction-btn ${selectedPrediction === btn.key ? "active" : ""}`}
-              onClick={() => setSelectedPrediction(btn.key)}
+              onClick={() => onSelectedPredictionChange?.(btn.key)}
             >
               <div className="btn-label">{btn.label}</div>
               {btn.data && (
@@ -112,18 +130,63 @@ export default function StockDetailView({ stock, onBack }) {
       {/* Candlestick Chart */}
       <div className="chart-section">
         <h3>Price Chart with Technical Indicators</h3>
+        <div className="marker-controls">
+          <div className="marker-control">
+            <label htmlFor="markers-total">Markers</label>
+            <select
+              id="markers-total"
+              value={markers}
+              onChange={(event) => updateMarkerSetting("markers", event.target.value)}
+            >
+              {[8, 10, 12, 15, 20].map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </div>
+          <div className="marker-control">
+            <label htmlFor="markers-per-indicator">Per Indicator</label>
+            <select
+              id="markers-per-indicator"
+              value={perIndicator}
+              onChange={(event) => updateMarkerSetting("perIndicator", event.target.value)}
+            >
+              {[2, 3, 4, 5].map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </div>
+        </div>
         <div className="chart-legend">
           <span className="legend-item sma5">— SMA 5</span>
           <span className="legend-item sma20">— SMA 20</span>
           <span className="legend-item sma50">— SMA 50</span>
+          <span className="legend-item trend">— Trend Line</span>
+          <span className="legend-item support">— Support</span>
+          <span className="legend-item resistance">— Resistance</span>
         </div>
         <CandlestickChart
           data={stock.candlestickData || []}
           indicators={indicatorSeries}
           selectedPeriod={currentPrediction}
           currentPrice={stock.currentPrice}
+          patternMatches={patternMatches}
+          predictionBasis={predictionBasis}
         />
       </div>
+
+      {patternMatches.length > 0 && (
+        <div className="prediction-summary">
+          <h3>Pattern Matches Used in Prediction</h3>
+          <div className="news-list">
+            {patternMatches.map((match, idx) => (
+              <div key={`${match.indicator}-${idx}`} className="news-item">
+                <strong>{match.indicator}: </strong>{match.label}
+                <span className="news-date">{match.detail}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Technical Indicators */}
       <div className="indicators-section">
@@ -144,6 +207,9 @@ export default function StockDetailView({ stock, onBack }) {
               <li>RSI (14): {indicators.rsi14?.toFixed(2) || "-"}</li>
               <li>MACD: {indicators.macd?.toFixed(4) || "-"}</li>
               <li>MACD Signal: {indicators.macdSignal?.toFixed(4) || "-"}</li>
+              <li>MACD Histogram: {indicators.macdHistogram?.toFixed(4) || "-"}</li>
+              <li>Stochastic %K: {indicators.stochK?.toFixed(2) || "-"}</li>
+              <li>Stochastic %D: {indicators.stochD?.toFixed(2) || "-"}</li>
             </ul>
           </div>
           <div className="indicator-card">
@@ -152,6 +218,19 @@ export default function StockDetailView({ stock, onBack }) {
               <li>Upper: {formatCurrency(indicators.bbUpper)}</li>
               <li>Middle: {formatCurrency(indicators.bbMiddle)}</li>
               <li>Lower: {formatCurrency(indicators.bbLower)}</li>
+            </ul>
+          </div>
+          <div className="indicator-card">
+            <h4>Trend + Volume Tools</h4>
+            <ul>
+              <li>ADX: {indicators.adx?.toFixed(2) || "-"}</li>
+              <li>DI+: {indicators.plusDI?.toFixed(2) || "-"}</li>
+              <li>DI-: {indicators.minusDI?.toFixed(2) || "-"}</li>
+              <li>Aroon Up: {indicators.aroonUp?.toFixed(2) || "-"}</li>
+              <li>Aroon Down: {indicators.aroonDown?.toFixed(2) || "-"}</li>
+              <li>OBV: {typeof indicators.obv === "number" ? indicators.obv.toLocaleString() : "-"}</li>
+              <li>A/D Line: {typeof indicators.adl === "number" ? indicators.adl.toLocaleString() : "-"}</li>
+              <li>ATR: {indicators.atr?.toFixed(2) || "-"}</li>
             </ul>
           </div>
         </div>

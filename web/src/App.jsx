@@ -3,6 +3,9 @@ import axios from "axios";
 import StockDetailView from "./components/StockDetailView";
 
 const REFRESH_MS = 60_000;
+const MARKER_OPTIONS = [8, 10, 12, 15, 20];
+const PER_INDICATOR_OPTIONS = [2, 3, 4, 5];
+const PERIOD_OPTIONS = ["week", "month", "quarter", "halfYear", "year"];
 
 function formatCurrency(value) {
   if (typeof value !== "number" || Number.isNaN(value)) return "-";
@@ -38,18 +41,64 @@ function trendImpactFromDirection(direction) {
   return "neutral";
 }
 
+function getInitialMarkerSettings() {
+  if (typeof window === "undefined") {
+    return { markers: 10, perIndicator: 3 };
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const markersFromUrl = Number.parseInt(params.get("markers") || "", 10);
+  const perIndicatorFromUrl = Number.parseInt(params.get("perIndicator") || "", 10);
+
+  return {
+    markers: MARKER_OPTIONS.includes(markersFromUrl) ? markersFromUrl : 10,
+    perIndicator: PER_INDICATOR_OPTIONS.includes(perIndicatorFromUrl) ? perIndicatorFromUrl : 3,
+  };
+}
+
+function getInitialViewState() {
+  if (typeof window === "undefined") {
+    return { selected: "AAPL", detailView: false, selectedPrediction: "week" };
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const symbol = (params.get("symbol") || "AAPL").toUpperCase();
+  const view = params.get("view");
+  const period = params.get("period") || "week";
+
+  return {
+    selected: symbol,
+    detailView: view === "detail",
+    selectedPrediction: PERIOD_OPTIONS.includes(period) ? period : "week",
+  };
+}
+
+function getInitialFilterQuery() {
+  if (typeof window === "undefined") return "";
+  const params = new URLSearchParams(window.location.search);
+  return params.get("q") || "";
+}
+
 export default function App() {
+  const initialView = getInitialViewState();
   const [payload, setPayload] = useState(null);
-  const [selected, setSelected] = useState("AAPL");
-  const [detailView, setDetailView] = useState(false);
+  const [selected, setSelected] = useState(initialView.selected);
+  const [detailView, setDetailView] = useState(initialView.detailView);
+  const [selectedPrediction, setSelectedPrediction] = useState(initialView.selectedPrediction);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(getInitialFilterQuery);
+  const [markerSettings, setMarkerSettings] = useState(getInitialMarkerSettings);
 
   async function loadData() {
     try {
       setError("");
-      const { data } = await axios.get("/api/analyze");
+      const { data } = await axios.get("/api/analyze", {
+        params: {
+          markers: markerSettings.markers,
+          perIndicator: markerSettings.perIndicator,
+        },
+      });
       setPayload(data);
       if (!data?.data?.some((item) => item.symbol === selected)) {
         setSelected(data?.data?.[0]?.symbol || "AAPL");
@@ -65,7 +114,29 @@ export default function App() {
     loadData();
     const timer = setInterval(loadData, REFRESH_MS);
     return () => clearInterval(timer);
-  }, []);
+  }, [markerSettings.markers, markerSettings.perIndicator]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    params.set("markers", String(markerSettings.markers));
+    params.set("perIndicator", String(markerSettings.perIndicator));
+    params.set("symbol", String(selected));
+    params.set("period", String(selectedPrediction));
+    if (query.trim()) {
+      params.set("q", query);
+    } else {
+      params.delete("q");
+    }
+    if (detailView) {
+      params.set("view", "detail");
+    } else {
+      params.delete("view");
+    }
+    const nextQuery = params.toString();
+    const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}${window.location.hash}`;
+    window.history.replaceState({}, "", nextUrl);
+  }, [markerSettings.markers, markerSettings.perIndicator, selected, selectedPrediction, detailView, query]);
 
   const stocks = payload?.data || [];
   const filteredStocks = useMemo(() => {
@@ -84,7 +155,16 @@ export default function App() {
   );
 
   if (detailView && selectedStock) {
-    return <StockDetailView stock={selectedStock} onBack={() => setDetailView(false)} />;
+    return (
+      <StockDetailView
+        stock={selectedStock}
+        onBack={() => setDetailView(false)}
+        selectedPrediction={selectedPrediction}
+        onSelectedPredictionChange={setSelectedPrediction}
+        markerSettings={markerSettings}
+        onMarkerSettingsChange={setMarkerSettings}
+      />
+    );
   }
 
   return (

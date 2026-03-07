@@ -70,3 +70,29 @@ npm run dev
 
 - Frontend: http://localhost:5173
 - Backend: http://localhost:4000
+
+## API Marker Tuning
+
+You can tune chart pattern-marker density from the API query string:
+
+- `markers` = total number of pattern matches returned (range `3-30`, default `10`)
+- `perIndicator` = max matches per indicator type (range `1-10`, default `3`)
+
+Examples:
+
+```bash
+# Default behavior
+curl "http://localhost:4000/api/analyze/AAPL"
+
+# Cleaner chart (fewer markers)
+curl "http://localhost:4000/api/analyze/AAPL?markers=8&perIndicator=2"
+
+# More markers for deeper review
+curl "http://localhost:4000/api/analyze/AAPL?markers=20&perIndicator=4"
+```
+
+You can also change these values directly in the stock detail screen under **Price Chart with Technical Indicators** using the `Markers` and `Per Indicator` dropdowns.
+When you change them in the UI, the app updates the URL query (`?markers=...&perIndicator=...`), so refreshing the page keeps your selected settings.
+
+The URL also stores your selected stock and prediction period (`symbol`, `period`, and `view=detail`), so shared/refresh links reopen the same stock detail context.
+The overview stock filter is persisted too as `q`, so dashboard searches are retained after refresh and can be shared.

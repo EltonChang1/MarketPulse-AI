@@ -1,7 +1,14 @@
 import { useEffect, useRef } from "react";
 import { createChart } from "lightweight-charts";
 
-export default function CandlestickChart({ data, indicators, selectedPeriod, currentPrice }) {
+export default function CandlestickChart({
+  data,
+  indicators,
+  selectedPeriod,
+  currentPrice,
+  patternMatches = [],
+  predictionBasis,
+}) {
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
   const trendDirection = selectedPeriod?.direction || "flat";
@@ -81,10 +88,32 @@ export default function CandlestickChart({ data, indicators, selectedPeriod, cur
       title: "SMA 50",
     });
 
+    // Obvious overlay lines across the full chart for trend/pattern guidance
+    const trendLineSeries = chart.addLineSeries({
+      color: "#7a5af8",
+      lineWidth: 3,
+      lineStyle: 2,
+      title: "Trend Line",
+    });
+
+    const supportLineSeries = chart.addLineSeries({
+      color: "#12b76a",
+      lineWidth: 2,
+      lineStyle: 2,
+      title: "Support",
+    });
+
+    const resistanceLineSeries = chart.addLineSeries({
+      color: "#f04438",
+      lineWidth: 2,
+      lineStyle: 2,
+      title: "Resistance",
+    });
+
     // Calculate padding to align with candlestick data
-    const sma5Start = Math.max(0, data.length - indicators.sma5.length);
-    const sma20Start = Math.max(0, data.length - indicators.sma20.length);
-    const sma50Start = Math.max(0, data.length - indicators.sma50.length);
+    const sma5Start = Math.max(0, data.length - (indicators.sma5?.length || 0));
+    const sma20Start = Math.max(0, data.length - (indicators.sma20?.length || 0));
+    const sma50Start = Math.max(0, data.length - (indicators.sma50?.length || 0));
 
     if (indicators.sma5 && indicators.sma5.length > 0) {
       const sma5Data = indicators.sma5.map((value, index) => ({
@@ -110,24 +139,48 @@ export default function CandlestickChart({ data, indicators, selectedPeriod, cur
       sma50Series.setData(sma50Data);
     }
 
+    if (indicators.trendLine?.length) {
+      trendLineSeries.setData(indicators.trendLine);
+    }
+
+    if (indicators.supportLine?.length) {
+      supportLineSeries.setData(indicators.supportLine);
+    }
+
+    if (indicators.resistanceLine?.length) {
+      resistanceLineSeries.setData(indicators.resistanceLine);
+    }
+
     // Add prediction marker if available
+    const markers = [];
+
     if (selectedPeriod) {
       const prediction = selectedPeriod.predictedPrice;
       const lastDate = data[data.length - 1]?.date;
       
       if (lastDate && prediction) {
-        // Add a marker for the prediction
-        candlestickSeries.setMarkers([
-          {
-            time: lastDate,
-            position: prediction > currentPrice ? "aboveBar" : "belowBar",
-            color: prediction > currentPrice ? "#26a69a" : "#ef5350",
-            shape: prediction > currentPrice ? "arrowUp" : "arrowDown",
-            text: `${selectedPeriod.period}: ${prediction > currentPrice ? "Bullish" : "Bearish"} ($${prediction})`,
-          },
-        ]);
+        markers.push({
+          time: lastDate,
+          position: prediction > currentPrice ? "aboveBar" : "belowBar",
+          color: prediction > currentPrice ? "#26a69a" : "#ef5350",
+          shape: prediction > currentPrice ? "arrowUp" : "arrowDown",
+          text: `${selectedPeriod.period}: ${prediction > currentPrice ? "Bullish" : "Bearish"} ($${prediction})`,
+        });
       }
     }
+
+    if (Array.isArray(patternMatches) && patternMatches.length) {
+      const patternMarkers = patternMatches.slice(0, 10).map((match) => ({
+        time: match.time,
+        position: match.direction === "down" ? "aboveBar" : "belowBar",
+        color: match.direction === "down" ? "#f04438" : "#12b76a",
+        shape: "circle",
+        text: `${match.indicator}: ${match.label}`,
+      }));
+      markers.push(...patternMarkers);
+    }
+
+    candlestickSeries.setMarkers(markers);
 
     chart.timeScale().fitContent();
 
@@ -153,6 +206,18 @@ export default function CandlestickChart({ data, indicators, selectedPeriod, cur
 
   return (
     <div className="chart-wrapper">
+      <div className="prediction-basis">
+        <strong>Prediction Indicators:</strong>{" "}
+        {(predictionBasis?.indicatorsUsed || [
+          "OBV",
+          "A/D",
+          "ADX",
+          "Aroon",
+          "MACD",
+          "RSI",
+          "Stochastic",
+        ]).join(" • ")}
+      </div>
       <div className={`chart-trend-label ${trendDirection}`}>
         Trend ({trendPeriodLabel}): {trendLabel}
       </div>

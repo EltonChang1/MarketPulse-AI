@@ -25,6 +25,19 @@ const TOP_COMPANIES = [
   { symbol: "JPM", companyName: "JPMorgan Chase" },
 ];
 
+function parseIntInRange(value, fallback, min, max) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, parsed));
+}
+
+function getPatternOptions(query = {}) {
+  return {
+    maxMarkers: parseIntInRange(query.markers, 10, 3, 30),
+    maxPerIndicator: parseIntInRange(query.perIndicator, 3, 1, 10),
+  };
+}
+
 app.use(cors());
 app.use(express.json());
 
@@ -36,9 +49,9 @@ app.get("/api/companies", (_req, res) => {
   res.json(TOP_COMPANIES);
 });
 
-async function analyzeCompany(symbol, companyName) {
+async function analyzeCompany(symbol, companyName, technicalOptions = {}) {
   const market = await fetchQuoteAndHistory(symbol);
-  const technicalForecast = predictMultipleTimeframes(market.history, market.currentPrice);
+  const technicalForecast = predictMultipleTimeframes(market.history, market.currentPrice, technicalOptions);
   const news = await fetchLatestNews(companyName, symbol, 10);
   const sentiment = await estimateNewsImpact({
     symbol,
@@ -72,10 +85,11 @@ async function analyzeCompany(symbol, companyName) {
   };
 }
 
-app.get("/api/analyze", async (_req, res) => {
+app.get("/api/analyze", async (req, res) => {
   try {
+    const technicalOptions = getPatternOptions(req.query);
     const data = await Promise.all(
-      TOP_COMPANIES.map((company) => analyzeCompany(company.symbol, company.companyName))
+      TOP_COMPANIES.map((company) => analyzeCompany(company.symbol, company.companyName, technicalOptions))
     );
 
     res.json({
@@ -91,6 +105,7 @@ app.get("/api/analyze", async (_req, res) => {
 app.get("/api/analyze/:symbol", async (req, res) => {
   try {
     const symbol = String(req.params.symbol || "").toUpperCase();
+    const technicalOptions = getPatternOptions(req.query);
     const company = TOP_COMPANIES.find((c) => c.symbol === symbol);
 
     if (!company) {
@@ -99,7 +114,7 @@ app.get("/api/analyze/:symbol", async (req, res) => {
       });
     }
 
-    const data = await analyzeCompany(company.symbol, company.companyName);
+    const data = await analyzeCompany(company.symbol, company.companyName, technicalOptions);
     return res.json(data);
   } catch (error) {
     return res.status(500).json({ message: "Failed to analyze symbol", error: error.message });
