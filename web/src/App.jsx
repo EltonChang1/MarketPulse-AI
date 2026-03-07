@@ -89,6 +89,9 @@ export default function App() {
   const [error, setError] = useState("");
   const [query, setQuery] = useState(getInitialFilterQuery);
   const [markerSettings, setMarkerSettings] = useState(getInitialMarkerSettings);
+  const effectiveSelectedPrediction = PERIOD_OPTIONS.includes(selectedPrediction)
+    ? selectedPrediction
+    : "week";
 
   async function loadData() {
     try {
@@ -122,7 +125,7 @@ export default function App() {
     params.set("markers", String(markerSettings.markers));
     params.set("perIndicator", String(markerSettings.perIndicator));
     params.set("symbol", String(selected));
-    params.set("period", String(selectedPrediction));
+    params.set("period", String(effectiveSelectedPrediction));
     if (query.trim()) {
       params.set("q", query);
     } else {
@@ -136,7 +139,7 @@ export default function App() {
     const nextQuery = params.toString();
     const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}${window.location.hash}`;
     window.history.replaceState({}, "", nextUrl);
-  }, [markerSettings.markers, markerSettings.perIndicator, selected, selectedPrediction, detailView, query]);
+  }, [markerSettings.markers, markerSettings.perIndicator, selected, effectiveSelectedPrediction, detailView, query]);
 
   const stocks = payload?.data || [];
   const filteredStocks = useMemo(() => {
@@ -159,7 +162,7 @@ export default function App() {
       <StockDetailView
         stock={selectedStock}
         onBack={() => setDetailView(false)}
-        selectedPrediction={selectedPrediction}
+        selectedPrediction={effectiveSelectedPrediction}
         onSelectedPredictionChange={setSelectedPrediction}
         markerSettings={markerSettings}
         onMarkerSettingsChange={setMarkerSettings}

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import CandlestickChart from "./CandlestickChart";
 
 function formatCurrency(value) {
@@ -23,6 +24,16 @@ export default function StockDetailView({
   markerSettings,
   onMarkerSettingsChange,
 }) {
+  const [visibleIndicators, setVisibleIndicators] = useState({
+    sma5: true,
+    sma20: true,
+    sma50: true,
+    trendLine: true,
+    supportLine: true,
+    resistanceLine: true,
+    predictionMarker: true,
+    patternMarkers: true,
+  });
 
   if (!stock) return null;
 
@@ -41,7 +52,14 @@ export default function StockDetailView({
     { key: "year", label: "1 Year", data: predictions.year },
   ];
 
-  const currentPrediction = predictions[selectedPrediction];
+  const fallbackPrediction =
+    predictions.week ||
+    predictions.month ||
+    predictions.quarter ||
+    predictions.halfYear ||
+    predictions.year ||
+    null;
+  const currentPrediction = predictions[selectedPrediction] || fallbackPrediction;
   const markers = markerSettings?.markers ?? 10;
   const perIndicator = markerSettings?.perIndicator ?? 3;
 
@@ -52,6 +70,13 @@ export default function StockDetailView({
       perIndicator,
       [key]: Number(value),
     });
+  };
+
+  const toggleIndicator = (key) => {
+    setVisibleIndicators((previous) => ({
+      ...previous,
+      [key]: !previous[key],
+    }));
   };
 
   return (
@@ -156,13 +181,34 @@ export default function StockDetailView({
             </select>
           </div>
         </div>
+        <div className="indicator-toggle-grid">
+          {[
+            { key: "sma5", label: "SMA 5" },
+            { key: "sma20", label: "SMA 20" },
+            { key: "sma50", label: "SMA 50" },
+            { key: "trendLine", label: "Trend Line" },
+            { key: "supportLine", label: "Support" },
+            { key: "resistanceLine", label: "Resistance" },
+            { key: "predictionMarker", label: "Prediction Marker" },
+            { key: "patternMarkers", label: "Pattern Markers" },
+          ].map((item) => (
+            <label key={item.key} className="indicator-toggle-item">
+              <input
+                type="checkbox"
+                checked={Boolean(visibleIndicators[item.key])}
+                onChange={() => toggleIndicator(item.key)}
+              />
+              <span>{item.label}</span>
+            </label>
+          ))}
+        </div>
         <div className="chart-legend">
-          <span className="legend-item sma5">— SMA 5</span>
-          <span className="legend-item sma20">— SMA 20</span>
-          <span className="legend-item sma50">— SMA 50</span>
-          <span className="legend-item trend">— Trend Line</span>
-          <span className="legend-item support">— Support</span>
-          <span className="legend-item resistance">— Resistance</span>
+          {visibleIndicators.sma5 ? <span className="legend-item sma5">— SMA 5</span> : null}
+          {visibleIndicators.sma20 ? <span className="legend-item sma20">— SMA 20</span> : null}
+          {visibleIndicators.sma50 ? <span className="legend-item sma50">— SMA 50</span> : null}
+          {visibleIndicators.trendLine ? <span className="legend-item trend">— Trend Line</span> : null}
+          {visibleIndicators.supportLine ? <span className="legend-item support">— Support</span> : null}
+          {visibleIndicators.resistanceLine ? <span className="legend-item resistance">— Resistance</span> : null}
         </div>
         <CandlestickChart
           data={stock.candlestickData || []}
@@ -171,6 +217,7 @@ export default function StockDetailView({
           currentPrice={stock.currentPrice}
           patternMatches={patternMatches}
           predictionBasis={predictionBasis}
+          visibleIndicators={visibleIndicators}
         />
       </div>
 
