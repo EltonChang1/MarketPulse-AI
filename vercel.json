@@ -1,9 +1,5 @@
 {
-  "name": "marketpulse-ai-frontend",
-  "version": 2,
-  "buildCommand": "cd web && npm install && npm run build",
-  "outputDirectory": "web/dist",
-  "framework": null,
-  "installCommand": "npm install --prefix web",
-  "devCommand": "npm run dev --prefix web"
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install"
 }
