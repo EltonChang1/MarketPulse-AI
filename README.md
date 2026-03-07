@@ -62,18 +62,22 @@ A full-stack website that tracks the **top 10 largest US companies by market cap
 - `GET /api/analyze`
 - `GET /api/analyze/:symbol`
 
-## Screenshot map
+## Features & Screenshots
 
-Use these filenames for the screenshots (stored under `docs/images/`) to match the user guide sections:
+MarketPulse AI includes comprehensive technical analysis and visualization tools. See `USERGUIDE.md` for detailed walkthrough of all features:
 
-- `marketpulse-overview-top10.png` — Home overview with 10 stock cards, trend badges, and filter bar.
-- `marketpulse-detail-period-selector.png` — Detail page showing prediction period selector and forecast summary.
-- `marketpulse-chart-trend-overlay.png` — Candlestick chart with SMA overlays and top-right trend label.
-- `marketpulse-technical-indicators.png` — Technical indicators cards (MA, momentum, Bollinger Bands).
-- `marketpulse-comprehensive-analysis.png` — Comprehensive analysis (financial summary, sentiment, risks/opportunities).
-- `marketpulse-latest-news.png` — Latest news feed list for the selected stock.
+1. **Dashboard Overview** — 10 stock cards with live prices and trend indicators
+2. **Stock Detail Page** — Comprehensive analysis for individual stocks
+3. **Multi-Timeframe Predictions** — 1W, 1M, 3M, 6M, 1Y forecasts with confidence levels
+4. **Interactive Charts** — Candlestick charts with moving averages and indicators
+5. **Customizable Indicators** — Toggle individual technical indicators on/off
+6. **Pattern Detection** — Automatic identification of technical patterns and signals
+7. **Adjustable Markers** — Fine-tune chart marker density (API & UI controls)
+8. **Technical Dashboard** — RSI, MACD, Bollinger Bands, ADX, Stochastic, OBV, A/D, Aroon
+9. **AI Analysis** — Sentiment, risk factors, opportunities, financial summary
+10. **Real-Time News** — Latest news feed with sentiment indicators
 
-See the full walkthrough in `USERGUIDE.md`.
+All screenshots are stored in `docs/images/` with descriptive filenames (01-dashboard-overview.png through 10-news-feed.png).
 
 ## Notes
 
