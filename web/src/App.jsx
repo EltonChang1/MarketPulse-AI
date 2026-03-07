@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import StockDetailView from "./components/StockDetailView";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 const REFRESH_MS = 60_000;
 const MARKER_OPTIONS = [8, 10, 12, 15, 20];
 const PER_INDICATOR_OPTIONS = [2, 3, 4, 5];
@@ -96,7 +97,7 @@ export default function App() {
   async function loadData() {
     try {
       setError("");
-      const { data } = await axios.get("/api/analyze", {
+      const { data } = await axios.get(`${API_BASE_URL}/api/analyze`, {
         params: {
           markers: markerSettings.markers,
           perIndicator: markerSettings.perIndicator,
