@@ -86,7 +86,12 @@ function parseJsonMaybe(content = "") {
 }
 
 function getGeminiApiKey() {
-  return process.env.Default_Gemini_API_Key || process.env.GEMINI_API_KEY || "";
+  const candidates = [process.env.GEMINI_API_KEY, process.env.Default_Gemini_API_Key]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .filter((value) => !/your[_-]?key|replace[_-]?me|placeholder/i.test(value));
+
+  return candidates[0] || "";
 }
 
 function getConfiguredGeminiModels() {

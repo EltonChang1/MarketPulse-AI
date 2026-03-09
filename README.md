@@ -42,7 +42,7 @@ A full-stack website that tracks the **top 10 largest US companies by market cap
 3. (Optional) Add API key in `server/.env`:
    ```env
    #for demonstrate
-   Default_Gemini_API_Key=your_key_here
+   GEMINI_API_KEY=your_key_here
    GEMINI_PROJECT_ID=projects/YOUR_PROJECT_NUMBER
    ```
 
