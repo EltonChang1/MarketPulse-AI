@@ -9,6 +9,8 @@ export async function fetchLatestNews(companyName, symbol, maxItems = 6) {
   const feed = await parser.parseURL(rssUrl);
   const items = (feed.items || []).slice(0, maxItems).map((item) => ({
     title: item.title || "Untitled",
+    contentSnippet: item.contentSnippet || item.content || item.summary || "",
+    description: item.contentSnippet || item.content || item.summary || "",
     link: item.link || "",
     pubDate: item.pubDate || null,
     source: item.source || feed.title || "Google News",

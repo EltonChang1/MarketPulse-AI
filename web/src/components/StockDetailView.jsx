@@ -19,6 +19,20 @@ function formatPercent(value) {
 function buildFallbackNewsSummary(stock, currentPrediction) {
   const newsItems = Array.isArray(stock?.news) ? stock.news : [];
   const companyName = stock?.companyName || stock?.symbol || "This company";
+  const countSentences = (text = "") =>
+    text
+      .split(/(?<=[.!?])\s+/)
+      .map((part) => part.trim())
+      .filter(Boolean).length;
+  const ensureMinSentences = (text = "", minSentences = 4, fillerSentences = []) => {
+    let result = String(text || "").trim();
+    let idx = 0;
+    while (countSentences(result) < minSentences && idx < fillerSentences.length) {
+      result = `${result} ${fillerSentences[idx]}`.trim();
+      idx += 1;
+    }
+    return result;
+  };
 
   if (newsItems.length === 0) {
     return {
@@ -34,9 +48,18 @@ function buildFallbackNewsSummary(stock, currentPrediction) {
     .slice(0, 5)
     .map((item, index) => {
       const title = item?.title || `Key development #${index + 1}`;
-      const source = item?.source ? `Source: ${item.source}. ` : "";
-      const when = item?.pubDate ? `Published ${new Date(item.pubDate).toLocaleDateString("en-US")}. ` : "";
-      return `News ${index + 1}: ${title}. ${source}${when}This was a top reported company development in the current cycle.`.trim();
+      const source = item?.source || "Google News";
+      const when = item?.pubDate ? new Date(item.pubDate).toLocaleDateString("en-US") : "recently";
+      const snippet = String(item?.contentSnippet || item?.description || "")
+        .replace(/\s+/g, " ")
+        .trim();
+      const base = snippet
+        ? `News ${index + 1} reports that ${title}. The article explains that ${snippet}. The report is attributed to ${source} and was published ${when}. This development is currently one of the most relevant company-specific updates being tracked.`
+        : `News ${index + 1} reports that ${title}. The report is attributed to ${source} and was published ${when}. This development is currently one of the most relevant company-specific updates being tracked. Additional in-feed content is limited, but this event remains part of the top-five summary.`;
+
+      return ensureMinSentences(base, 4, [
+        `This update contributes to the current information set around ${companyName}.`,
+      ]);
     });
   const factsParagraph = factsParagraphs.join(" ");
 

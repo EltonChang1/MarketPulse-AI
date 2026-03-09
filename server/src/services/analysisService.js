@@ -194,12 +194,38 @@ export async function estimateNewsImpact({ symbol, companyName, newsItems, techn
 export async function generateDetailedNewsSummary({ symbol, companyName, newsItems, technicalForecast, currentPrice }) {
   const apiKey = getGeminiApiKey();
   const topFiveNews = (Array.isArray(newsItems) ? newsItems : []).slice(0, 5);
+  const countSentences = (text = "") =>
+    text
+      .split(/(?<=[.!?])\s+/)
+      .map((part) => part.trim())
+      .filter(Boolean).length;
+  const ensureMinSentences = (text = "", minSentences = 4, fillerSentences = []) => {
+    let result = String(text || "").trim();
+    let idx = 0;
+    while (countSentences(result) < minSentences && idx < fillerSentences.length) {
+      result = `${result} ${fillerSentences[idx]}`.trim();
+      idx += 1;
+    }
+    return result;
+  };
+  const articleSnippet = (item = {}) => {
+    const raw = item.contentSnippet || item.description || item.content || "";
+    return String(raw).replace(/\s+/g, " ").trim();
+  };
   const buildFactsParagraphs = (items = []) => {
     return items.map((item, index) => {
       const title = item?.title || `Key development #${index + 1}`;
-      const source = item?.source ? `Source: ${item.source}. ` : "";
-      const when = item?.pubDate ? `Published ${new Date(item.pubDate).toLocaleDateString("en-US")}. ` : "";
-      return `News ${index + 1}: ${title}. ${source}${when}This development is one of the top reported company-specific updates in the current cycle.`.trim();
+      const source = item?.source || "Google News";
+      const when = item?.pubDate ? new Date(item.pubDate).toLocaleDateString("en-US") : "recently";
+      const snippet = articleSnippet(item);
+
+      const baseParagraph = snippet
+        ? `News ${index + 1} reports that ${title}. The article details that ${snippet}. The coverage comes from ${source} and was published ${when}. This item is one of the most relevant current developments for ${companyName}.`
+        : `News ${index + 1} reports that ${title}. The coverage comes from ${source} and was published ${when}. This item is one of the most relevant current developments for ${companyName}. Additional reporting context is limited in the feed, but the event is still part of the top company-specific news set.`;
+
+      return ensureMinSentences(baseParagraph, 4, [
+        `The update is directly tied to ${companyName}'s near-term information flow.`,
+      ]);
     });
   };
 
@@ -208,7 +234,7 @@ export async function generateDetailedNewsSummary({ symbol, companyName, newsIte
     return {
       factsParagraphs: [`No recent news found for ${companyName} (${symbol}).`],
       factsParagraph: `No recent news found for ${companyName} (${symbol}).`,
-      impactParagraph: `Without recent news developments, stock price movement will likely be driven by technical factors and broader market conditions.`,
+      impactParagraph: `Without recent news developments, short-term price movement in the next 1-4 weeks will likely be driven by technical signals and macro risk sentiment. Over the next 1-3 months, earnings guidance updates and sector rotation should become the main directional drivers. Over the 6-12 month horizon, valuation is more likely to track revenue growth, margin durability, and capital allocation execution. In this environment, price direction is less headline-driven and more dependent on fundamental follow-through.`,
       source: "heuristic",
     };
   }
@@ -242,7 +268,13 @@ export async function generateDetailedNewsSummary({ symbol, companyName, newsIte
   }
 
   try {
-    const topNews = newsItems.slice(0, 10).map((n) => `- ${n.title}`).join("\n");
+    const topNews = newsItems
+      .slice(0, 10)
+      .map((n, index) => {
+        const snippet = articleSnippet(n);
+        return `${index + 1}. Title: ${n.title}\n   Source: ${n.source || "Google News"}\n   Published: ${n.pubDate || "N/A"}\n   Content: ${snippet || "No snippet available in feed."}`;
+      })
+      .join("\n");
 
     const prompt = `You are a financial analyst. Summarize the top 10 news items for ${companyName} (${symbol}), currently trading at $${currentPrice}.
 
@@ -258,14 +290,20 @@ Technical Context:
 Generate ONLY valid JSON with NO markdown or extra text. Use these exact keys:
 {
   "factsParagraphs": [
-    "Short paragraph for news item 1 describing what happened factually",
-    "Short paragraph for news item 2 describing what happened factually",
-    "Short paragraph for news item 3 describing what happened factually",
-    "Short paragraph for news item 4 describing what happened factually",
-    "Short paragraph for news item 5 describing what happened factually"
+    "Paragraph for news item 1 with at least 4 factual sentences based on content",
+    "Paragraph for news item 2 with at least 4 factual sentences based on content",
+    "Paragraph for news item 3 with at least 4 factual sentences based on content",
+    "Paragraph for news item 4 with at least 4 factual sentences based on content",
+    "Paragraph for news item 5 with at least 4 factual sentences based on content"
   ],
-  "impactParagraph": "One paragraph (4-6 sentences) analyzing stock price impact broken down by timeframe: Short-term (days to 4 weeks), Medium-term (1-3 months), and Long-term (6-12 months). Include clear timelines and potential price movements."
-}`;
+  "impactParagraph": "One paragraph with at least 4 sentences analyzing stock price impact broken down by timeline: Short-term (days to 4 weeks), Medium-term (1-3 months), and Long-term (6-12 months). Include clear timeline language and directional implications."
+}
+
+Rules:
+- Each paragraph in factsParagraphs must be at least 4 sentences.
+- Summarize article content and details, not just the title.
+- Keep statements factual in factsParagraphs and avoid speculation there.
+- Use all five facts paragraphs (top five items).`;
 
     const content = await generateGeminiText(prompt);
     const parsed = parseJsonMaybe(content);
@@ -281,11 +319,21 @@ Generate ONLY valid JSON with NO markdown or extra text. Use these exact keys:
     const factsParagraphs = parsedFactsParagraphs.length
       ? parsedFactsParagraphs.slice(0, 5)
       : buildFactsParagraphs(topFiveNews);
+    const normalizedFactsParagraphs = factsParagraphs.map((paragraph, index) =>
+      ensureMinSentences(paragraph, 4, [
+        `This report remains one of the key tracked company updates for ${companyName}.`,
+        `Its details are incorporated into the current news summary set for ${symbol}.`,
+      ])
+    );
+    const normalizedImpactParagraph = ensureMinSentences(parsed.impactParagraph, 4, [
+      "Short-term response is usually dominated by immediate repricing and volatility.",
+      "Longer-term outcomes depend on execution against guidance and sector conditions.",
+    ]);
 
     return {
-      factsParagraphs,
-      factsParagraph: parsed.factsParagraph || factsParagraphs.join(" "),
-      impactParagraph: parsed.impactParagraph,
+      factsParagraphs: normalizedFactsParagraphs,
+      factsParagraph: parsed.factsParagraph || normalizedFactsParagraphs.join(" "),
+      impactParagraph: normalizedImpactParagraph,
       source: "gemini",
     };
   } catch (error) {
@@ -297,7 +345,7 @@ Generate ONLY valid JSON with NO markdown or extra text. Use these exact keys:
     const factsParagraphs = buildFactsParagraphs(topFiveNews);
     const factsParagraph = factsParagraphs.join(" ");
 
-    const impactParagraph = `Market sentiment and technical indicators suggest short-term (1-4 weeks) direction could be mixed. Medium-term (1-3 months) developments depend on news resolution. Long-term (6-12 months) trends align with technical forecasts showing potential moves to $${technicalForecast.predictions.year.predictedPrice}.`;
+    const impactParagraph = `Short-term (1-4 weeks), the current news mix can drive event-based volatility as investors digest incoming updates and revise expectations. Medium-term (1-3 months), sustained direction should depend on whether follow-up disclosures and earnings validate the current narrative in these reports. Long-term (6-12 months), the stock is more likely to follow fundamentals such as growth durability, margins, and strategic execution rather than single headlines. The technical baseline currently points toward a potential move to around $${technicalForecast.predictions.year.predictedPrice}, but that path will shift as new company data arrives.`;
 
     return {
       factsParagraphs,
