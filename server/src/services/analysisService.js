@@ -210,7 +210,17 @@ export async function generateDetailedNewsSummary({ symbol, companyName, newsIte
   };
   const articleSnippet = (item = {}) => {
     const raw = item.articleContent || item.contentSnippet || item.description || item.content || "";
-    return String(raw).replace(/\s+/g, " ").trim();
+    const cleaned = String(raw)
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const title = String(item.title || "").replace(/\s+/g, " ").trim().toLowerCase();
+    const normalized = cleaned.toLowerCase();
+    if (!cleaned || cleaned.length < 80) return "";
+    if (title && (normalized === title || normalized.includes(title))) {
+      return "";
+    }
+    return cleaned;
   };
   const buildFactsParagraphs = (items = []) => {
     return items.map((item, index) => {
@@ -221,7 +231,7 @@ export async function generateDetailedNewsSummary({ symbol, companyName, newsIte
 
       const baseParagraph = snippet
         ? `News ${index + 1} reports that ${title}. The article details that ${snippet}. The coverage comes from ${source} and was published ${when}. This item is one of the most relevant current developments for ${companyName}.`
-        : `News ${index + 1} reports that ${title}. The coverage comes from ${source} and was published ${when}. This item is one of the most relevant current developments for ${companyName}. Additional reporting context is limited in the feed, but the event is still part of the top company-specific news set.`;
+        : `News ${index + 1} reports that ${title}. The coverage comes from ${source} and was published ${when}. This item is one of the most relevant current developments for ${companyName}. Full article text was not reliably available from the source feed, so this summary is based on trusted metadata only.`;
 
       return ensureMinSentences(baseParagraph, 4, [
         `The update is directly tied to ${companyName}'s near-term information flow.`,

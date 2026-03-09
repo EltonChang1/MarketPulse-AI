@@ -4,6 +4,23 @@ const parser = new Parser();
 const ARTICLE_FETCH_TIMEOUT_MS = 8000;
 const MAX_ARTICLE_CHARS = 6000;
 const articleCache = new Map();
+const NON_TEXT_EXTENSIONS = /\.(png|jpe?g|gif|webp|svg|ico|bmp|tiff?|avif|mp4|mov|m4v|webm|mp3|wav|pdf|zip)(\?|$)/i;
+
+function hasBinarySignature(text = "") {
+  const sample = String(text || "").slice(0, 200);
+  return /\uFFFD|\x00|‰PNG|PNG\s*IHDR|JFIF|IEND\uFFFD|RIFF|WEBP/i.test(sample);
+}
+
+function isLikelyReadableText(text = "") {
+  const value = String(text || "").trim();
+  if (!value || value.length < 120) return false;
+  if (hasBinarySignature(value)) return false;
+
+  const letters = (value.match(/[A-Za-z]/g) || []).length;
+  const printable = (value.match(/[\x20-\x7E\n\r\t]/g) || []).length;
+  if (letters < 60) return false;
+  return printable / value.length > 0.85;
+}
 
 function stripHtml(html = "") {
   return String(html)
@@ -58,15 +75,28 @@ function extractParagraphText(html = "") {
 
 function chooseBestArticleText(html = "") {
   const fromJsonLd = extractJsonLdArticleBody(html);
-  if (fromJsonLd) return fromJsonLd;
+  if (isLikelyReadableText(fromJsonLd)) return fromJsonLd;
 
   const fromParagraphs = extractParagraphText(html);
-  if (fromParagraphs) return fromParagraphs;
+  if (isLikelyReadableText(fromParagraphs)) return fromParagraphs;
 
-  return stripHtml(html);
+  const stripped = stripHtml(html);
+  if (isLikelyReadableText(stripped)) return stripped;
+
+  return "";
 }
 
 async function fetchUrl(url) {
+  if (NON_TEXT_EXTENSIONS.test(url)) {
+    return {
+      ok: false,
+      finalUrl: url,
+      status: 415,
+      contentType: "application/octet-stream",
+      html: "",
+    };
+  }
+
   const response = await fetch(url, {
     method: "GET",
     redirect: "follow",
@@ -78,11 +108,23 @@ async function fetchUrl(url) {
     },
   });
 
+  const contentType = response.headers.get("content-type") || "";
+  if (!/text\/html|application\/xhtml\+xml/i.test(contentType)) {
+    return {
+      ok: response.ok,
+      finalUrl: response.url,
+      status: response.status,
+      contentType,
+      html: "",
+    };
+  }
+
   const html = await response.text();
   return {
     ok: response.ok,
     finalUrl: response.url,
     status: response.status,
+    contentType,
     html,
   };
 }
@@ -92,7 +134,13 @@ function findExternalUrlInGoogleNewsHtml(html = "") {
   return candidates.find((candidate) => {
     try {
       const url = new URL(candidate);
-      return !url.hostname.includes("google.com") && !url.hostname.includes("gstatic.com");
+      if (url.hostname.includes("google.com") || url.hostname.includes("gstatic.com")) {
+        return false;
+      }
+      if (NON_TEXT_EXTENSIONS.test(url.pathname)) {
+        return false;
+      }
+      return true;
     } catch {
       return false;
     }
