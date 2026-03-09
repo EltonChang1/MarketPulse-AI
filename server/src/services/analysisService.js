@@ -199,6 +199,7 @@ export async function estimateNewsImpact({ symbol, companyName, newsItems, techn
 export async function generateDetailedNewsSummary({ symbol, companyName, newsItems, technicalForecast, currentPrice }) {
   const apiKey = getGeminiApiKey();
   const topFiveNews = (Array.isArray(newsItems) ? newsItems : []).slice(0, 5);
+  const FACTS_MIN_SENTENCES = 8;
   const countSentences = (text = "") =>
     text
       .split(/(?<=[.!?])\s+/)
@@ -210,6 +211,9 @@ export async function generateDetailedNewsSummary({ symbol, companyName, newsIte
     while (countSentences(result) < minSentences && idx < fillerSentences.length) {
       result = `${result} ${fillerSentences[idx]}`.trim();
       idx += 1;
+    }
+    while (countSentences(result) < minSentences) {
+      result = `${result} Reported details remain relevant to ${companyName}'s current market narrative.`.trim();
     }
     return result;
   };
@@ -246,8 +250,12 @@ export async function generateDetailedNewsSummary({ symbol, companyName, newsIte
         ? `News ${index + 1} reports that ${title}. The article details that ${snippet}. The coverage comes from ${source} and was published ${when}. This item is one of the most relevant current developments for ${companyName}.`
         : `News ${index + 1} reports that ${title}. The coverage comes from ${source} and was published ${when}. This item is one of the most relevant current developments for ${companyName}. Full article text was not reliably available from the source feed, so this summary is based on trusted metadata only.`;
 
-      return ensureMinSentences(baseParagraph, 4, [
+      return ensureMinSentences(baseParagraph, FACTS_MIN_SENTENCES, [
         `The update is directly tied to ${companyName}'s near-term information flow.`,
+        `Investors typically compare this development with management guidance and prior disclosures.`,
+        `The report adds context that can influence analyst expectations around demand and execution.`,
+        `This event is tracked alongside other recent company announcements for consistency.`,
+        `Its implications are assessed with both market sentiment and company fundamentals in mind.`,
       ]);
     });
   };
@@ -313,17 +321,18 @@ Technical Context:
 Generate ONLY valid JSON with NO markdown or extra text. Use these exact keys:
 {
   "factsParagraphs": [
-    "Paragraph for news item 1 with at least 4 factual sentences based on content",
-    "Paragraph for news item 2 with at least 4 factual sentences based on content",
-    "Paragraph for news item 3 with at least 4 factual sentences based on content",
-    "Paragraph for news item 4 with at least 4 factual sentences based on content",
-    "Paragraph for news item 5 with at least 4 factual sentences based on content"
+    "Paragraph for news item 1 with at least 8 factual sentences based on content",
+    "Paragraph for news item 2 with at least 8 factual sentences based on content",
+    "Paragraph for news item 3 with at least 8 factual sentences based on content",
+    "Paragraph for news item 4 with at least 8 factual sentences based on content",
+    "Paragraph for news item 5 with at least 8 factual sentences based on content"
   ],
   "impactParagraph": "One paragraph with at least 4 sentences analyzing stock price impact broken down by timeline: Short-term (days to 4 weeks), Medium-term (1-3 months), and Long-term (6-12 months). Include clear timeline language and directional implications."
 }
 
 Rules:
-- Each paragraph in factsParagraphs must be at least 4 sentences.
+- Return exactly 5 paragraphs in factsParagraphs.
+- Each paragraph in factsParagraphs must be at least 8 sentences.
 - Summarize article content and details, not just the title.
 - Keep statements factual in factsParagraphs and avoid speculation there.
 - Use all five facts paragraphs (top five items).`;
@@ -339,13 +348,21 @@ Rules:
       throw new Error("Invalid response structure");
     }
 
-    const factsParagraphs = parsedFactsParagraphs.length
-      ? parsedFactsParagraphs.slice(0, 5)
-      : buildFactsParagraphs(topFiveNews);
+    const fallbackFactsParagraphs = buildFactsParagraphs(topFiveNews);
+    const factsParagraphs = parsedFactsParagraphs.slice(0, 5);
+    while (factsParagraphs.length < 5) {
+      factsParagraphs.push(
+        fallbackFactsParagraphs[factsParagraphs.length] ||
+          `News ${factsParagraphs.length + 1} could not be fully parsed from AI output, so a fallback summary was generated from available content.`
+      );
+    }
     const normalizedFactsParagraphs = factsParagraphs.map((paragraph, index) =>
-      ensureMinSentences(paragraph, 4, [
+      ensureMinSentences(paragraph, FACTS_MIN_SENTENCES, [
         `This report remains one of the key tracked company updates for ${companyName}.`,
         `Its details are incorporated into the current news summary set for ${symbol}.`,
+        `Market participants generally evaluate this update against earnings visibility and execution trends.`,
+        `The information is reviewed for consistency with prior company disclosures and external reporting.`,
+        `This summary preserves factual context while avoiding unsupported forward assumptions.`,
       ])
     );
     const normalizedImpactParagraph = ensureMinSentences(parsed.impactParagraph, 4, [

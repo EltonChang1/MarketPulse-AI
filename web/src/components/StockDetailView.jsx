@@ -19,6 +19,7 @@ function formatPercent(value) {
 function buildFallbackNewsSummary(stock, currentPrediction) {
   const newsItems = Array.isArray(stock?.news) ? stock.news : [];
   const companyName = stock?.companyName || stock?.symbol || "This company";
+  const FACTS_MIN_SENTENCES = 8;
   const countSentences = (text = "") =>
     text
       .split(/(?<=[.!?])\s+/)
@@ -30,6 +31,9 @@ function buildFallbackNewsSummary(stock, currentPrediction) {
     while (countSentences(result) < minSentences && idx < fillerSentences.length) {
       result = `${result} ${fillerSentences[idx]}`.trim();
       idx += 1;
+    }
+    while (countSentences(result) < minSentences) {
+      result = `${result} This update remains part of the tracked company news narrative.`.trim();
     }
     return result;
   };
@@ -61,8 +65,12 @@ function buildFallbackNewsSummary(stock, currentPrediction) {
         ? `News ${index + 1} reports that ${title}. The article explains that ${summaryText}. The report is attributed to ${source} and was published ${when}. This development is currently one of the most relevant company-specific updates being tracked.`
         : `News ${index + 1} reports that ${title}. The report is attributed to ${source} and was published ${when}. This development is currently one of the most relevant company-specific updates being tracked. Additional in-feed content is limited, but this event remains part of the top-five summary.`;
 
-      return ensureMinSentences(base, 4, [
+      return ensureMinSentences(base, FACTS_MIN_SENTENCES, [
         `This update contributes to the current information set around ${companyName}.`,
+        `The report is considered alongside other company events and disclosures.`,
+        `Analysts typically evaluate this development against guidance and execution progress.`,
+        `The summary focuses on factual details from currently available reporting.`,
+        `This item remains relevant to near-term sentiment and medium-term expectations.`,
       ]);
     });
   const factsParagraph = factsParagraphs.join(" ");
