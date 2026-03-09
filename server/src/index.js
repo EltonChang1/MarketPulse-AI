@@ -25,6 +25,136 @@ const TOP_COMPANIES = [
   { symbol: "JPM", companyName: "JPMorgan Chase" },
 ];
 
+const MARKET_TZ = "America/New_York";
+const MARKET_OPEN_MINUTE = 9 * 60 + 30; // 9:30 ET
+const MARKET_CLOSE_MINUTE = 16 * 60; // 16:00 ET
+const OPEN_CACHE_TTL_MS = 2 * 60 * 1000;
+
+const aggregateCache = new Map();
+const symbolCache = new Map();
+const inFlight = new Map();
+
+const weekdayToIndex = {
+  Mon: 0,
+  Tue: 1,
+  Wed: 2,
+  Thu: 3,
+  Fri: 4,
+  Sat: 5,
+  Sun: 6,
+};
+
+function getEasternTimeParts(date = new Date()) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: MARKET_TZ,
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+  const parts = formatter.formatToParts(date);
+  const weekday = parts.find((p) => p.type === "weekday")?.value;
+  const hour = Number(parts.find((p) => p.type === "hour")?.value ?? 0);
+  const minute = Number(parts.find((p) => p.type === "minute")?.value ?? 0);
+
+  return {
+    weekdayIndex: weekdayToIndex[weekday] ?? 0,
+    hour,
+    minute,
+  };
+}
+
+function getMarketState(date = new Date()) {
+  const { weekdayIndex, hour, minute } = getEasternTimeParts(date);
+  const minuteOfDay = hour * 60 + minute;
+  const isWeekday = weekdayIndex >= 0 && weekdayIndex <= 4;
+  const isOpen = isWeekday && minuteOfDay >= MARKET_OPEN_MINUTE && minuteOfDay < MARKET_CLOSE_MINUTE;
+
+  return {
+    isOpen,
+    weekdayIndex,
+    minuteOfDay,
+  };
+}
+
+function getMsUntilNextMarketOpen(date = new Date()) {
+  const { weekdayIndex, minuteOfDay } = getMarketState(date);
+  const currentMinuteOfWeek = weekdayIndex * 1440 + minuteOfDay;
+  const openMinutesOfWeek = [0, 1, 2, 3, 4].map((day) => day * 1440 + MARKET_OPEN_MINUTE);
+
+  const allDiffs = openMinutesOfWeek.map((openMinute) => {
+    const diff = (openMinute - currentMinuteOfWeek + 7 * 1440) % (7 * 1440);
+    return diff === 0 ? 7 * 1440 : diff;
+  });
+
+  const minDiffMinutes = Math.min(...allDiffs);
+  return minDiffMinutes * 60 * 1000;
+}
+
+function getCacheTtlMs(date = new Date()) {
+  const marketState = getMarketState(date);
+  if (marketState.isOpen) return OPEN_CACHE_TTL_MS;
+
+  return getMsUntilNextMarketOpen(date) + 60 * 1000;
+}
+
+function getCacheKey(prefix, params) {
+  return `${prefix}:${JSON.stringify(params)}`;
+}
+
+async function withCache({
+  key,
+  cache,
+  compute,
+  includeStaleOnError = true,
+}) {
+  const now = Date.now();
+  const existing = cache.get(key);
+  const marketState = getMarketState();
+
+  if (existing && existing.expiresAt > now) {
+    return { payload: existing.payload, cacheStatus: "hit", marketState };
+  }
+
+  if (inFlight.has(key)) {
+    const payload = await inFlight.get(key);
+    return { payload, cacheStatus: "coalesced", marketState };
+  }
+
+  const requestPromise = (async () => {
+    const payload = await compute();
+    const ttlMs = getCacheTtlMs();
+    cache.set(key, {
+      payload,
+      expiresAt: Date.now() + ttlMs,
+    });
+    return payload;
+  })();
+
+  inFlight.set(key, requestPromise);
+
+  try {
+    const payload = await requestPromise;
+    return { payload, cacheStatus: "miss", marketState };
+  } catch (error) {
+    if (includeStaleOnError && existing?.payload) {
+      return {
+        payload: {
+          ...existing.payload,
+          stale: true,
+          staleReason: error?.message || "Unknown upstream error",
+        },
+        cacheStatus: "stale-fallback",
+        marketState,
+      };
+    }
+    throw error;
+  } finally {
+    inFlight.delete(key);
+  }
+}
+
 function parseIntInRange(value, fallback, min, max) {
   const parsed = Number.parseInt(value, 10);
   if (!Number.isFinite(parsed)) return fallback;
@@ -88,37 +218,47 @@ async function analyzeCompany(symbol, companyName, technicalOptions = {}) {
 app.get("/api/analyze", async (req, res) => {
   try {
     const technicalOptions = getPatternOptions(req.query);
-    const settled = await Promise.allSettled(
-      TOP_COMPANIES.map((company) => analyzeCompany(company.symbol, company.companyName, technicalOptions))
-    );
+    const cacheKey = getCacheKey("analyze-all", technicalOptions);
 
-    const data = settled
-      .filter((result) => result.status === "fulfilled")
-      .map((result) => result.value);
+    const { payload, cacheStatus, marketState } = await withCache({
+      key: cacheKey,
+      cache: aggregateCache,
+      compute: async () => {
+        const settled = await Promise.allSettled(
+          TOP_COMPANIES.map((company) => analyzeCompany(company.symbol, company.companyName, technicalOptions))
+        );
 
-    const failures = settled
-      .map((result, index) => ({ result, company: TOP_COMPANIES[index] }))
-      .filter(({ result }) => result.status === "rejected")
-      .map(({ result, company }) => ({
-        symbol: company.symbol,
-        companyName: company.companyName,
-        error: result.reason?.message || "Unknown error",
-      }));
+        const data = settled
+          .filter((result) => result.status === "fulfilled")
+          .map((result) => result.value);
 
-    if (data.length === 0) {
-      return res.status(503).json({
-        message: "All stock analyses failed",
-        error: "Upstream market data provider unavailable",
-        failures,
-      });
-    }
+        const failures = settled
+          .map((result, index) => ({ result, company: TOP_COMPANIES[index] }))
+          .filter(({ result }) => result.status === "rejected")
+          .map(({ result, company }) => ({
+            symbol: company.symbol,
+            companyName: company.companyName,
+            error: result.reason?.message || "Unknown error",
+          }));
+
+        if (data.length === 0) {
+          throw new Error("Upstream market data provider unavailable");
+        }
+
+        return {
+          generatedAt: new Date().toISOString(),
+          count: data.length,
+          data,
+          partialFailure: failures.length > 0,
+          failures,
+        };
+      },
+    });
 
     return res.json({
-      generatedAt: new Date().toISOString(),
-      count: data.length,
-      data,
-      partialFailure: failures.length > 0,
-      failures,
+      ...payload,
+      marketOpen: marketState.isOpen,
+      cacheStatus,
     });
   } catch (error) {
     return res.status(500).json({ message: "Failed to analyze stocks", error: error.message });
@@ -137,8 +277,19 @@ app.get("/api/analyze/:symbol", async (req, res) => {
       });
     }
 
-    const data = await analyzeCompany(company.symbol, company.companyName, technicalOptions);
-    return res.json(data);
+    const cacheKey = getCacheKey(`analyze-${symbol}`, technicalOptions);
+
+    const { payload, cacheStatus, marketState } = await withCache({
+      key: cacheKey,
+      cache: symbolCache,
+      compute: async () => analyzeCompany(company.symbol, company.companyName, technicalOptions),
+    });
+
+    return res.json({
+      ...payload,
+      marketOpen: marketState.isOpen,
+      cacheStatus,
+    });
   } catch (error) {
     return res.status(500).json({ message: "Failed to analyze symbol", error: error.message });
   }
