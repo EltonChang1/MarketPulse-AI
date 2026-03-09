@@ -209,7 +209,7 @@ export async function generateDetailedNewsSummary({ symbol, companyName, newsIte
     return result;
   };
   const articleSnippet = (item = {}) => {
-    const raw = item.contentSnippet || item.description || item.content || "";
+    const raw = item.articleContent || item.contentSnippet || item.description || item.content || "";
     return String(raw).replace(/\s+/g, " ").trim();
   };
   const buildFactsParagraphs = (items = []) => {
@@ -272,7 +272,7 @@ export async function generateDetailedNewsSummary({ symbol, companyName, newsIte
       .slice(0, 10)
       .map((n, index) => {
         const snippet = articleSnippet(n);
-        return `${index + 1}. Title: ${n.title}\n   Source: ${n.source || "Google News"}\n   Published: ${n.pubDate || "N/A"}\n   Content: ${snippet || "No snippet available in feed."}`;
+        return `${index + 1}. Title: ${n.title}\n   Source: ${n.source || "Google News"}\n   Published: ${n.pubDate || "N/A"}\n   URL: ${n.articleUrl || n.link || "N/A"}\n   Content: ${snippet || "No article text available."}`;
       })
       .join("\n");
 

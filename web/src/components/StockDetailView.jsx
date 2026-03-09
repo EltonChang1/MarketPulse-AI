@@ -53,8 +53,12 @@ function buildFallbackNewsSummary(stock, currentPrediction) {
       const snippet = String(item?.contentSnippet || item?.description || "")
         .replace(/\s+/g, " ")
         .trim();
-      const base = snippet
-        ? `News ${index + 1} reports that ${title}. The article explains that ${snippet}. The report is attributed to ${source} and was published ${when}. This development is currently one of the most relevant company-specific updates being tracked.`
+      const fullText = String(item?.articleContent || "")
+        .replace(/\s+/g, " ")
+        .trim();
+      const summaryText = fullText || snippet;
+      const base = summaryText
+        ? `News ${index + 1} reports that ${title}. The article explains that ${summaryText}. The report is attributed to ${source} and was published ${when}. This development is currently one of the most relevant company-specific updates being tracked.`
         : `News ${index + 1} reports that ${title}. The report is attributed to ${source} and was published ${when}. This development is currently one of the most relevant company-specific updates being tracked. Additional in-feed content is limited, but this event remains part of the top-five summary.`;
 
       return ensureMinSentences(base, 4, [
