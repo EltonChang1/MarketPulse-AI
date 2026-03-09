@@ -16,6 +16,47 @@ function formatPercent(value) {
   return `${sign}${value.toFixed(2)}%`;
 }
 
+function buildFallbackNewsSummary(stock, currentPrediction) {
+  const newsItems = Array.isArray(stock?.news) ? stock.news : [];
+  const companyName = stock?.companyName || stock?.symbol || "This company";
+
+  if (newsItems.length === 0) {
+    return {
+      factsParagraph: `No recent news headlines are available for ${companyName} right now.`,
+      impactParagraph:
+        "Short-term (1-4 weeks), price action will likely be driven by technical momentum and broader market conditions. Medium-term (1-3 months), new catalysts such as earnings, guidance, and macro data should determine direction. Long-term (6-12 months), fundamentals and execution will have the largest impact on valuation.",
+      source: "fallback",
+    };
+  }
+
+  const topTitles = newsItems
+    .slice(0, 10)
+    .map((item) => item?.title)
+    .filter(Boolean);
+
+  const factsParagraph = `${companyName} recently appeared in major headlines including ${topTitles
+    .slice(0, 5)
+    .join("; ")}. These stories summarize the most material recent developments around operations, market positioning, and company-specific events.`;
+
+  const expectedMove = Number(currentPrediction?.expectedMovePct);
+  const direction = Number.isFinite(expectedMove)
+    ? expectedMove > 0
+      ? "upside"
+      : expectedMove < 0
+        ? "downside"
+        : "sideways"
+    : "sideways";
+  const absMove = Number.isFinite(expectedMove) ? Math.abs(expectedMove).toFixed(2) : "0.00";
+
+  const impactParagraph = `Short-term (1-4 weeks), this news flow may create ${direction} bias with elevated volatility as investors reprice near-term expectations. Medium-term (1-3 months), follow-through depends on whether upcoming earnings and guidance confirm the narrative from these headlines. Long-term (6-12 months), sustained stock performance should track execution quality, cash-flow trends, and competitive positioning; the current model implies an approximate ${absMove}% move for the selected period, which can change as new information arrives.`;
+
+  return {
+    factsParagraph,
+    impactParagraph,
+    source: "fallback",
+  };
+}
+
 export default function StockDetailView({
   stock,
   onBack,
@@ -60,6 +101,7 @@ export default function StockDetailView({
     predictions.year ||
     null;
   const currentPrediction = predictions[selectedPrediction] || fallbackPrediction;
+  const resolvedNewsSummary = stock.newsSummary || buildFallbackNewsSummary(stock, currentPrediction);
   const markers = markerSettings?.markers ?? 10;
   const perIndicator = markerSettings?.perIndicator ?? 3;
 
@@ -322,17 +364,17 @@ export default function StockDetailView({
       </div>
 
       {/* News Summary */}
-      {stock.newsSummary && (
+      {resolvedNewsSummary && (
         <div className="news-summary-section">
           <h3>AI-Powered News Summary</h3>
           <div className="news-summary-card">
             <div className="summary-paragraph">
               <h4>What Happened</h4>
-              <p>{stock.newsSummary.factsParagraph}</p>
+              <p>{resolvedNewsSummary.factsParagraph}</p>
             </div>
             <div className="summary-paragraph">
               <h4>Stock Price Impact</h4>
-              <p>{stock.newsSummary.impactParagraph}</p>
+              <p>{resolvedNewsSummary.impactParagraph}</p>
             </div>
           </div>
         </div>
