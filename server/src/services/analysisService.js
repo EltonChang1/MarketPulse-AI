@@ -288,6 +288,14 @@ Generate ONLY valid JSON with NO markdown or extra text. Use these exact keys:
     };
   }
 }
+
+export async function generateComprehensiveAnalysis({
+  symbol,
+  companyName,
+  newsItems,
+  technicalForecast,
+  currentPrice,
+}) {
   const apiKey = getGeminiApiKey();
 
   if (!apiKey) {
