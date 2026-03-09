@@ -222,8 +222,16 @@ export async function generateDetailedNewsSummary({ symbol, companyName, newsIte
     const title = String(item.title || "").replace(/\s+/g, " ").trim().toLowerCase();
     const normalized = cleaned.toLowerCase();
     if (!cleaned || cleaned.length < 80) return "";
-    if (title && (normalized === title || normalized.includes(title))) {
-      return "";
+    if (title && normalized.includes(title)) {
+      const escapedTitle = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const withoutTitle = cleaned
+        .replace(new RegExp(`^${escapedTitle}[:\-–—\s]*`, "i"), "")
+        .replace(new RegExp(escapedTitle, "ig"), " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (withoutTitle.length >= 80) {
+        return withoutTitle;
+      }
     }
     return cleaned;
   };

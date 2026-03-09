@@ -73,9 +73,29 @@ function extractParagraphText(html = "") {
   return paragraphs.slice(0, 20).join(" ");
 }
 
+function extractMetaDescription(html = "") {
+  const metaPatterns = [
+    /<meta[^>]+property=["']og:description["'][^>]+content=["']([\s\S]*?)["'][^>]*>/i,
+    /<meta[^>]+name=["']description["'][^>]+content=["']([\s\S]*?)["'][^>]*>/i,
+  ];
+
+  for (const pattern of metaPatterns) {
+    const match = html.match(pattern);
+    const value = stripHtml(match?.[1] || "");
+    if (value.length > 120 && !hasBinarySignature(value)) {
+      return value;
+    }
+  }
+
+  return "";
+}
+
 function chooseBestArticleText(html = "") {
   const fromJsonLd = extractJsonLdArticleBody(html);
   if (isLikelyReadableText(fromJsonLd)) return fromJsonLd;
+
+  const fromMeta = extractMetaDescription(html);
+  if (fromMeta) return fromMeta;
 
   const fromParagraphs = extractParagraphText(html);
   if (isLikelyReadableText(fromParagraphs)) return fromParagraphs;
