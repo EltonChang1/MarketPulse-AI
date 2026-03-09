@@ -193,10 +193,20 @@ export async function estimateNewsImpact({ symbol, companyName, newsItems, techn
 
 export async function generateDetailedNewsSummary({ symbol, companyName, newsItems, technicalForecast, currentPrice }) {
   const apiKey = getGeminiApiKey();
+  const topFiveNews = (Array.isArray(newsItems) ? newsItems : []).slice(0, 5);
+  const buildFactsParagraphs = (items = []) => {
+    return items.map((item, index) => {
+      const title = item?.title || `Key development #${index + 1}`;
+      const source = item?.source ? `Source: ${item.source}. ` : "";
+      const when = item?.pubDate ? `Published ${new Date(item.pubDate).toLocaleDateString("en-US")}. ` : "";
+      return `News ${index + 1}: ${title}. ${source}${when}This development is one of the top reported company-specific updates in the current cycle.`.trim();
+    });
+  };
 
   // If no news items, return empty summary
   if (!newsItems || newsItems.length === 0) {
     return {
+      factsParagraphs: [`No recent news found for ${companyName} (${symbol}).`],
       factsParagraph: `No recent news found for ${companyName} (${symbol}).`,
       impactParagraph: `Without recent news developments, stock price movement will likely be driven by technical factors and broader market conditions.`,
       source: "heuristic",
@@ -211,12 +221,8 @@ export async function generateDetailedNewsSummary({ symbol, companyName, newsIte
 
     const sentiment = hasPositive && !hasNegative ? "positive" : hasNegative && !hasPositive ? "negative" : "mixed";
 
-    let factsParagraph = `Recent news regarding ${companyName} shows ${sentiment} developments. Key headlines include: `;
-    factsParagraph += newsItems
-      .slice(0, 5)
-      .map((n) => n.title)
-      .join("; ");
-    factsParagraph += ".";
+    const factsParagraphs = buildFactsParagraphs(topFiveNews);
+    const factsParagraph = factsParagraphs.join(" ");
 
     let impactParagraph = "";
     if (sentiment === "positive") {
@@ -228,6 +234,7 @@ export async function generateDetailedNewsSummary({ symbol, companyName, newsIte
     }
 
     return {
+      factsParagraphs,
       factsParagraph,
       impactParagraph,
       source: "heuristic",
@@ -250,19 +257,34 @@ Technical Context:
 
 Generate ONLY valid JSON with NO markdown or extra text. Use these exact keys:
 {
-  "factsParagraph": "One paragraph (3-5 sentences) summarizing the factual events/announcements from recent news. Focus on what happened without speculation.",
+  "factsParagraphs": [
+    "Short paragraph for news item 1 describing what happened factually",
+    "Short paragraph for news item 2 describing what happened factually",
+    "Short paragraph for news item 3 describing what happened factually",
+    "Short paragraph for news item 4 describing what happened factually",
+    "Short paragraph for news item 5 describing what happened factually"
+  ],
   "impactParagraph": "One paragraph (4-6 sentences) analyzing stock price impact broken down by timeframe: Short-term (days to 4 weeks), Medium-term (1-3 months), and Long-term (6-12 months). Include clear timelines and potential price movements."
 }`;
 
     const content = await generateGeminiText(prompt);
     const parsed = parseJsonMaybe(content);
 
-    if (!parsed || !parsed.factsParagraph || !parsed.impactParagraph) {
+    const parsedFactsParagraphs = Array.isArray(parsed?.factsParagraphs)
+      ? parsed.factsParagraphs.filter((item) => typeof item === "string" && item.trim())
+      : [];
+
+    if (!parsed || (!parsedFactsParagraphs.length && !parsed.factsParagraph) || !parsed.impactParagraph) {
       throw new Error("Invalid response structure");
     }
 
+    const factsParagraphs = parsedFactsParagraphs.length
+      ? parsedFactsParagraphs.slice(0, 5)
+      : buildFactsParagraphs(topFiveNews);
+
     return {
-      factsParagraph: parsed.factsParagraph,
+      factsParagraphs,
+      factsParagraph: parsed.factsParagraph || factsParagraphs.join(" "),
       impactParagraph: parsed.impactParagraph,
       source: "gemini",
     };
@@ -272,16 +294,13 @@ Generate ONLY valid JSON with NO markdown or extra text. Use these exact keys:
     }
 
     // Fallback heuristic
-    let factsParagraph = `Recent developments for ${companyName} (${symbol}): `;
-    factsParagraph += newsItems
-      .slice(0, 5)
-      .map((n) => n.title)
-      .join("; ");
-    factsParagraph += ".";
+    const factsParagraphs = buildFactsParagraphs(topFiveNews);
+    const factsParagraph = factsParagraphs.join(" ");
 
     const impactParagraph = `Market sentiment and technical indicators suggest short-term (1-4 weeks) direction could be mixed. Medium-term (1-3 months) developments depend on news resolution. Long-term (6-12 months) trends align with technical forecasts showing potential moves to $${technicalForecast.predictions.year.predictedPrice}.`;
 
     return {
+      factsParagraphs,
       factsParagraph,
       impactParagraph,
       source: "heuristic",

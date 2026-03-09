@@ -672,6 +672,10 @@ footer {
   font-size: 0.95rem;
 }
 
+.summary-paragraph p + p {
+  margin-top: 10px;
+}
+
 /* News Section */
 .news-section {
   background: #fff;

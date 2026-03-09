@@ -22,6 +22,7 @@ function buildFallbackNewsSummary(stock, currentPrediction) {
 
   if (newsItems.length === 0) {
     return {
+      factsParagraphs: [`No recent news headlines are available for ${companyName} right now.`],
       factsParagraph: `No recent news headlines are available for ${companyName} right now.`,
       impactParagraph:
         "Short-term (1-4 weeks), price action will likely be driven by technical momentum and broader market conditions. Medium-term (1-3 months), new catalysts such as earnings, guidance, and macro data should determine direction. Long-term (6-12 months), fundamentals and execution will have the largest impact on valuation.",
@@ -29,14 +30,15 @@ function buildFallbackNewsSummary(stock, currentPrediction) {
     };
   }
 
-  const topTitles = newsItems
-    .slice(0, 10)
-    .map((item) => item?.title)
-    .filter(Boolean);
-
-  const factsParagraph = `${companyName} recently appeared in major headlines including ${topTitles
+  const factsParagraphs = newsItems
     .slice(0, 5)
-    .join("; ")}. These stories summarize the most material recent developments around operations, market positioning, and company-specific events.`;
+    .map((item, index) => {
+      const title = item?.title || `Key development #${index + 1}`;
+      const source = item?.source ? `Source: ${item.source}. ` : "";
+      const when = item?.pubDate ? `Published ${new Date(item.pubDate).toLocaleDateString("en-US")}. ` : "";
+      return `News ${index + 1}: ${title}. ${source}${when}This was a top reported company development in the current cycle.`.trim();
+    });
+  const factsParagraph = factsParagraphs.join(" ");
 
   const expectedMove = Number(currentPrediction?.expectedMovePct);
   const direction = Number.isFinite(expectedMove)
@@ -51,6 +53,7 @@ function buildFallbackNewsSummary(stock, currentPrediction) {
   const impactParagraph = `Short-term (1-4 weeks), this news flow may create ${direction} bias with elevated volatility as investors reprice near-term expectations. Medium-term (1-3 months), follow-through depends on whether upcoming earnings and guidance confirm the narrative from these headlines. Long-term (6-12 months), sustained stock performance should track execution quality, cash-flow trends, and competitive positioning; the current model implies an approximate ${absMove}% move for the selected period, which can change as new information arrives.`;
 
   return {
+    factsParagraphs,
     factsParagraph,
     impactParagraph,
     source: "fallback",
@@ -102,6 +105,11 @@ export default function StockDetailView({
     null;
   const currentPrediction = predictions[selectedPrediction] || fallbackPrediction;
   const resolvedNewsSummary = stock.newsSummary || buildFallbackNewsSummary(stock, currentPrediction);
+  const whatHappenedParagraphs = Array.isArray(resolvedNewsSummary?.factsParagraphs)
+    ? resolvedNewsSummary.factsParagraphs.filter((text) => typeof text === "string" && text.trim())
+    : resolvedNewsSummary?.factsParagraph
+      ? [resolvedNewsSummary.factsParagraph]
+      : [];
   const markers = markerSettings?.markers ?? 10;
   const perIndicator = markerSettings?.perIndicator ?? 3;
 
@@ -370,7 +378,9 @@ export default function StockDetailView({
           <div className="news-summary-card">
             <div className="summary-paragraph">
               <h4>What Happened</h4>
-              <p>{resolvedNewsSummary.factsParagraph}</p>
+              {whatHappenedParagraphs.map((paragraph, index) => (
+                <p key={`what-happened-${index}`}>{paragraph}</p>
+              ))}
             </div>
             <div className="summary-paragraph">
               <h4>Stock Price Impact</h4>
