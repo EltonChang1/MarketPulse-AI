@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const DEFAULT_GEMINI_MODELS = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"];
+const DEFAULT_GEMINI_MODELS = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"];
 const MODEL_NOT_FOUND_PATTERN = /(not found|not supported|404)/i;
 
 let cachedGeminiClient = null;
