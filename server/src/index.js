@@ -2,7 +2,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 
-import { estimateNewsImpact, generateComprehensiveAnalysis } from "./services/analysisService.js";
+import { estimateNewsImpact, generateComprehensiveAnalysis, generateDetailedNewsSummary } from "./services/analysisService.js";
 import { fetchQuoteAndHistory } from "./services/marketService.js";
 import { fetchLatestNews } from "./services/newsService.js";
 import { predictMultipleTimeframes } from "./services/technicalService.js";
@@ -196,6 +196,13 @@ async function analyzeCompany(symbol, companyName, technicalOptions = {}) {
     technicalForecast,
     currentPrice: market.currentPrice,
   });
+  const newsSummary = await generateDetailedNewsSummary({
+    symbol,
+    companyName,
+    newsItems: news,
+    technicalForecast,
+    currentPrice: market.currentPrice,
+  });
 
   return {
     symbol,
@@ -209,6 +216,7 @@ async function analyzeCompany(symbol, companyName, technicalOptions = {}) {
     sentiment,
     technicalForecast,
     comprehensiveAnalysis,
+    newsSummary,
     candlestickData: market.candlestickData,
     news,
     updatedAt: new Date().toISOString(),

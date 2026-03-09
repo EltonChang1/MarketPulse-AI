@@ -191,7 +191,103 @@ export async function estimateNewsImpact({ symbol, companyName, newsItems, techn
   }
 }
 
-export async function generateComprehensiveAnalysis({ symbol, companyName, newsItems, technicalForecast, currentPrice }) {
+export async function generateDetailedNewsSummary({ symbol, companyName, newsItems, technicalForecast, currentPrice }) {
+  const apiKey = getGeminiApiKey();
+
+  // If no news items, return empty summary
+  if (!newsItems || newsItems.length === 0) {
+    return {
+      factsParagraph: `No recent news found for ${companyName} (${symbol}).`,
+      impactParagraph: `Without recent news developments, stock price movement will likely be driven by technical factors and broader market conditions.`,
+      source: "heuristic",
+    };
+  }
+
+  // Use heuristic if no Gemini API key
+  if (!apiKey) {
+    const headlines = newsItems.slice(0, 10).map((n) => n.title).join(" ");
+    const hasPositive = /beats|surge|growth|upgrade|record|strong|profit|partnership|innovation|buyback|expands|approval/i.test(headlines);
+    const hasNegative = /misses|decline|downgrade|lawsuit|probe|layoffs|weak|loss|delay|recall|antitrust|cut/i.test(headlines);
+
+    const sentiment = hasPositive && !hasNegative ? "positive" : hasNegative && !hasPositive ? "negative" : "mixed";
+
+    let factsParagraph = `Recent news regarding ${companyName} shows ${sentiment} developments. Key headlines include: `;
+    factsParagraph += newsItems
+      .slice(0, 5)
+      .map((n) => n.title)
+      .join("; ");
+    factsParagraph += ".";
+
+    let impactParagraph = "";
+    if (sentiment === "positive") {
+      impactParagraph = `The positive news environment may support short-term strength (1-4 weeks). Medium-term (1-3 months), sustained positive momentum could drive 5-10% gains. Long-term (6-12 months), fundamentals from positive developments could contribute to substantial moves if execution continues.`;
+    } else if (sentiment === "negative") {
+      impactParagraph = `The negative news may pressure near-term price action (1-4 weeks). Medium-term (1-3 months), the stock could see 5-15% downside if concerns deepen. Long-term (6-12 months), resolution of issues or strategic pivots would be needed to reverse negative sentiment.`;
+    } else {
+      impactParagraph = `Mixed news sentiment suggests balanced short-term (1-4 weeks) price action with key catalysts pending. Medium-term (1-3 months), continued developments will determine directional bias. Long-term (6-12 months), fundamental improvements or market shifts could provide direction.`;
+    }
+
+    return {
+      factsParagraph,
+      impactParagraph,
+      source: "heuristic",
+    };
+  }
+
+  try {
+    const topNews = newsItems.slice(0, 10).map((n) => `- ${n.title}`).join("\n");
+
+    const prompt = `You are a financial analyst. Summarize the top 10 news items for ${companyName} (${symbol}), currently trading at $${currentPrice}.
+
+Top 10 Recent News:
+${topNews}
+
+Technical Context:
+- 1-week forecast: $${technicalForecast.predictions.week.predictedPrice} (${technicalForecast.predictions.week.expectedMovePct}%)
+- 1-month forecast: $${technicalForecast.predictions.month.predictedPrice} (${technicalForecast.predictions.month.expectedMovePct}%)
+- 3-month forecast: $${technicalForecast.predictions.quarter.predictedPrice} (${technicalForecast.predictions.quarter.expectedMovePct}%)
+- 1-year forecast: $${technicalForecast.predictions.year.predictedPrice} (${technicalForecast.predictions.year.expectedMovePct}%)
+
+Generate ONLY valid JSON with NO markdown or extra text. Use these exact keys:
+{
+  "factsParagraph": "One paragraph (3-5 sentences) summarizing the factual events/announcements from recent news. Focus on what happened without speculation.",
+  "impactParagraph": "One paragraph (4-6 sentences) analyzing stock price impact broken down by timeframe: Short-term (days to 4 weeks), Medium-term (1-3 months), and Long-term (6-12 months). Include clear timelines and potential price movements."
+}`;
+
+    const content = await generateGeminiText(prompt);
+    const parsed = parseJsonMaybe(content);
+
+    if (!parsed || !parsed.factsParagraph || !parsed.impactParagraph) {
+      throw new Error("Invalid response structure");
+    }
+
+    return {
+      factsParagraph: parsed.factsParagraph,
+      impactParagraph: parsed.impactParagraph,
+      source: "gemini",
+    };
+  } catch (error) {
+    if (!geminiDisabled) {
+      console.error("Gemini API error in news summary:", error.message);
+    }
+
+    // Fallback heuristic
+    let factsParagraph = `Recent developments for ${companyName} (${symbol}): `;
+    factsParagraph += newsItems
+      .slice(0, 5)
+      .map((n) => n.title)
+      .join("; ");
+    factsParagraph += ".";
+
+    const impactParagraph = `Market sentiment and technical indicators suggest short-term (1-4 weeks) direction could be mixed. Medium-term (1-3 months) developments depend on news resolution. Long-term (6-12 months) trends align with technical forecasts showing potential moves to $${technicalForecast.predictions.year.predictedPrice}.`;
+
+    return {
+      factsParagraph,
+      impactParagraph,
+      source: "heuristic",
+    };
+  }
+}
   const apiKey = getGeminiApiKey();
 
   if (!apiKey) {

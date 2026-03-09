@@ -321,6 +321,23 @@ export default function StockDetailView({
         </div>
       </div>
 
+      {/* News Summary */}
+      {stock.newsSummary && (
+        <div className="news-summary-section">
+          <h3>AI-Powered News Summary</h3>
+          <div className="news-summary-card">
+            <div className="summary-paragraph">
+              <h4>What Happened</h4>
+              <p>{stock.newsSummary.factsParagraph}</p>
+            </div>
+            <div className="summary-paragraph">
+              <h4>Stock Price Impact</h4>
+              <p>{stock.newsSummary.impactParagraph}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Latest News */}
       <div className="news-section">
         <h3>Latest News</h3>
