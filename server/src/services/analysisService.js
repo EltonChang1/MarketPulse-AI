@@ -1,5 +1,13 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
+const DEFAULT_GEMINI_MODELS = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"];
+const MODEL_NOT_FOUND_PATTERN = /(not found|not supported|404)/i;
+
+let cachedGeminiClient = null;
+let cachedGeminiModelName = null;
+let geminiDisabled = false;
+let hasLoggedGeminiDisabled = false;
+
 const POSITIVE_WORDS = [
   "beats",
   "surge",
@@ -77,17 +85,79 @@ function parseJsonMaybe(content = "") {
   }
 }
 
+function getGeminiApiKey() {
+  return process.env.Default_Gemini_API_Key || process.env.GEMINI_API_KEY || "";
+}
+
+function getConfiguredGeminiModels() {
+  const configured = String(process.env.GEMINI_MODELS || "")
+    .split(",")
+    .map((model) => model.trim())
+    .filter(Boolean);
+
+  if (configured.length > 0) return configured;
+  return DEFAULT_GEMINI_MODELS;
+}
+
+function isModelNotFoundError(error) {
+  return MODEL_NOT_FOUND_PATTERN.test(String(error?.message || ""));
+}
+
+function logGeminiDisabledOnce(message) {
+  if (hasLoggedGeminiDisabled) return;
+  hasLoggedGeminiDisabled = true;
+  console.warn(message);
+}
+
+async function generateGeminiText(prompt) {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
+    throw new Error("Gemini API key is missing");
+  }
+
+  if (geminiDisabled) {
+    throw new Error("Gemini temporarily disabled due to incompatible model configuration");
+  }
+
+  if (!cachedGeminiClient) {
+    cachedGeminiClient = new GoogleGenerativeAI(apiKey);
+  }
+
+  const candidates = cachedGeminiModelName ? [cachedGeminiModelName] : getConfiguredGeminiModels();
+  let lastError;
+
+  for (const modelName of candidates) {
+    try {
+      const model = cachedGeminiClient.getGenerativeModel({ model: modelName });
+      const result = await model.generateContent(prompt);
+      cachedGeminiModelName = modelName;
+      return result.response.text();
+    } catch (error) {
+      lastError = error;
+      if (!isModelNotFoundError(error)) {
+        break;
+      }
+    }
+  }
+
+  if (isModelNotFoundError(lastError)) {
+    geminiDisabled = true;
+    logGeminiDisabledOnce(
+      `Gemini model unavailable for configured API version. Checked models: ${getConfiguredGeminiModels().join(", ")}. Falling back to heuristic summaries.`
+    );
+  }
+
+  throw lastError || new Error("Gemini request failed");
+}
+
 export async function estimateNewsImpact({ symbol, companyName, newsItems, technicalForecast }) {
-  const apiKey = process.env.Default_Gemini_API_Key;
+  const apiKey = getGeminiApiKey();
 
   if (!apiKey) {
     return heuristicImpact(newsItems);
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
     const prompt = JSON.stringify({
       company: companyName,
       symbol,
@@ -96,8 +166,7 @@ export async function estimateNewsImpact({ symbol, companyName, newsItems, techn
       instruction: "Analyze the news sentiment and return ONLY valid JSON with keys: impact (positive/negative/neutral), confidence (0.0-1.0), summary (one concise sentence). No markdown, no extra text.",
     });
 
-    const result = await model.generateContent(prompt);
-    const content = result.response.text();
+    const content = await generateGeminiText(prompt);
     const parsed = parseJsonMaybe(content);
 
     if (!parsed || !parsed.impact) {
@@ -115,13 +184,15 @@ export async function estimateNewsImpact({ symbol, companyName, newsItems, techn
       source: "gemini",
     };
   } catch (error) {
-    console.error("Gemini API error:", error.message);
+    if (!geminiDisabled) {
+      console.error("Gemini API error:", error.message);
+    }
     return heuristicImpact(newsItems);
   }
 }
 
 export async function generateComprehensiveAnalysis({ symbol, companyName, newsItems, technicalForecast, currentPrice }) {
-  const apiKey = process.env.Default_Gemini_API_Key;
+  const apiKey = getGeminiApiKey();
 
   if (!apiKey) {
     return {
@@ -134,9 +205,6 @@ export async function generateComprehensiveAnalysis({ symbol, companyName, newsI
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
     const prompt = `Analyze ${companyName} (${symbol}) based on:
 
 Current Price: $${currentPrice}
@@ -163,8 +231,7 @@ Provide ONLY valid JSON with these exact keys (no markdown, no extra text):
   "opportunities": ["opp1", "opp2", "opp3"]
 }`;
 
-    const result = await model.generateContent(prompt);
-    const content = result.response.text();
+    const content = await generateGeminiText(prompt);
     const parsed = parseJsonMaybe(content);
 
     if (!parsed) {
@@ -179,7 +246,9 @@ Provide ONLY valid JSON with these exact keys (no markdown, no extra text):
       source: "gemini",
     };
   } catch (error) {
-    console.error("Gemini API error:", error.message);
+    if (!geminiDisabled) {
+      console.error("Gemini API error:", error.message);
+    }
     return {
       financialSummary: `${companyName} (${symbol}) is currently trading at $${currentPrice}. Technical indicators suggest ${technicalForecast.predictions.week.direction} momentum in the short term.`,
       newsSummary: `Based on ${newsItems.length} recent news articles, sentiment appears mixed. Key developments include product launches, market movements, and industry trends.`,
@@ -187,4 +256,5 @@ Provide ONLY valid JSON with these exact keys (no markdown, no extra text):
       opportunities: ["Product innovation", "Market expansion", "Technology adoption"],
       source: "heuristic",
     };
-  }}
+  }
+}
