@@ -267,7 +267,9 @@ Fine-tune the number of pattern markers shown on the chart to match your analysi
 3. **Set up environment (optional)**
    ```bash
    cp .env.example server/.env
-   # Add your Gemini API key if you have one
+  # Optional in server/.env:
+  # Default_Gemini_API_Key=your_key_here
+  # GEMINI_MODELS=gemini-1.5-flash,gemini-1.5-pro
    ```
 
 4. **Run the application**

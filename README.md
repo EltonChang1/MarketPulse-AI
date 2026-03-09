@@ -44,7 +44,12 @@ A full-stack website that tracks the **top 10 largest US companies by market cap
    #for demonstrate
    Default_Gemini_API_Key=your_key_here
    GEMINI_PROJECT_ID=projects/YOUR_PROJECT_NUMBER
+   GEMINI_MODELS=gemini-1.5-flash,gemini-1.5-pro
    ```
+
+   Notes:
+   - `GEMINI_MODELS` is optional and allows model fallback in order (left to right).
+   - If Gemini is unavailable, the backend automatically falls back to heuristic analysis.
 
 4. Run both backend and frontend:
    ```bash
