@@ -1,14 +1,42 @@
 import axios from "axios";
 
+const RETRYABLE_STATUS_CODES = new Set([429, 500, 502, 503, 504]);
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchChartWithRetry(url, maxAttempts = 3) {
+  let lastError;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await axios.get(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0",
+          Accept: "application/json",
+        },
+        timeout: 15000,
+      });
+    } catch (error) {
+      lastError = error;
+      const status = error?.response?.status;
+      const retryable = RETRYABLE_STATUS_CODES.has(status) || !status;
+      const canRetry = retryable && attempt < maxAttempts;
+
+      if (!canRetry) break;
+
+      await sleep(300 * attempt);
+    }
+  }
+
+  throw lastError;
+}
+
 export async function fetchQuoteAndHistory(symbol) {
   const chartUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?range=2y&interval=1d`;
 
-  const chartResponse = await axios.get(chartUrl, {
-    headers: {
-      "User-Agent": "Mozilla/5.0",
-      Accept: "application/json",
-    },
-  });
+  const chartResponse = await fetchChartWithRetry(chartUrl);
 
   const result = chartResponse.data?.chart?.result?.[0];
   if (!result) {

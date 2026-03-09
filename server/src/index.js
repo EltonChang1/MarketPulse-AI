@@ -88,17 +88,40 @@ async function analyzeCompany(symbol, companyName, technicalOptions = {}) {
 app.get("/api/analyze", async (req, res) => {
   try {
     const technicalOptions = getPatternOptions(req.query);
-    const data = await Promise.all(
+    const settled = await Promise.allSettled(
       TOP_COMPANIES.map((company) => analyzeCompany(company.symbol, company.companyName, technicalOptions))
     );
 
-    res.json({
+    const data = settled
+      .filter((result) => result.status === "fulfilled")
+      .map((result) => result.value);
+
+    const failures = settled
+      .map((result, index) => ({ result, company: TOP_COMPANIES[index] }))
+      .filter(({ result }) => result.status === "rejected")
+      .map(({ result, company }) => ({
+        symbol: company.symbol,
+        companyName: company.companyName,
+        error: result.reason?.message || "Unknown error",
+      }));
+
+    if (data.length === 0) {
+      return res.status(503).json({
+        message: "All stock analyses failed",
+        error: "Upstream market data provider unavailable",
+        failures,
+      });
+    }
+
+    return res.json({
       generatedAt: new Date().toISOString(),
       count: data.length,
       data,
+      partialFailure: failures.length > 0,
+      failures,
     });
   } catch (error) {
-    res.status(500).json({ message: "Failed to analyze stocks", error: error.message });
+    return res.status(500).json({ message: "Failed to analyze stocks", error: error.message });
   }
 });
 
