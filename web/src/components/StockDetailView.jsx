@@ -1,5 +1,4 @@
-import { useState } from "react";
-import CandlestickChart from "./CandlestickChart";
+import TradingViewChart from "./TradingViewChart";
 
 function formatCurrency(value) {
   if (typeof value !== "number" || Number.isNaN(value)) return "-";
@@ -16,111 +15,17 @@ function formatPercent(value) {
   return `${sign}${value.toFixed(2)}%`;
 }
 
-function buildFallbackNewsSummary(stock, currentPrediction) {
-  const newsItems = Array.isArray(stock?.news) ? stock.news : [];
-  const companyName = stock?.companyName || stock?.symbol || "This company";
-  const FACTS_MIN_SENTENCES = 8;
-  const countSentences = (text = "") =>
-    text
-      .split(/(?<=[.!?])\s+/)
-      .map((part) => part.trim())
-      .filter(Boolean).length;
-  const ensureMinSentences = (text = "", minSentences = 4, fillerSentences = []) => {
-    let result = String(text || "").trim();
-    let idx = 0;
-    while (countSentences(result) < minSentences && idx < fillerSentences.length) {
-      result = `${result} ${fillerSentences[idx]}`.trim();
-      idx += 1;
-    }
-    while (countSentences(result) < minSentences) {
-      result = `${result} This update remains part of the tracked company news narrative.`.trim();
-    }
-    return result;
-  };
-
-  if (newsItems.length === 0) {
-    return {
-      factsParagraphs: [`No recent news headlines are available for ${companyName} right now.`],
-      factsParagraph: `No recent news headlines are available for ${companyName} right now.`,
-      impactParagraph:
-        "Short-term (1-4 weeks), price action will likely be driven by technical momentum and broader market conditions. Medium-term (1-3 months), new catalysts such as earnings, guidance, and macro data should determine direction. Long-term (6-12 months), fundamentals and execution will have the largest impact on valuation.",
-      source: "fallback",
-    };
-  }
-
-  const factsParagraphs = newsItems
-    .slice(0, 5)
-    .map((item, index) => {
-      const title = item?.title || `Key development #${index + 1}`;
-      const source = item?.source || "Google News";
-      const when = item?.pubDate ? new Date(item.pubDate).toLocaleDateString("en-US") : "recently";
-      const snippet = String(item?.contentSnippet || item?.description || "")
-        .replace(/\s+/g, " ")
-        .trim();
-      const fullText = String(item?.articleContent || "")
-        .replace(/\s+/g, " ")
-        .trim();
-      const summaryText = fullText || snippet;
-      const base = summaryText
-        ? `News ${index + 1} reports that ${title}. The article explains that ${summaryText}. The report is attributed to ${source} and was published ${when}. This development is currently one of the most relevant company-specific updates being tracked.`
-        : `News ${index + 1} reports that ${title}. The report is attributed to ${source} and was published ${when}. This development is currently one of the most relevant company-specific updates being tracked. Additional in-feed content is limited, but this event remains part of the top-five summary.`;
-
-      return ensureMinSentences(base, FACTS_MIN_SENTENCES, [
-        `This update contributes to the current information set around ${companyName}.`,
-        `The report is considered alongside other company events and disclosures.`,
-        `Analysts typically evaluate this development against guidance and execution progress.`,
-        `The summary focuses on factual details from currently available reporting.`,
-        `This item remains relevant to near-term sentiment and medium-term expectations.`,
-      ]);
-    });
-  const factsParagraph = factsParagraphs.join(" ");
-
-  const expectedMove = Number(currentPrediction?.expectedMovePct);
-  const direction = Number.isFinite(expectedMove)
-    ? expectedMove > 0
-      ? "upside"
-      : expectedMove < 0
-        ? "downside"
-        : "sideways"
-    : "sideways";
-  const absMove = Number.isFinite(expectedMove) ? Math.abs(expectedMove).toFixed(2) : "0.00";
-
-  const impactParagraph = `Short-term (1-4 weeks), this news flow may create ${direction} bias with elevated volatility as investors reprice near-term expectations. Medium-term (1-3 months), follow-through depends on whether upcoming earnings and guidance confirm the narrative from these headlines. Long-term (6-12 months), sustained stock performance should track execution quality, cash-flow trends, and competitive positioning; the current model implies an approximate ${absMove}% move for the selected period, which can change as new information arrives.`;
-
-  return {
-    factsParagraphs,
-    factsParagraph,
-    impactParagraph,
-    source: "fallback",
-  };
-}
-
 export default function StockDetailView({
   stock,
   onBack,
   selectedPrediction,
   onSelectedPredictionChange,
-  markerSettings,
-  onMarkerSettingsChange,
 }) {
-  const [visibleIndicators, setVisibleIndicators] = useState({
-    sma5: true,
-    sma20: true,
-    sma50: true,
-    trendLine: true,
-    supportLine: true,
-    resistanceLine: true,
-    predictionMarker: true,
-    patternMarkers: true,
-  });
-
   if (!stock) return null;
 
   const predictions = stock.technicalForecast?.predictions || {};
   const indicators = stock.technicalForecast?.indicators || {};
-  const indicatorSeries = stock.technicalForecast?.indicatorSeries || {};
   const patternMatches = stock.technicalForecast?.patternMatches || [];
-  const predictionBasis = stock.technicalForecast?.predictionBasis || {};
   const analysis = stock.comprehensiveAnalysis || {};
 
   const predictionButtons = [
@@ -138,31 +43,8 @@ export default function StockDetailView({
     predictions.halfYear ||
     predictions.year ||
     null;
+
   const currentPrediction = predictions[selectedPrediction] || fallbackPrediction;
-  const resolvedNewsSummary = stock.newsSummary || buildFallbackNewsSummary(stock, currentPrediction);
-  const whatHappenedParagraphs = Array.isArray(resolvedNewsSummary?.factsParagraphs)
-    ? resolvedNewsSummary.factsParagraphs.filter((text) => typeof text === "string" && text.trim())
-    : resolvedNewsSummary?.factsParagraph
-      ? [resolvedNewsSummary.factsParagraph]
-      : [];
-  const markers = markerSettings?.markers ?? 10;
-  const perIndicator = markerSettings?.perIndicator ?? 3;
-
-  const updateMarkerSetting = (key, value) => {
-    if (!onMarkerSettingsChange) return;
-    onMarkerSettingsChange({
-      markers,
-      perIndicator,
-      [key]: Number(value),
-    });
-  };
-
-  const toggleIndicator = (key) => {
-    setVisibleIndicators((previous) => ({
-      ...previous,
-      [key]: !previous[key],
-    }));
-  };
 
   return (
     <div className="detail-view">
@@ -184,7 +66,6 @@ export default function StockDetailView({
         </div>
       </div>
 
-      {/* Prediction Period Selector */}
       <div className="prediction-selector">
         <h3>Select Prediction Period:</h3>
         <div className="prediction-buttons">
@@ -208,7 +89,6 @@ export default function StockDetailView({
         </div>
       </div>
 
-      {/* Current Prediction Summary */}
       {currentPrediction && (
         <div className="prediction-summary">
           <h3>{currentPrediction.period} Forecast</h3>
@@ -226,7 +106,11 @@ export default function StockDetailView({
             <div className="forecast-item">
               <span className="label">Direction</span>
               <span className={`value ${currentPrediction.direction}`}>
-                {currentPrediction.direction === "up" ? "↑ Bullish" : currentPrediction.direction === "down" ? "↓ Bearish" : "→ Neutral"}
+                {currentPrediction.direction === "up"
+                  ? "↑ Bullish"
+                  : currentPrediction.direction === "down"
+                    ? "↓ Bearish"
+                    : "→ Neutral"}
               </span>
             </div>
             <div className="forecast-item">
@@ -237,73 +121,9 @@ export default function StockDetailView({
         </div>
       )}
 
-      {/* Candlestick Chart */}
       <div className="chart-section">
-        <h3>Price Chart with Technical Indicators</h3>
-        <div className="marker-controls">
-          <div className="marker-control">
-            <label htmlFor="markers-total">Markers</label>
-            <select
-              id="markers-total"
-              value={markers}
-              onChange={(event) => updateMarkerSetting("markers", event.target.value)}
-            >
-              {[8, 10, 12, 15, 20].map((option) => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
-          </div>
-          <div className="marker-control">
-            <label htmlFor="markers-per-indicator">Per Indicator</label>
-            <select
-              id="markers-per-indicator"
-              value={perIndicator}
-              onChange={(event) => updateMarkerSetting("perIndicator", event.target.value)}
-            >
-              {[2, 3, 4, 5].map((option) => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div className="indicator-toggle-grid">
-          {[
-            { key: "sma5", label: "SMA 5" },
-            { key: "sma20", label: "SMA 20" },
-            { key: "sma50", label: "SMA 50" },
-            { key: "trendLine", label: "Trend Line" },
-            { key: "supportLine", label: "Support" },
-            { key: "resistanceLine", label: "Resistance" },
-            { key: "predictionMarker", label: "Prediction Marker" },
-            { key: "patternMarkers", label: "Pattern Markers" },
-          ].map((item) => (
-            <label key={item.key} className="indicator-toggle-item">
-              <input
-                type="checkbox"
-                checked={Boolean(visibleIndicators[item.key])}
-                onChange={() => toggleIndicator(item.key)}
-              />
-              <span>{item.label}</span>
-            </label>
-          ))}
-        </div>
-        <div className="chart-legend">
-          {visibleIndicators.sma5 ? <span className="legend-item sma5">— SMA 5</span> : null}
-          {visibleIndicators.sma20 ? <span className="legend-item sma20">— SMA 20</span> : null}
-          {visibleIndicators.sma50 ? <span className="legend-item sma50">— SMA 50</span> : null}
-          {visibleIndicators.trendLine ? <span className="legend-item trend">— Trend Line</span> : null}
-          {visibleIndicators.supportLine ? <span className="legend-item support">— Support</span> : null}
-          {visibleIndicators.resistanceLine ? <span className="legend-item resistance">— Resistance</span> : null}
-        </div>
-        <CandlestickChart
-          data={stock.candlestickData || []}
-          indicators={indicatorSeries}
-          selectedPeriod={currentPrediction}
-          currentPrice={stock.currentPrice}
-          patternMatches={patternMatches}
-          predictionBasis={predictionBasis}
-          visibleIndicators={visibleIndicators}
-        />
+        <h3>TradingView Chart</h3>
+        <TradingViewChart symbol={stock.symbol} />
       </div>
 
       {patternMatches.length > 0 && (
@@ -312,7 +132,8 @@ export default function StockDetailView({
           <div className="news-list">
             {patternMatches.map((match, idx) => (
               <div key={`${match.indicator}-${idx}`} className="news-item">
-                <strong>{match.indicator}: </strong>{match.label}
+                <strong>{match.indicator}: </strong>
+                {match.label}
                 <span className="news-date">{match.detail}</span>
               </div>
             ))}
@@ -320,7 +141,6 @@ export default function StockDetailView({
         </div>
       )}
 
-      {/* Technical Indicators */}
       <div className="indicators-section">
         <h3>Technical Indicators</h3>
         <div className="indicators-grid">
@@ -368,7 +188,6 @@ export default function StockDetailView({
         </div>
       </div>
 
-      {/* Comprehensive Analysis */}
       <div className="analysis-section">
         <h3>Comprehensive Analysis</h3>
         <div className="analysis-grid">
@@ -406,26 +225,6 @@ export default function StockDetailView({
         </div>
       </div>
 
-      {/* News Summary */}
-      {resolvedNewsSummary && (
-        <div className="news-summary-section">
-          <h3>AI-Powered News Summary</h3>
-          <div className="news-summary-card">
-            <div className="summary-paragraph">
-              <h4>What Happened</h4>
-              {whatHappenedParagraphs.map((paragraph, index) => (
-                <p key={`what-happened-${index}`}>{paragraph}</p>
-              ))}
-            </div>
-            <div className="summary-paragraph">
-              <h4>Stock Price Impact</h4>
-              <p>{resolvedNewsSummary.impactParagraph}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Latest News */}
       <div className="news-section">
         <h3>Latest News</h3>
         <div className="news-list">
@@ -434,9 +233,7 @@ export default function StockDetailView({
               <a href={item.link} target="_blank" rel="noreferrer">
                 {item.title}
               </a>
-              <span className="news-date">
-                {item.pubDate ? new Date(item.pubDate).toLocaleString() : ""}
-              </span>
+              <span className="news-date">{item.pubDate ? new Date(item.pubDate).toLocaleString() : ""}</span>
             </div>
           ))}
         </div>
