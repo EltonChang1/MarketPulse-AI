@@ -1,4 +1,4 @@
-import AdvancedChart from "./AdvancedChart";
+import TradingViewChart from "./TradingViewChart";
 
 function formatCurrency(value) {
   if (typeof value !== "number" || Number.isNaN(value)) return "-";
@@ -122,14 +122,8 @@ export default function StockDetailView({
       )}
 
       <div className="chart-section">
-        <h3>Advanced Technical Chart</h3>
-        <AdvancedChart
-          data={stock.candlestickData || []}
-          indicators={stock.technicalForecast?.indicatorSeries || {}}
-          selectedPeriod={currentPrediction}
-          currentPrice={stock.currentPrice}
-          patternMatches={patternMatches}
-        />
+        <h3>TradingView Chart</h3>
+        <TradingViewChart symbol={stock.symbol} />
       </div>
 
       {patternMatches.length > 0 && (
