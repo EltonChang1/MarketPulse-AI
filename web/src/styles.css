@@ -839,14 +839,29 @@ footer {
 .indicator-container {
   width: 100%;
   background: #fff;
+  position: relative;
 }
 
 .chart-container {
+  height: 400px;
   border-bottom: 1px solid #eaecf0;
 }
 
 .volume-container {
+  height: 120px;
   border-bottom: 1px solid #eaecf0;
+}
+
+.indicator-container {
+  height: 150px;
+}
+
+.chart-container canvas,
+.volume-container canvas,
+.indicator-container canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .chart-footer {

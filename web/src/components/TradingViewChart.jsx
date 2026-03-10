@@ -1,12 +1,44 @@
 import { useEffect, useRef, useState } from "react";
-import { createChart } from "lightweight-charts";
+import {
+  Chart,
+  CategoryScale,
+  LinearScale,
+  TimeScale,
+  Tooltip,
+  Legend,
+  BarController,
+  BarElement,
+  LineController,
+  LineElement,
+  PointElement,
+} from "chart.js";
+import { CandlestickController, CandlestickElement, OhlcController, OhlcElement } from "chartjs-chart-financial";
+import "chartjs-adapter-date-fns";
+
+// Register Chart.js components
+Chart.register(
+  CategoryScale,
+  LinearScale,
+  TimeScale,
+  Tooltip,
+  Legend,
+  BarController,
+  BarElement,
+  LineController,
+  LineElement,
+  PointElement,
+  CandlestickController,
+  CandlestickElement,
+  OhlcController,
+  OhlcElement
+);
 
 // Technical indicator calculations
 function calculateSMA(data, period) {
   const sma = [];
   for (let i = period - 1; i < data.length; i++) {
-    const sum = data.slice(i - period + 1, i + 1).reduce((a, b) => a + b.close, 0);
-    sma.push({ time: data[i].time, value: sum / period });
+    const sum = data.slice(i - period + 1, i + 1).reduce((a, b) => a + b.c, 0);
+    sma.push(sum / period);
   }
   return sma;
 }
@@ -14,11 +46,12 @@ function calculateSMA(data, period) {
 function calculateEMA(data, period) {
   const ema = [];
   const multiplier = 2 / (period + 1);
-  let prevEMA = data.slice(0, period).reduce((a, b) => a + b.close, 0) / period;
+  let prevEMA = data.slice(0, period).reduce((a, b) => a + b.c, 0) / period;
+  ema.push(prevEMA);
   
   for (let i = period; i < data.length; i++) {
-    const currentEMA = (data[i].close - prevEMA) * multiplier + prevEMA;
-    ema.push({ time: data[i].time, value: currentEMA });
+    const currentEMA = (data[i].c - prevEMA) * multiplier + prevEMA;
+    ema.push(currentEMA);
     prevEMA = currentEMA;
   }
   return ema;
@@ -29,7 +62,7 @@ function calculateRSI(data, period = 14) {
   let gains = 0, losses = 0;
 
   for (let i = 1; i <= period; i++) {
-    const change = data[i].close - data[i - 1].close;
+    const change = data[i].c - data[i - 1].c;
     if (change > 0) gains += change;
     else losses -= change;
   }
@@ -38,7 +71,7 @@ function calculateRSI(data, period = 14) {
   let avgLoss = losses / period;
 
   for (let i = period; i < data.length; i++) {
-    const change = data[i].close - data[i - 1].close;
+    const change = data[i].c - data[i - 1].c;
     const gain = change > 0 ? change : 0;
     const loss = change < 0 ? -change : 0;
 
@@ -47,7 +80,7 @@ function calculateRSI(data, period = 14) {
 
     const rs = avgGain / (avgLoss || 1);
     const rsiValue = 100 - (100 / (1 + rs));
-    rsi.push({ time: data[i].time, value: rsiValue });
+    rsi.push(rsiValue);
   }
   return rsi;
 }
@@ -57,26 +90,19 @@ function calculateMACD(data) {
   const ema26 = calculateEMA(data, 26);
   const macdLine = [];
 
-  const startIndex = Math.max(0, ema26.length - ema12.length);
-  for (let i = 0; i < ema12.length && i + startIndex < ema26.length; i++) {
-    macdLine.push({
-      time: ema12[i].time,
-      value: ema12[i].value - ema26[i + startIndex].value,
-    });
+  const startIndex = ema26.length - ema12.length;
+  for (let i = 0; i < ema12.length; i++) {
+    if (i + startIndex < ema26.length) {
+      macdLine.push(ema12[i] - ema26[i + startIndex]);
+    }
   }
 
-  const macdData = macdLine.map((m, i) => ({ close: m.value, time: m.time }));
+  const macdData = macdLine.map(m => ({ c: m }));
   const signal = calculateEMA(macdData, 9);
   const histogram = [];
 
   for (let i = 0; i < signal.length; i++) {
-    const macdIndex = macdLine.findIndex(m => m.time === signal[i].time);
-    if (macdIndex !== -1) {
-      histogram.push({
-        time: signal[i].time,
-        value: macdLine[macdIndex].value - signal[i].value,
-      });
-    }
+    histogram.push(macdLine[i] - signal[i]);
   }
 
   return { macd: macdLine, signal, histogram };
@@ -88,13 +114,13 @@ function calculateBollingerBands(data, period = 20, stdDev = 2) {
 
   for (let i = 0; i < sma.length; i++) {
     const dataSlice = data.slice(i, i + period);
-    const mean = sma[i].value;
-    const variance = dataSlice.reduce((sum, d) => sum + Math.pow(d.close - mean, 2), 0) / period;
+    const mean = sma[i];
+    const variance = dataSlice.reduce((sum, d) => sum + Math.pow(d.c - mean, 2), 0) / period;
     const std = Math.sqrt(variance);
 
-    bands.middle.push(sma[i]);
-    bands.upper.push({ time: sma[i].time, value: mean + stdDev * std });
-    bands.lower.push({ time: sma[i].time, value: mean - stdDev * std });
+    bands.middle.push(mean);
+    bands.upper.push(mean + stdDev * std);
+    bands.lower.push(mean - stdDev * std);
   }
 
   return bands;
@@ -103,21 +129,21 @@ function calculateBollingerBands(data, period = 20, stdDev = 2) {
 // Generate mock historical data
 function generateMockData(symbol, interval, count) {
   const data = [];
-  const now = Math.floor(Date.now() / 1000);
-  let intervalSeconds = 86400; // 1 day default
+  const now = Date.now();
+  let intervalMs = 86400000; // 1 day default
   
-  if (interval === '1') intervalSeconds = 60;
-  else if (interval === '5') intervalSeconds = 300;
-  else if (interval === '15') intervalSeconds = 900;
-  else if (interval === '60') intervalSeconds = 3600;
-  else if (interval === '240') intervalSeconds = 14400;
-  else if (interval === 'D') intervalSeconds = 86400;
-  else if (interval === 'W') intervalSeconds = 604800;
+  if (interval === '1') intervalMs = 60000;
+  else if (interval === '5') intervalMs = 300000;
+  else if (interval === '15') intervalMs = 900000;
+  else if (interval === '60') intervalMs = 3600000;
+  else if (interval === '240') intervalMs = 14400000;
+  else if (interval === 'D') intervalMs = 86400000;
+  else if (interval === 'W') intervalMs = 604800000;
 
   let basePrice = 150 + Math.random() * 50;
   
   for (let i = count - 1; i >= 0; i--) {
-    const time = now - (i * intervalSeconds);
+    const time = now - (i * intervalMs);
     const volatility = basePrice * 0.02;
     const open = basePrice + (Math.random() - 0.5) * volatility;
     const close = open + (Math.random() - 0.5) * volatility;
@@ -126,11 +152,11 @@ function generateMockData(symbol, interval, count) {
     const volume = Math.floor(1000000 + Math.random() * 5000000);
 
     data.push({
-      time: time,
-      open: parseFloat(open.toFixed(2)),
-      high: parseFloat(high.toFixed(2)),
-      low: parseFloat(low.toFixed(2)),
-      close: parseFloat(close.toFixed(2)),
+      x: time,
+      o: parseFloat(open.toFixed(2)),
+      h: parseFloat(high.toFixed(2)),
+      l: parseFloat(low.toFixed(2)),
+      c: parseFloat(close.toFixed(2)),
       volume,
     });
 
@@ -140,13 +166,14 @@ function generateMockData(symbol, interval, count) {
   return data;
 }
 
+
 export default function TradingViewChart({ symbol }) {
-  const chartContainerRef = useRef(null);
-  const volumeContainerRef = useRef(null);
-  const indicatorContainerRef = useRef(null);
-  const chartRef = useRef(null);
+  const mainChartRef = useRef(null);
   const volumeChartRef = useRef(null);
   const indicatorChartRef = useRef(null);
+  const mainChartInstance = useRef(null);
+  const volumeChartInstance = useRef(null);
+  const indicatorChartInstance = useRef(null);
 
   const [interval, setInterval] = useState('D');
   const [indicators, setIndicators] = useState({
@@ -159,249 +186,360 @@ export default function TradingViewChart({ symbol }) {
   const [drawingMode, setDrawingMode] = useState(null);
 
   useEffect(() => {
-    if (!chartContainerRef.current) return;
-
-    // Clean up existing charts
-    if (chartRef.current) chartRef.current.remove();
-    if (volumeChartRef.current) volumeChartRef.current.remove();
-    if (indicatorChartRef.current) indicatorChartRef.current.remove();
+    if (!mainChartRef.current) return;
 
     // Generate data
     const dataCount = interval === '1' ? 200 : interval === '5' ? 300 : 500;
-    const data = generateMockData(symbol, interval, dataCount);
+    const rawData = generateMockData(symbol, interval, dataCount);
+
+    // Destroy existing charts
+    if (mainChartInstance.current) {
+      mainChartInstance.current.destroy();
+      mainChartInstance.current = null;
+    }
+    if (volumeChartInstance.current) {
+      volumeChartInstance.current.destroy();
+      volumeChartInstance.current = null;
+    }
+    if (indicatorChartInstance.current) {
+      indicatorChartInstance.current.destroy();
+      indicatorChartInstance.current = null;
+    }
+
+    // Prepare datasets for main chart
+    const datasets = [{
+      label: symbol,
+      data: rawData,
+      type: 'candlestick',
+      borderColor: {
+        up: '#26a69a',
+        down: '#ef5350',
+        unchanged: '#999',
+      },
+      backgroundColor: {
+        up: '#26a69a',
+        down: '#ef5350',
+        unchanged: '#999',
+      },
+    }];
+
+    // Add SMA indicators
+    if (indicators.sma) {
+      const sma20 = calculateSMA(rawData, 20);
+      const sma50 = calculateSMA(rawData, 50);
+      
+      datasets.push({
+        label: 'SMA 20',
+        data: sma20.map((val, idx) => ({ x: rawData[idx + 19].x, y: val })),
+        type: 'line',
+        borderColor: '#2962FF',
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0.1,
+      });
+      
+      datasets.push({
+        label: 'SMA 50',
+        data: sma50.map((val, idx) => ({ x: rawData[idx + 49].x, y: val })),
+        type: 'line',
+        borderColor: '#FF6D00',
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0.1,
+      });
+    }
+
+    // Add EMA indicators
+    if (indicators.ema) {
+      const ema12 = calculateEMA(rawData, 12);
+      const ema26 = calculateEMA(rawData, 26);
+      
+      datasets.push({
+        label: 'EMA 12',
+        data: ema12.map((val, idx) => ({ x: rawData[idx + 12].x, y: val })),
+        type: 'line',
+        borderColor: '#7B1FA2',
+        backgroundColor: 'transparent',
+        borderWidth: 1,
+        pointRadius: 0,
+        borderDash: [5, 5],
+        tension: 0.1,
+      });
+      
+      datasets.push({
+        label: 'EMA 26',
+        data: ema26.map((val, idx) => ({ x: rawData[idx + 26].x, y: val })),
+        type: 'line',
+        borderColor: '#E91E63',
+        backgroundColor: 'transparent',
+        borderWidth: 1,
+        pointRadius: 0,
+        borderDash: [5, 5],
+        tension: 0.1,
+      });
+    }
+
+    // Add Bollinger Bands
+    if (indicators.bb) {
+      const bb = calculateBollingerBands(rawData, 20);
+      
+      datasets.push({
+        label: 'BB Upper',
+        data: bb.upper.map((val, idx) => ({ x: rawData[idx + 19].x, y: val })),
+        type: 'line',
+        borderColor: '#9C27B0',
+        backgroundColor: 'transparent',
+        borderWidth: 1,
+        pointRadius: 0,
+        borderDash: [2, 2],
+        tension: 0.1,
+      });
+      
+      datasets.push({
+        label: 'BB Middle',
+        data: bb.middle.map((val, idx) => ({ x: rawData[idx + 19].x, y: val })),
+        type: 'line',
+        borderColor: '#9C27B0',
+        backgroundColor: 'transparent',
+        borderWidth: 1,
+        pointRadius: 0,
+        tension: 0.1,
+      });
+      
+      datasets.push({
+        label: 'BB Lower',
+        data: bb.lower.map((val, idx) => ({ x: rawData[idx + 19].x, y: val })),
+        type: 'line',
+        borderColor: '#9C27B0',
+        backgroundColor: 'transparent',
+        borderWidth: 1,
+        pointRadius: 0,
+        borderDash: [2, 2],
+        tension: 0.1,
+      });
+    }
 
     // Create main price chart
-    const chart = createChart(chartContainerRef.current, {
-      width: chartContainerRef.current.clientWidth,
-      height: 400,
-      layout: {
-        background: { color: '#ffffff' },
-        textColor: '#333',
-      },
-      grid: {
-        vertLines: { color: '#f0f0f0' },
-        horzLines: { color: '#f0f0f0' },
-      },
-      crosshair: { mode: 1 },
-      rightPriceScale: { borderColor: '#d1d4dc' },
-      timeScale: {
-        borderColor: '#d1d4dc',
-        timeVisible: true,
-        secondsVisible: false,
+    mainChartInstance.current = new Chart(mainChartRef.current, {
+      type: 'candlestick',
+      data: { datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false,
+        },
+        scales: {
+          x: {
+            type: 'time',
+            time: {
+              unit: interval === '1' || interval === '5' ? 'minute' : interval === '15' || interval === '60' ? 'hour' : 'day',
+            },
+            grid: { color: '#f0f0f0' },
+          },
+          y: {
+            position: 'right',
+            grid: { color: '#f0f0f0' },
+          },
+        },
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            labels: { boxWidth: 15, padding: 10, font: { size: 11 } },
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+          },
+        },
       },
     });
-    chartRef.current = chart;
-
-    // Add candlestick series
-    const candlestickSeries = chart.addCandlestickSeries({
-      upColor: '#26a69a',
-      downColor: '#ef5350',
-      borderVisible: false,
-      wickUpColor: '#26a69a',
-      wickDownColor: '#ef5350',
-    });
-    candlestickSeries.setData(data);
-
-    // Add indicators
-    if (indicators.sma) {
-      const sma20 = calculateSMA(data, 20);
-      const sma50 = calculateSMA(data, 50);
-      const sma20Series = chart.addLineSeries({
-        color: '#2962FF',
-        lineWidth: 2,
-        title: 'SMA 20',
-      });
-      const sma50Series = chart.addLineSeries({
-        color: '#FF6D00',
-        lineWidth: 2,
-        title: 'SMA 50',
-      });
-      sma20Series.setData(sma20);
-      sma50Series.setData(sma50);
-    }
-
-    if (indicators.ema) {
-      const ema12 = calculateEMA(data, 12);
-      const ema26 = calculateEMA(data, 26);
-      const ema12Series = chart.addLineSeries({
-        color: '#7B1FA2',
-        lineWidth: 1,
-        title: 'EMA 12',
-      });
-      const ema26Series = chart.addLineSeries({
-        color: '#E91E63',
-        lineWidth: 1,
-        title: 'EMA 26',
-      });
-      ema12Series.setData(ema12);
-      ema26Series.setData(ema26);
-    }
-
-    if (indicators.bb) {
-      const bb = calculateBollingerBands(data);
-      const upperSeries = chart.addLineSeries({
-        color: '#9C27B0',
-        lineWidth: 1,
-        lineStyle: 2,
-        title: 'BB Upper',
-      });
-      const middleSeries = chart.addLineSeries({
-        color: '#9C27B0',
-        lineWidth: 1,
-        title: 'BB Middle',
-      });
-      const lowerSeries = chart.addLineSeries({
-        color: '#9C27B0',
-        lineWidth: 1,
-        lineStyle: 2,
-        title: 'BB Lower',
-      });
-      upperSeries.setData(bb.upper);
-      middleSeries.setData(bb.middle);
-      lowerSeries.setData(bb.lower);
-    }
 
     // Create volume chart
-    if (volumeContainerRef.current) {
-      const volumeChart = createChart(volumeContainerRef.current, {
-        width: volumeContainerRef.current.clientWidth,
-        height: 120,
-        layout: {
-          background: { color: '#ffffff' },
-          textColor: '#333',
-        },
-        grid: {
-          vertLines: { color: '#f0f0f0' },
-          horzLines: { color: '#f0f0f0' },
-        },
-        rightPriceScale: { borderColor: '#d1d4dc' },
-        timeScale: {
-          borderColor: '#d1d4dc',
-          visible: false,
-        },
-      });
-      volumeChartRef.current = volumeChart;
-
-      const volumeSeries = volumeChart.addHistogramSeries({
-        color: '#26a69a',
-        priceFormat: {
-          type: 'volume',
-        },
-      });
-      const volumeData = data.map(d => ({
-        time: d.time,
-        value: d.volume,
-        color: d.close >= d.open ? '#26a69a80' : '#ef535080',
+    if (volumeChartRef.current) {
+      const volumeData = rawData.map(d => ({
+        x: d.x,
+        y: d.volume,
       }));
-      volumeSeries.setData(volumeData);
 
-      // Sync time scales
-      chart.timeScale().subscribeVisibleTimeRangeChange((timeRange) => {
-        volumeChart.timeScale().setVisibleRange(timeRange);
+      const volumeColors = rawData.map(d => d.c >= d.o ? '#26a69a80' : '#ef535080');
+
+      volumeChartInstance.current = new Chart(volumeChartRef.current, {
+        type: 'bar',
+        data: {
+          datasets: [{
+            label: 'Volume',
+            data: volumeData,
+            backgroundColor: volumeColors,
+            borderWidth: 0,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              type: 'time',
+              time: {
+                unit: interval === '1' || interval === '5' ? 'minute' : interval === '15' || interval === '60' ? 'hour' : 'day',
+              },
+              grid: { color: '#f0f0f0' },
+              display: false,
+            },
+            y: {
+              position: 'right',
+              grid: { color: '#f0f0f0' },
+            },
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+            },
+          },
+        },
       });
     }
 
     // Create indicator chart (RSI/MACD)
-    if (indicatorContainerRef.current && (indicators.rsi || indicators.macd)) {
-      const indicatorChart = createChart(indicatorContainerRef.current, {
-        width: indicatorContainerRef.current.clientWidth,
-        height: 150,
-        layout: {
-          background: { color: '#ffffff' },
-          textColor: '#333',
-        },
-        grid: {
-          vertLines: { color: '#f0f0f0' },
-          horzLines: { color: '#f0f0f0' },
-        },
-        rightPriceScale: { borderColor: '#d1d4dc' },
-        timeScale: {
-          borderColor: '#d1d4dc',
-          visible: false,
-        },
-      });
-      indicatorChartRef.current = indicatorChart;
+    if (indicatorChartRef.current && (indicators.rsi || indicators.macd)) {
+      const indicatorDatasets = [];
 
       if (indicators.rsi) {
-        const rsi = calculateRSI(data);
-        const rsiSeries = indicatorChart.addLineSeries({
-          color: '#2962FF',
-          lineWidth: 2,
-          title: 'RSI',
+        const rsi = calculateRSI(rawData);
+        
+        indicatorDatasets.push({
+          label: 'RSI',
+          data: rsi.map((val, idx) => ({ x: rawData[idx + 14].x, y: val })),
+          type: 'line',
+          borderColor: '#2962FF',
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          pointRadius: 0,
+          yAxisID: 'y',
+          tension: 0.1,
         });
-        rsiSeries.setData(rsi);
 
-        // Add RSI reference lines
-        const rsiUpper = indicatorChart.addLineSeries({
-          color: '#ff000040',
-          lineWidth: 1,
-          lineStyle: 2,
+        // RSI reference lines
+        indicatorDatasets.push({
+          label: 'Overbought',
+          data: rawData.slice(14).map(d => ({ x: d.x, y: 70 })),
+          type: 'line',
+          borderColor: '#ff000040',
+          backgroundColor: 'transparent',
+          borderWidth: 1,
+          pointRadius: 0,
+          borderDash: [5, 5],
+          yAxisID: 'y',
         });
-        const rsiLower = indicatorChart.addLineSeries({
-          color: '#00ff0040',
-          lineWidth: 1,
-          lineStyle: 2,
+
+        indicatorDatasets.push({
+          label: 'Oversold',
+          data: rawData.slice(14).map(d => ({ x: d.x, y: 30 })),
+          type: 'line',
+          borderColor: '#00ff0040',
+          backgroundColor: 'transparent',
+          borderWidth: 1,
+          pointRadius: 0,
+          borderDash: [5, 5],
+          yAxisID: 'y',
         });
-        rsiUpper.setData(rsi.map(r => ({ time: r.time, value: 70 })));
-        rsiLower.setData(rsi.map(r => ({ time: r.time, value: 30 })));
       }
 
       if (indicators.macd) {
-        const macd = calculateMACD(data);
-        const macdSeries = indicatorChart.addLineSeries({
-          color: '#2962FF',
-          lineWidth: 2,
-          title: 'MACD',
-        });
-        const signalSeries = indicatorChart.addLineSeries({
-          color: '#FF6D00',
-          lineWidth: 1,
-          title: 'Signal',
-        });
-        const histogramSeries = indicatorChart.addHistogramSeries({
-          color: '#26a69a',
+        const macd = calculateMACD(rawData);
+        const macdOffset = rawData.length - macd.macd.length;
+        
+        indicatorDatasets.push({
+          label: 'MACD',
+          data: macd.macd.map((val, idx) => ({ x: rawData[idx + macdOffset].x, y: val })),
+          type: 'line',
+          borderColor: '#2962FF',
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          pointRadius: 0,
+          yAxisID: indicators.rsi ? 'y1' : 'y',
+          tension: 0.1,
         });
 
-        macdSeries.setData(macd.macd);
-        signalSeries.setData(macd.signal);
-        histogramSeries.setData(macd.histogram.map(h => ({
-          ...h,
-          color: h.value >= 0 ? '#26a69a' : '#ef5350',
-        })));
+        const signalOffset = rawData.length - macd.signal.length;
+        indicatorDatasets.push({
+          label: 'Signal',
+          data: macd.signal.map((val, idx) => ({ x: rawData[idx + signalOffset].x, y: val })),
+          type: 'line',
+          borderColor: '#FF6D00',
+          backgroundColor: 'transparent',
+          borderWidth: 1,
+          pointRadius: 0,
+          yAxisID: indicators.rsi ? 'y1' : 'y',
+          tension: 0.1,
+        });
+
+        const histColors = macd.histogram.map(h => h >= 0 ? '#26a69a' : '#ef5350');
+        indicatorDatasets.push({
+          label: 'Histogram',
+          data: macd.histogram.map((val, idx) => ({ x: rawData[idx + signalOffset].x, y: val })),
+          type: 'bar',
+          backgroundColor: histColors,
+          borderWidth: 0,
+          yAxisID: indicators.rsi ? 'y1' : 'y',
+        });
       }
 
-      // Sync time scales
-      chart.timeScale().subscribeVisibleTimeRangeChange((timeRange) => {
-        indicatorChart.timeScale().setVisibleRange(timeRange);
+      const scales = {
+        x: {
+          type: 'time',
+          time: {
+            unit: interval === '1' || interval === '5' ? 'minute' : interval === '15' || interval === '60' ? 'hour' : 'day',
+          },
+          grid: { color: '#f0f0f0' },
+          display: false,
+        },
+        y: {
+          position: 'right',
+          grid: { color: '#f0f0f0' },
+          display: indicators.rsi,
+        },
+      };
+
+      if (indicators.rsi && indicators.macd) {
+        scales.y1 = {
+          position: 'left',
+          grid: { display: false },
+        };
+      }
+
+      indicatorChartInstance.current = new Chart(indicatorChartRef.current, {
+        type: 'line',
+        data: { datasets: indicatorDatasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales,
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top',
+              labels: { boxWidth: 15, padding: 10, font: { size: 11 } },
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+            },
+          },
+        },
       });
     }
 
-    // Handle resize
-    const handleResize = () => {
-      if (chartContainerRef.current && chartRef.current) {
-        chartRef.current.applyOptions({ 
-          width: chartContainerRef.current.clientWidth 
-        });
-      }
-      if (volumeContainerRef.current && volumeChartRef.current) {
-        volumeChartRef.current.applyOptions({ 
-          width: volumeContainerRef.current.clientWidth 
-        });
-      }
-      if (indicatorContainerRef.current && indicatorChartRef.current) {
-        indicatorChartRef.current.applyOptions({ 
-          width: indicatorContainerRef.current.clientWidth 
-        });
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-
     return () => {
-      window.removeEventListener('resize', handleResize);
-      if (chartRef.current) chartRef.current.remove();
-      if (volumeChartRef.current) volumeChartRef.current.remove();
-      if (indicatorChartRef.current) indicatorChartRef.current.remove();
+      if (mainChartInstance.current) mainChartInstance.current.destroy();
+      if (volumeChartInstance.current) volumeChartInstance.current.destroy();
+      if (indicatorChartInstance.current) indicatorChartInstance.current.destroy();
     };
   }, [symbol, interval, indicators]);
 
@@ -421,6 +559,10 @@ export default function TradingViewChart({ symbol }) {
     { label: 'Rectangle', value: 'rectangle' },
     { label: 'Fibonacci', value: 'fibonacci' },
   ];
+
+  const toggleIndicator = (key) => {
+    setIndicators(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   return (
     <div className="tradingview-wrapper">
@@ -448,7 +590,7 @@ export default function TradingViewChart({ symbol }) {
                 <input
                   type="checkbox"
                   checked={indicators.sma}
-                  onChange={(e) => setIndicators({ ...indicators, sma: e.target.checked })}
+                  onChange={() => toggleIndicator('sma')}
                 />
                 <span>SMA</span>
               </label>
@@ -456,7 +598,7 @@ export default function TradingViewChart({ symbol }) {
                 <input
                   type="checkbox"
                   checked={indicators.ema}
-                  onChange={(e) => setIndicators({ ...indicators, ema: e.target.checked })}
+                  onChange={() => toggleIndicator('ema')}
                 />
                 <span>EMA</span>
               </label>
@@ -464,7 +606,7 @@ export default function TradingViewChart({ symbol }) {
                 <input
                   type="checkbox"
                   checked={indicators.bb}
-                  onChange={(e) => setIndicators({ ...indicators, bb: e.target.checked })}
+                  onChange={() => toggleIndicator('bb')}
                 />
                 <span>Bollinger Bands</span>
               </label>
@@ -472,7 +614,7 @@ export default function TradingViewChart({ symbol }) {
                 <input
                   type="checkbox"
                   checked={indicators.rsi}
-                  onChange={(e) => setIndicators({ ...indicators, rsi: e.target.checked })}
+                  onChange={() => toggleIndicator('rsi')}
                 />
                 <span>RSI</span>
               </label>
@@ -480,7 +622,7 @@ export default function TradingViewChart({ symbol }) {
                 <input
                   type="checkbox"
                   checked={indicators.macd}
-                  onChange={(e) => setIndicators({ ...indicators, macd: e.target.checked })}
+                  onChange={() => toggleIndicator('macd')}
                 />
                 <span>MACD</span>
               </label>
@@ -506,10 +648,16 @@ export default function TradingViewChart({ symbol }) {
       </div>
 
       <div className="tradingview-widget-shell">
-        <div ref={chartContainerRef} className="chart-container" />
-        <div ref={volumeContainerRef} className="volume-container" />
+        <div className="chart-container">
+          <canvas ref={mainChartRef}></canvas>
+        </div>
+        <div className="volume-container">
+          <canvas ref={volumeChartRef}></canvas>
+        </div>
         {(indicators.rsi || indicators.macd) && (
-          <div ref={indicatorContainerRef} className="indicator-container" />
+          <div className="indicator-container">
+            <canvas ref={indicatorChartRef}></canvas>
+          </div>
         )}
       </div>
 
