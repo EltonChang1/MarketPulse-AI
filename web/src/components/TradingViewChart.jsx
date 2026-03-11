@@ -45,6 +45,7 @@ function calculateSMA(data, period) {
 
 function calculateEMA(data, period) {
   const ema = [];
+  if (!Array.isArray(data) || data.length < period) return ema;
   const multiplier = 2 / (period + 1);
   let prevEMA = data.slice(0, period).reduce((a, b) => a + b.c, 0) / period;
   ema.push(prevEMA);
@@ -88,24 +89,41 @@ function calculateRSI(data, period = 14) {
 function calculateMACD(data) {
   const ema12 = calculateEMA(data, 12);
   const ema26 = calculateEMA(data, 26);
-  const macdLine = [];
 
-  const startIndex = ema26.length - ema12.length;
-  for (let i = 0; i < ema12.length; i++) {
-    if (i + startIndex < ema26.length) {
-      macdLine.push(ema12[i] - ema26[i + startIndex]);
+  const macd = [];
+  const macdOffset = 25;
+
+  for (let rawIndex = macdOffset; rawIndex < data.length; rawIndex++) {
+    const ema12Index = rawIndex - 11;
+    const ema26Index = rawIndex - 25;
+    if (ema12Index >= 0 && ema12Index < ema12.length && ema26Index >= 0 && ema26Index < ema26.length) {
+      macd.push(ema12[ema12Index] - ema26[ema26Index]);
     }
   }
 
-  const macdData = macdLine.map(m => ({ c: m }));
-  const signal = calculateEMA(macdData, 9);
+  const signalSource = macd.map((value) => ({ c: value }));
+  const signal = calculateEMA(signalSource, 9);
+  const signalOffset = macdOffset + 8;
   const histogram = [];
 
   for (let i = 0; i < signal.length; i++) {
-    histogram.push(macdLine[i] - signal[i]);
+    const macdIndex = i + 8;
+    if (macdIndex < macd.length) {
+      histogram.push(macd[macdIndex] - signal[i]);
+    }
   }
 
-  return { macd: macdLine, signal, histogram };
+  return { macd, signal, histogram, macdOffset, signalOffset };
+}
+
+function mapSeriesToRawData(values, rawData, offset) {
+  return values
+    .map((value, idx) => {
+      const point = rawData[idx + offset];
+      if (!point || typeof point.x === "undefined") return null;
+      return { x: point.x, y: value };
+    })
+    .filter(Boolean);
 }
 
 function calculateBollingerBands(data, period = 20, stdDev = 2) {
@@ -230,7 +248,7 @@ export default function TradingViewChart({ symbol }) {
       
       datasets.push({
         label: 'SMA 20',
-        data: sma20.map((val, idx) => ({ x: rawData[idx + 19].x, y: val })),
+        data: mapSeriesToRawData(sma20, rawData, 19),
         type: 'line',
         borderColor: '#2962FF',
         backgroundColor: 'transparent',
@@ -241,7 +259,7 @@ export default function TradingViewChart({ symbol }) {
       
       datasets.push({
         label: 'SMA 50',
-        data: sma50.map((val, idx) => ({ x: rawData[idx + 49].x, y: val })),
+        data: mapSeriesToRawData(sma50, rawData, 49),
         type: 'line',
         borderColor: '#FF6D00',
         backgroundColor: 'transparent',
@@ -258,7 +276,7 @@ export default function TradingViewChart({ symbol }) {
       
       datasets.push({
         label: 'EMA 12',
-        data: ema12.map((val, idx) => ({ x: rawData[idx + 12].x, y: val })),
+        data: mapSeriesToRawData(ema12, rawData, 11),
         type: 'line',
         borderColor: '#7B1FA2',
         backgroundColor: 'transparent',
@@ -270,7 +288,7 @@ export default function TradingViewChart({ symbol }) {
       
       datasets.push({
         label: 'EMA 26',
-        data: ema26.map((val, idx) => ({ x: rawData[idx + 26].x, y: val })),
+        data: mapSeriesToRawData(ema26, rawData, 25),
         type: 'line',
         borderColor: '#E91E63',
         backgroundColor: 'transparent',
@@ -287,7 +305,7 @@ export default function TradingViewChart({ symbol }) {
       
       datasets.push({
         label: 'BB Upper',
-        data: bb.upper.map((val, idx) => ({ x: rawData[idx + 19].x, y: val })),
+        data: mapSeriesToRawData(bb.upper, rawData, 19),
         type: 'line',
         borderColor: '#9C27B0',
         backgroundColor: 'transparent',
@@ -299,7 +317,7 @@ export default function TradingViewChart({ symbol }) {
       
       datasets.push({
         label: 'BB Middle',
-        data: bb.middle.map((val, idx) => ({ x: rawData[idx + 19].x, y: val })),
+        data: mapSeriesToRawData(bb.middle, rawData, 19),
         type: 'line',
         borderColor: '#9C27B0',
         backgroundColor: 'transparent',
@@ -310,7 +328,7 @@ export default function TradingViewChart({ symbol }) {
       
       datasets.push({
         label: 'BB Lower',
-        data: bb.lower.map((val, idx) => ({ x: rawData[idx + 19].x, y: val })),
+        data: mapSeriesToRawData(bb.lower, rawData, 19),
         type: 'line',
         borderColor: '#9C27B0',
         backgroundColor: 'transparent',
@@ -415,7 +433,7 @@ export default function TradingViewChart({ symbol }) {
         
         indicatorDatasets.push({
           label: 'RSI',
-          data: rsi.map((val, idx) => ({ x: rawData[idx + 14].x, y: val })),
+          data: mapSeriesToRawData(rsi, rawData, 14),
           type: 'line',
           borderColor: '#2962FF',
           backgroundColor: 'transparent',
@@ -453,11 +471,10 @@ export default function TradingViewChart({ symbol }) {
 
       if (indicators.macd) {
         const macd = calculateMACD(rawData);
-        const macdOffset = rawData.length - macd.macd.length;
         
         indicatorDatasets.push({
           label: 'MACD',
-          data: macd.macd.map((val, idx) => ({ x: rawData[idx + macdOffset].x, y: val })),
+          data: mapSeriesToRawData(macd.macd, rawData, macd.macdOffset),
           type: 'line',
           borderColor: '#2962FF',
           backgroundColor: 'transparent',
@@ -467,10 +484,9 @@ export default function TradingViewChart({ symbol }) {
           tension: 0.1,
         });
 
-        const signalOffset = rawData.length - macd.signal.length;
         indicatorDatasets.push({
           label: 'Signal',
-          data: macd.signal.map((val, idx) => ({ x: rawData[idx + signalOffset].x, y: val })),
+          data: mapSeriesToRawData(macd.signal, rawData, macd.signalOffset),
           type: 'line',
           borderColor: '#FF6D00',
           backgroundColor: 'transparent',
@@ -483,7 +499,7 @@ export default function TradingViewChart({ symbol }) {
         const histColors = macd.histogram.map(h => h >= 0 ? '#26a69a' : '#ef5350');
         indicatorDatasets.push({
           label: 'Histogram',
-          data: macd.histogram.map((val, idx) => ({ x: rawData[idx + signalOffset].x, y: val })),
+          data: mapSeriesToRawData(macd.histogram, rawData, macd.signalOffset),
           type: 'bar',
           backgroundColor: histColors,
           borderWidth: 0,
