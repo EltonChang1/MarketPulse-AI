@@ -492,10 +492,14 @@ export default function TradingViewChart({ symbol }) {
             type: "time",
             time: { unit: unitForInterval(interval) },
             grid: { color: "#f2f4f7" },
+            ticks: { maxRotation: 0 },
           },
           y: {
             position: "right",
             grid: { color: "#f2f4f7" },
+            ticks: {
+              callback: (v) => `$${Number(v).toFixed(2)}`,
+            },
           },
         },
         plugins: {
