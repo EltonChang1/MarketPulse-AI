@@ -906,3 +906,80 @@ footer {
     gap: 8px;
   }
 }
+
+.tv-mimic-header {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.tv-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eaecf0;
+}
+
+.tv-symbol-block h4 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.tv-symbol-block p {
+  margin: 4px 0 0;
+  font-size: 0.95rem;
+}
+
+.tv-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(110px, 1fr));
+  gap: 6px 10px;
+  font-size: 0.85rem;
+  color: #475467;
+}
+
+.tv-control-grid .control-group {
+  border: 1px solid #eaecf0;
+  border-radius: 8px;
+  padding: 10px;
+  background: #fff;
+}
+
+.tv-compare-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tv-compare-input {
+  min-width: 170px;
+  flex: 1;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+}
+
+.tv-checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .tv-top-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tv-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tv-compare-input {
+    min-width: 0;
+    width: 100%;
+  }
+}

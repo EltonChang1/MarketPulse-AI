@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Chart,
   CategoryScale,
@@ -11,11 +11,11 @@ import {
   LineController,
   LineElement,
   PointElement,
+  Filler,
 } from "chart.js";
 import { CandlestickController, CandlestickElement, OhlcController, OhlcElement } from "chartjs-chart-financial";
 import "chartjs-adapter-date-fns";
 
-// Register Chart.js components
 Chart.register(
   CategoryScale,
   LinearScale,
@@ -27,525 +27,602 @@ Chart.register(
   LineController,
   LineElement,
   PointElement,
+  Filler,
   CandlestickController,
   CandlestickElement,
   OhlcController,
   OhlcElement
 );
 
-// Technical indicator calculations
-function calculateSMA(data, period) {
-  const sma = [];
-  for (let i = period - 1; i < data.length; i++) {
-    const sum = data.slice(i - period + 1, i + 1).reduce((a, b) => a + b.c, 0);
-    sma.push(sum / period);
-  }
-  return sma;
+const INTERVALS = ["1", "5", "15", "60", "240", "D", "W", "M"];
+const RANGES = ["1D", "5D", "1M", "3M", "6M", "YTD", "1Y", "3Y", "5Y", "ALL"];
+const CHART_TYPES = ["candles", "ohlc", "line", "area"];
+
+function symbolSeed(symbol = "AAPL") {
+  return String(symbol)
+    .toUpperCase()
+    .split("")
+    .reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
 }
 
-function calculateEMA(data, period) {
-  const ema = [];
-  if (!Array.isArray(data) || data.length < period) return ema;
-  const multiplier = 2 / (period + 1);
-  let prevEMA = data.slice(0, period).reduce((a, b) => a + b.c, 0) / period;
-  ema.push(prevEMA);
-  
-  for (let i = period; i < data.length; i++) {
-    const currentEMA = (data[i].c - prevEMA) * multiplier + prevEMA;
-    ema.push(currentEMA);
-    prevEMA = currentEMA;
-  }
-  return ema;
+function mulberry32(seed) {
+  let state = seed;
+  return function rand() {
+    state |= 0;
+    state = (state + 0x6d2b79f5) | 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
-function calculateRSI(data, period = 14) {
-  const rsi = [];
-  let gains = 0, losses = 0;
-
-  for (let i = 1; i <= period; i++) {
-    const change = data[i].c - data[i - 1].c;
-    if (change > 0) gains += change;
-    else losses -= change;
-  }
-
-  let avgGain = gains / period;
-  let avgLoss = losses / period;
-
-  for (let i = period; i < data.length; i++) {
-    const change = data[i].c - data[i - 1].c;
-    const gain = change > 0 ? change : 0;
-    const loss = change < 0 ? -change : 0;
-
-    avgGain = (avgGain * (period - 1) + gain) / period;
-    avgLoss = (avgLoss * (period - 1) + loss) / period;
-
-    const rs = avgGain / (avgLoss || 1);
-    const rsiValue = 100 - (100 / (1 + rs));
-    rsi.push(rsiValue);
-  }
-  return rsi;
+function intervalMs(interval) {
+  if (interval === "1") return 60 * 1000;
+  if (interval === "5") return 5 * 60 * 1000;
+  if (interval === "15") return 15 * 60 * 1000;
+  if (interval === "60") return 60 * 60 * 1000;
+  if (interval === "240") return 4 * 60 * 60 * 1000;
+  if (interval === "W") return 7 * 24 * 60 * 60 * 1000;
+  if (interval === "M") return 30 * 24 * 60 * 60 * 1000;
+  return 24 * 60 * 60 * 1000;
 }
 
-function calculateMACD(data) {
-  const ema12 = calculateEMA(data, 12);
-  const ema26 = calculateEMA(data, 26);
-
-  const macd = [];
-  const macdOffset = 25;
-
-  for (let rawIndex = macdOffset; rawIndex < data.length; rawIndex++) {
-    const ema12Index = rawIndex - 11;
-    const ema26Index = rawIndex - 25;
-    if (ema12Index >= 0 && ema12Index < ema12.length && ema26Index >= 0 && ema26Index < ema26.length) {
-      macd.push(ema12[ema12Index] - ema26[ema26Index]);
-    }
-  }
-
-  const signalSource = macd.map((value) => ({ c: value }));
-  const signal = calculateEMA(signalSource, 9);
-  const signalOffset = macdOffset + 8;
-  const histogram = [];
-
-  for (let i = 0; i < signal.length; i++) {
-    const macdIndex = i + 8;
-    if (macdIndex < macd.length) {
-      histogram.push(macd[macdIndex] - signal[i]);
-    }
-  }
-
-  return { macd, signal, histogram, macdOffset, signalOffset };
+function unitForInterval(interval) {
+  if (["1", "5", "15"].includes(interval)) return "minute";
+  if (["60", "240"].includes(interval)) return "hour";
+  if (interval === "W") return "week";
+  if (interval === "M") return "month";
+  return "day";
 }
 
-function mapSeriesToRawData(values, rawData, offset) {
-  return values
-    .map((value, idx) => {
-      const point = rawData[idx + offset];
-      if (!point || typeof point.x === "undefined") return null;
-      return { x: point.x, y: value };
-    })
-    .filter(Boolean);
+function defaultPointCount(interval) {
+  if (["1", "5"].includes(interval)) return 4000;
+  if (["15", "60"].includes(interval)) return 3000;
+  if (["240"].includes(interval)) return 2000;
+  if (interval === "D") return 2200;
+  if (interval === "W") return 800;
+  if (interval === "M") return 400;
+  return 1000;
 }
 
-function calculateBollingerBands(data, period = 20, stdDev = 2) {
-  const sma = calculateSMA(data, period);
-  const bands = { upper: [], middle: [], lower: [] };
-
-  for (let i = 0; i < sma.length; i++) {
-    const dataSlice = data.slice(i, i + period);
-    const mean = sma[i];
-    const variance = dataSlice.reduce((sum, d) => sum + Math.pow(d.c - mean, 2), 0) / period;
-    const std = Math.sqrt(variance);
-
-    bands.middle.push(mean);
-    bands.upper.push(mean + stdDev * std);
-    bands.lower.push(mean - stdDev * std);
-  }
-
-  return bands;
-}
-
-// Generate mock historical data
-function generateMockData(symbol, interval, count) {
-  const data = [];
+function generateSeries(symbol, interval, count, forcedTimes) {
+  const rand = mulberry32(symbolSeed(symbol));
+  const step = intervalMs(interval);
   const now = Date.now();
-  let intervalMs = 86400000; // 1 day default
-  
-  if (interval === '1') intervalMs = 60000;
-  else if (interval === '5') intervalMs = 300000;
-  else if (interval === '15') intervalMs = 900000;
-  else if (interval === '60') intervalMs = 3600000;
-  else if (interval === '240') intervalMs = 14400000;
-  else if (interval === 'D') intervalMs = 86400000;
-  else if (interval === 'W') intervalMs = 604800000;
+  const times = forcedTimes || Array.from({ length: count }, (_, idx) => now - (count - 1 - idx) * step);
 
-  let basePrice = 150 + Math.random() * 50;
-  
-  for (let i = count - 1; i >= 0; i--) {
-    const time = now - (i * intervalMs);
-    const volatility = basePrice * 0.02;
-    const open = basePrice + (Math.random() - 0.5) * volatility;
-    const close = open + (Math.random() - 0.5) * volatility;
-    const high = Math.max(open, close) + Math.random() * volatility * 0.5;
-    const low = Math.min(open, close) - Math.random() * volatility * 0.5;
-    const volume = Math.floor(1000000 + Math.random() * 5000000);
+  let price = 60 + rand() * 260;
+  const data = [];
+
+  for (let i = 0; i < times.length; i++) {
+    const volatility = Math.max(0.6, price * (0.004 + rand() * 0.018));
+    const drift = (rand() - 0.495) * volatility;
+    const open = price;
+    const close = Math.max(1, open + drift);
+    const high = Math.max(open, close) + rand() * volatility * 0.5;
+    const low = Math.max(0.5, Math.min(open, close) - rand() * volatility * 0.5);
+    const volume = Math.floor(500_000 + rand() * 7_500_000);
 
     data.push({
-      x: time,
-      o: parseFloat(open.toFixed(2)),
-      h: parseFloat(high.toFixed(2)),
-      l: parseFloat(low.toFixed(2)),
-      c: parseFloat(close.toFixed(2)),
+      x: times[i],
+      o: Number(open.toFixed(2)),
+      h: Number(high.toFixed(2)),
+      l: Number(low.toFixed(2)),
+      c: Number(close.toFixed(2)),
       volume,
     });
 
-    basePrice = close;
+    price = close;
   }
 
   return data;
 }
 
+function filterByRange(data, range) {
+  if (!data.length || range === "ALL") return data;
+
+  const lastTs = data[data.length - 1].x;
+  const lastDate = new Date(lastTs);
+  let threshold = 0;
+
+  if (range === "1D") threshold = lastTs - 24 * 60 * 60 * 1000;
+  else if (range === "5D") threshold = lastTs - 5 * 24 * 60 * 60 * 1000;
+  else if (range === "1M") threshold = lastTs - 30 * 24 * 60 * 60 * 1000;
+  else if (range === "3M") threshold = lastTs - 90 * 24 * 60 * 60 * 1000;
+  else if (range === "6M") threshold = lastTs - 180 * 24 * 60 * 60 * 1000;
+  else if (range === "1Y") threshold = lastTs - 365 * 24 * 60 * 60 * 1000;
+  else if (range === "3Y") threshold = lastTs - 3 * 365 * 24 * 60 * 60 * 1000;
+  else if (range === "5Y") threshold = lastTs - 5 * 365 * 24 * 60 * 60 * 1000;
+  else if (range === "YTD") threshold = new Date(lastDate.getFullYear(), 0, 1).getTime();
+
+  return data.filter((point) => point.x >= threshold);
+}
+
+function calcSMA(data, period) {
+  if (data.length < period) return [];
+  const out = [];
+  for (let i = period - 1; i < data.length; i++) {
+    const avg = data.slice(i - period + 1, i + 1).reduce((s, p) => s + p.c, 0) / period;
+    out.push(avg);
+  }
+  return out;
+}
+
+function calcEMA(data, period) {
+  if (data.length < period) return [];
+  const mult = 2 / (period + 1);
+  const out = [];
+  let prev = data.slice(0, period).reduce((s, p) => s + p.c, 0) / period;
+  out.push(prev);
+  for (let i = period; i < data.length; i++) {
+    prev = (data[i].c - prev) * mult + prev;
+    out.push(prev);
+  }
+  return out;
+}
+
+function calcRSI(data, period = 14) {
+  if (data.length <= period) return [];
+  let gains = 0;
+  let losses = 0;
+
+  for (let i = 1; i <= period; i++) {
+    const delta = data[i].c - data[i - 1].c;
+    if (delta > 0) gains += delta;
+    else losses -= delta;
+  }
+
+  let avgGain = gains / period;
+  let avgLoss = losses / period;
+  const out = [];
+
+  for (let i = period; i < data.length; i++) {
+    const delta = data[i].c - data[i - 1].c;
+    const gain = delta > 0 ? delta : 0;
+    const loss = delta < 0 ? -delta : 0;
+
+    avgGain = (avgGain * (period - 1) + gain) / period;
+    avgLoss = (avgLoss * (period - 1) + loss) / period;
+
+    const rs = avgGain / (avgLoss || 1);
+    out.push(100 - 100 / (1 + rs));
+  }
+
+  return out;
+}
+
+function calcMACD(data) {
+  const ema12 = calcEMA(data, 12);
+  const ema26 = calcEMA(data, 26);
+  const macdOffset = 25;
+  const macd = [];
+
+  for (let rawIndex = macdOffset; rawIndex < data.length; rawIndex++) {
+    const i12 = rawIndex - 11;
+    const i26 = rawIndex - 25;
+    if (i12 >= 0 && i12 < ema12.length && i26 >= 0 && i26 < ema26.length) {
+      macd.push(ema12[i12] - ema26[i26]);
+    }
+  }
+
+  const signal = calcEMA(macd.map((value) => ({ c: value })), 9);
+  const signalOffset = macdOffset + 8;
+  const histogram = [];
+
+  for (let i = 0; i < signal.length; i++) {
+    const macdIdx = i + 8;
+    if (macdIdx < macd.length) histogram.push(macd[macdIdx] - signal[i]);
+  }
+
+  return { macd, signal, histogram, macdOffset, signalOffset };
+}
+
+function calcBollinger(data, period = 20, mult = 2) {
+  const middle = calcSMA(data, period);
+  const upper = [];
+  const lower = [];
+
+  for (let i = 0; i < middle.length; i++) {
+    const slice = data.slice(i, i + period);
+    const mean = middle[i];
+    const variance = slice.reduce((sum, p) => sum + (p.c - mean) ** 2, 0) / period;
+    const std = Math.sqrt(variance);
+    upper.push(mean + mult * std);
+    lower.push(mean - mult * std);
+  }
+
+  return { middle, upper, lower };
+}
+
+function mapToSeries(values, data, offset) {
+  return values
+    .map((value, index) => {
+      const point = data[index + offset];
+      if (!point) return null;
+      return { x: point.x, y: value };
+    })
+    .filter(Boolean);
+}
+
+function formatCompact(num) {
+  if (num >= 1e9) return `${(num / 1e9).toFixed(2)}B`;
+  if (num >= 1e6) return `${(num / 1e6).toFixed(2)}M`;
+  if (num >= 1e3) return `${(num / 1e3).toFixed(2)}K`;
+  return String(num);
+}
 
 export default function TradingViewChart({ symbol }) {
-  const mainChartRef = useRef(null);
+  const priceCanvasRef = useRef(null);
+  const volumeCanvasRef = useRef(null);
+  const indicatorCanvasRef = useRef(null);
+
+  const priceChartRef = useRef(null);
   const volumeChartRef = useRef(null);
   const indicatorChartRef = useRef(null);
-  const mainChartInstance = useRef(null);
-  const volumeChartInstance = useRef(null);
-  const indicatorChartInstance = useRef(null);
 
-  const [interval, setInterval] = useState('D');
+  const [interval, setInterval] = useState("D");
+  const [range, setRange] = useState("1Y");
+  const [chartType, setChartType] = useState("candles");
+  const [compareInput, setCompareInput] = useState("");
+  const [compareSymbol, setCompareSymbol] = useState("");
+  const [refreshVersion, setRefreshVersion] = useState(0);
+
   const [indicators, setIndicators] = useState({
-    sma: true,
-    ema: true,
+    volume: true,
+    sma20: true,
+    sma50: false,
+    ema20: true,
     bb: false,
     rsi: true,
     macd: true,
+    trendLine: false,
+    horizontalLine: false,
+    fibLevels: false,
   });
-  const [drawingMode, setDrawingMode] = useState(null);
+
+  const allData = useMemo(() => {
+    const count = defaultPointCount(interval);
+    return generateSeries(symbol || "AAPL", interval, count);
+  }, [symbol, interval, refreshVersion]);
+
+  const visibleData = useMemo(() => filterByRange(allData, range), [allData, range]);
+
+  const compareData = useMemo(() => {
+    if (!compareSymbol.trim()) return [];
+    const seeded = generateSeries(compareSymbol.trim().toUpperCase(), interval, visibleData.length, visibleData.map((p) => p.x));
+    return seeded;
+  }, [compareSymbol, interval, visibleData]);
+
+  const latest = visibleData[visibleData.length - 1];
+  const first = visibleData[0];
+  const delta = latest && first ? latest.c - first.c : 0;
+  const deltaPct = latest && first && first.c ? (delta / first.c) * 100 : 0;
 
   useEffect(() => {
-    if (!mainChartRef.current) return;
+    if (!priceCanvasRef.current || visibleData.length < 30) return;
 
-    // Generate data
-    const dataCount = interval === '1' ? 200 : interval === '5' ? 300 : 500;
-    const rawData = generateMockData(symbol, interval, dataCount);
+    if (priceChartRef.current) priceChartRef.current.destroy();
+    if (volumeChartRef.current) volumeChartRef.current.destroy();
+    if (indicatorChartRef.current) indicatorChartRef.current.destroy();
 
-    // Destroy existing charts
-    if (mainChartInstance.current) {
-      mainChartInstance.current.destroy();
-      mainChartInstance.current = null;
-    }
-    if (volumeChartInstance.current) {
-      volumeChartInstance.current.destroy();
-      volumeChartInstance.current = null;
-    }
-    if (indicatorChartInstance.current) {
-      indicatorChartInstance.current.destroy();
-      indicatorChartInstance.current = null;
-    }
+    const priceDatasets = [];
 
-    // Prepare datasets for main chart
-    const datasets = [{
-      label: symbol,
-      data: rawData,
-      type: 'candlestick',
-      borderColor: {
-        up: '#26a69a',
-        down: '#ef5350',
-        unchanged: '#999',
-      },
-      backgroundColor: {
-        up: '#26a69a',
-        down: '#ef5350',
-        unchanged: '#999',
-      },
-    }];
-
-    // Add SMA indicators
-    if (indicators.sma) {
-      const sma20 = calculateSMA(rawData, 20);
-      const sma50 = calculateSMA(rawData, 50);
-      
-      datasets.push({
-        label: 'SMA 20',
-        data: mapSeriesToRawData(sma20, rawData, 19),
-        type: 'line',
-        borderColor: '#2962FF',
-        backgroundColor: 'transparent',
+    if (chartType === "candles") {
+      priceDatasets.push({
+        type: "candlestick",
+        label: (symbol || "AAPL").toUpperCase(),
+        data: visibleData,
+        borderColor: { up: "#26a69a", down: "#ef5350", unchanged: "#999" },
+        backgroundColor: { up: "#26a69a", down: "#ef5350", unchanged: "#999" },
+      });
+    } else if (chartType === "ohlc") {
+      priceDatasets.push({
+        type: "ohlc",
+        label: (symbol || "AAPL").toUpperCase(),
+        data: visibleData,
+        borderColor: { up: "#26a69a", down: "#ef5350", unchanged: "#999" },
+      });
+    } else {
+      priceDatasets.push({
+        type: "line",
+        label: (symbol || "AAPL").toUpperCase(),
+        data: visibleData.map((p) => ({ x: p.x, y: p.c })),
+        borderColor: "#2962FF",
+        backgroundColor: chartType === "area" ? "rgba(41, 98, 255, 0.16)" : "transparent",
         borderWidth: 2,
         pointRadius: 0,
-        tension: 0.1,
+        fill: chartType === "area",
+        tension: 0.15,
       });
-      
-      datasets.push({
-        label: 'SMA 50',
-        data: mapSeriesToRawData(sma50, rawData, 49),
-        type: 'line',
-        borderColor: '#FF6D00',
-        backgroundColor: 'transparent',
+    }
+
+    if (compareData.length) {
+      priceDatasets.push({
+        type: "line",
+        label: compareSymbol.toUpperCase(),
+        data: compareData.map((p) => ({ x: p.x, y: p.c })),
+        borderColor: "#f79009",
+        backgroundColor: "transparent",
         borderWidth: 2,
         pointRadius: 0,
-        tension: 0.1,
+        tension: 0.15,
       });
     }
 
-    // Add EMA indicators
-    if (indicators.ema) {
-      const ema12 = calculateEMA(rawData, 12);
-      const ema26 = calculateEMA(rawData, 26);
-      
-      datasets.push({
-        label: 'EMA 12',
-        data: mapSeriesToRawData(ema12, rawData, 11),
-        type: 'line',
-        borderColor: '#7B1FA2',
-        backgroundColor: 'transparent',
-        borderWidth: 1,
+    if (indicators.sma20) {
+      priceDatasets.push({
+        type: "line",
+        label: "SMA 20",
+        data: mapToSeries(calcSMA(visibleData, 20), visibleData, 19),
+        borderColor: "#7f56d9",
+        backgroundColor: "transparent",
+        borderWidth: 1.4,
         pointRadius: 0,
-        borderDash: [5, 5],
-        tension: 0.1,
-      });
-      
-      datasets.push({
-        label: 'EMA 26',
-        data: mapSeriesToRawData(ema26, rawData, 25),
-        type: 'line',
-        borderColor: '#E91E63',
-        backgroundColor: 'transparent',
-        borderWidth: 1,
-        pointRadius: 0,
-        borderDash: [5, 5],
-        tension: 0.1,
       });
     }
 
-    // Add Bollinger Bands
+    if (indicators.sma50) {
+      priceDatasets.push({
+        type: "line",
+        label: "SMA 50",
+        data: mapToSeries(calcSMA(visibleData, 50), visibleData, 49),
+        borderColor: "#12b76a",
+        backgroundColor: "transparent",
+        borderWidth: 1.4,
+        pointRadius: 0,
+      });
+    }
+
+    if (indicators.ema20) {
+      priceDatasets.push({
+        type: "line",
+        label: "EMA 20",
+        data: mapToSeries(calcEMA(visibleData, 20), visibleData, 19),
+        borderColor: "#e31b54",
+        backgroundColor: "transparent",
+        borderWidth: 1.2,
+        pointRadius: 0,
+        borderDash: [5, 3],
+      });
+    }
+
     if (indicators.bb) {
-      const bb = calculateBollingerBands(rawData, 20);
-      
-      datasets.push({
-        label: 'BB Upper',
-        data: mapSeriesToRawData(bb.upper, rawData, 19),
-        type: 'line',
-        borderColor: '#9C27B0',
-        backgroundColor: 'transparent',
-        borderWidth: 1,
+      const bb = calcBollinger(visibleData, 20, 2);
+      priceDatasets.push(
+        {
+          type: "line",
+          label: "BB Upper",
+          data: mapToSeries(bb.upper, visibleData, 19),
+          borderColor: "#6941c6",
+          borderDash: [2, 2],
+          backgroundColor: "transparent",
+          borderWidth: 1,
+          pointRadius: 0,
+        },
+        {
+          type: "line",
+          label: "BB Mid",
+          data: mapToSeries(bb.middle, visibleData, 19),
+          borderColor: "#6941c6",
+          backgroundColor: "transparent",
+          borderWidth: 1,
+          pointRadius: 0,
+        },
+        {
+          type: "line",
+          label: "BB Lower",
+          data: mapToSeries(bb.lower, visibleData, 19),
+          borderColor: "#6941c6",
+          borderDash: [2, 2],
+          backgroundColor: "transparent",
+          borderWidth: 1,
+          pointRadius: 0,
+        }
+      );
+    }
+
+    if (indicators.trendLine && visibleData.length > 3) {
+      priceDatasets.push({
+        type: "line",
+        label: "Trend",
+        data: [
+          { x: visibleData[0].x, y: visibleData[0].c },
+          { x: visibleData[visibleData.length - 1].x, y: visibleData[visibleData.length - 1].c },
+        ],
+        borderColor: "#344054",
+        borderDash: [6, 4],
+        borderWidth: 1.2,
         pointRadius: 0,
-        borderDash: [2, 2],
-        tension: 0.1,
-      });
-      
-      datasets.push({
-        label: 'BB Middle',
-        data: mapSeriesToRawData(bb.middle, rawData, 19),
-        type: 'line',
-        borderColor: '#9C27B0',
-        backgroundColor: 'transparent',
-        borderWidth: 1,
-        pointRadius: 0,
-        tension: 0.1,
-      });
-      
-      datasets.push({
-        label: 'BB Lower',
-        data: mapSeriesToRawData(bb.lower, rawData, 19),
-        type: 'line',
-        borderColor: '#9C27B0',
-        backgroundColor: 'transparent',
-        borderWidth: 1,
-        pointRadius: 0,
-        borderDash: [2, 2],
-        tension: 0.1,
       });
     }
 
-    // Create main price chart
-    mainChartInstance.current = new Chart(mainChartRef.current, {
-      type: 'candlestick',
-      data: { datasets },
+    if (indicators.horizontalLine && latest) {
+      priceDatasets.push({
+        type: "line",
+        label: "Price Line",
+        data: visibleData.map((p) => ({ x: p.x, y: latest.c })),
+        borderColor: "#f04438",
+        borderDash: [4, 4],
+        borderWidth: 1,
+        pointRadius: 0,
+      });
+    }
+
+    if (indicators.fibLevels && visibleData.length > 10) {
+      const high = Math.max(...visibleData.map((p) => p.h));
+      const low = Math.min(...visibleData.map((p) => p.l));
+      const diff = high - low;
+      const levels = [0.236, 0.382, 0.5, 0.618, 0.786];
+      levels.forEach((lv) => {
+        const value = high - diff * lv;
+        priceDatasets.push({
+          type: "line",
+          label: `Fib ${lv}`,
+          data: visibleData.map((p) => ({ x: p.x, y: value })),
+          borderColor: "rgba(16,24,40,0.35)",
+          borderDash: [3, 3],
+          borderWidth: 0.8,
+          pointRadius: 0,
+        });
+      });
+    }
+
+    priceChartRef.current = new Chart(priceCanvasRef.current, {
+      type: "line",
+      data: { datasets: priceDatasets },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        interaction: {
-          mode: 'index',
-          intersect: false,
-        },
+        interaction: { mode: "index", intersect: false },
         scales: {
           x: {
-            type: 'time',
-            time: {
-              unit: interval === '1' || interval === '5' ? 'minute' : interval === '15' || interval === '60' ? 'hour' : 'day',
-            },
-            grid: { color: '#f0f0f0' },
+            type: "time",
+            time: { unit: unitForInterval(interval) },
+            grid: { color: "#f2f4f7" },
           },
           y: {
-            position: 'right',
-            grid: { color: '#f0f0f0' },
+            position: "right",
+            grid: { color: "#f2f4f7" },
           },
         },
         plugins: {
           legend: {
             display: true,
-            position: 'top',
-            labels: { boxWidth: 15, padding: 10, font: { size: 11 } },
-          },
-          tooltip: {
-            mode: 'index',
-            intersect: false,
+            position: "top",
+            labels: { boxWidth: 12, usePointStyle: true, pointStyle: "line", font: { size: 11 } },
           },
         },
       },
     });
 
-    // Create volume chart
-    if (volumeChartRef.current) {
-      const volumeData = rawData.map(d => ({
-        x: d.x,
-        y: d.volume,
-      }));
-
-      const volumeColors = rawData.map(d => d.c >= d.o ? '#26a69a80' : '#ef535080');
-
-      volumeChartInstance.current = new Chart(volumeChartRef.current, {
-        type: 'bar',
+    if (indicators.volume && volumeCanvasRef.current) {
+      volumeChartRef.current = new Chart(volumeCanvasRef.current, {
+        type: "bar",
         data: {
-          datasets: [{
-            label: 'Volume',
-            data: volumeData,
-            backgroundColor: volumeColors,
-            borderWidth: 0,
-          }],
+          datasets: [
+            {
+              label: "Volume",
+              data: visibleData.map((p) => ({ x: p.x, y: p.volume })),
+              backgroundColor: visibleData.map((p) => (p.c >= p.o ? "#12b76a99" : "#f0443899")),
+              borderWidth: 0,
+            },
+          ],
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            x: {
-              type: 'time',
-              time: {
-                unit: interval === '1' || interval === '5' ? 'minute' : interval === '15' || interval === '60' ? 'hour' : 'day',
-              },
-              grid: { color: '#f0f0f0' },
-              display: false,
-            },
-            y: {
-              position: 'right',
-              grid: { color: '#f0f0f0' },
-            },
+            x: { type: "time", display: false, time: { unit: unitForInterval(interval) }, grid: { color: "#f2f4f7" } },
+            y: { position: "right", grid: { color: "#f2f4f7" } },
           },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              mode: 'index',
-              intersect: false,
-            },
-          },
+          plugins: { legend: { display: false } },
         },
       });
     }
 
-    // Create indicator chart (RSI/MACD)
-    if (indicatorChartRef.current && (indicators.rsi || indicators.macd)) {
-      const indicatorDatasets = [];
+    const hasLowerPane = indicators.rsi || indicators.macd;
+    if (hasLowerPane && indicatorCanvasRef.current) {
+      const lowerDatasets = [];
 
       if (indicators.rsi) {
-        const rsi = calculateRSI(rawData);
-        
-        indicatorDatasets.push({
-          label: 'RSI',
-          data: mapSeriesToRawData(rsi, rawData, 14),
-          type: 'line',
-          borderColor: '#2962FF',
-          backgroundColor: 'transparent',
-          borderWidth: 2,
-          pointRadius: 0,
-          yAxisID: 'y',
-          tension: 0.1,
-        });
-
-        // RSI reference lines
-        indicatorDatasets.push({
-          label: 'Overbought',
-          data: rawData.slice(14).map(d => ({ x: d.x, y: 70 })),
-          type: 'line',
-          borderColor: '#ff000040',
-          backgroundColor: 'transparent',
-          borderWidth: 1,
-          pointRadius: 0,
-          borderDash: [5, 5],
-          yAxisID: 'y',
-        });
-
-        indicatorDatasets.push({
-          label: 'Oversold',
-          data: rawData.slice(14).map(d => ({ x: d.x, y: 30 })),
-          type: 'line',
-          borderColor: '#00ff0040',
-          backgroundColor: 'transparent',
-          borderWidth: 1,
-          pointRadius: 0,
-          borderDash: [5, 5],
-          yAxisID: 'y',
-        });
+        const rsi = calcRSI(visibleData, 14);
+        lowerDatasets.push(
+          {
+            type: "line",
+            label: "RSI",
+            data: mapToSeries(rsi, visibleData, 14),
+            borderColor: "#2962FF",
+            borderWidth: 1.4,
+            pointRadius: 0,
+            yAxisID: "y",
+          },
+          {
+            type: "line",
+            label: "RSI 70",
+            data: visibleData.slice(14).map((p) => ({ x: p.x, y: 70 })),
+            borderColor: "rgba(240,68,56,0.4)",
+            borderDash: [4, 3],
+            borderWidth: 1,
+            pointRadius: 0,
+            yAxisID: "y",
+          },
+          {
+            type: "line",
+            label: "RSI 30",
+            data: visibleData.slice(14).map((p) => ({ x: p.x, y: 30 })),
+            borderColor: "rgba(18,183,106,0.4)",
+            borderDash: [4, 3],
+            borderWidth: 1,
+            pointRadius: 0,
+            yAxisID: "y",
+          }
+        );
       }
 
       if (indicators.macd) {
-        const macd = calculateMACD(rawData);
-        
-        indicatorDatasets.push({
-          label: 'MACD',
-          data: mapSeriesToRawData(macd.macd, rawData, macd.macdOffset),
-          type: 'line',
-          borderColor: '#2962FF',
-          backgroundColor: 'transparent',
-          borderWidth: 2,
-          pointRadius: 0,
-          yAxisID: indicators.rsi ? 'y1' : 'y',
-          tension: 0.1,
-        });
-
-        indicatorDatasets.push({
-          label: 'Signal',
-          data: mapSeriesToRawData(macd.signal, rawData, macd.signalOffset),
-          type: 'line',
-          borderColor: '#FF6D00',
-          backgroundColor: 'transparent',
-          borderWidth: 1,
-          pointRadius: 0,
-          yAxisID: indicators.rsi ? 'y1' : 'y',
-          tension: 0.1,
-        });
-
-        const histColors = macd.histogram.map(h => h >= 0 ? '#26a69a' : '#ef5350');
-        indicatorDatasets.push({
-          label: 'Histogram',
-          data: mapSeriesToRawData(macd.histogram, rawData, macd.signalOffset),
-          type: 'bar',
-          backgroundColor: histColors,
-          borderWidth: 0,
-          yAxisID: indicators.rsi ? 'y1' : 'y',
-        });
+        const macd = calcMACD(visibleData);
+        const yAxisID = indicators.rsi ? "y1" : "y";
+        lowerDatasets.push(
+          {
+            type: "line",
+            label: "MACD",
+            data: mapToSeries(macd.macd, visibleData, macd.macdOffset),
+            borderColor: "#7f56d9",
+            borderWidth: 1.2,
+            pointRadius: 0,
+            yAxisID,
+          },
+          {
+            type: "line",
+            label: "Signal",
+            data: mapToSeries(macd.signal, visibleData, macd.signalOffset),
+            borderColor: "#f79009",
+            borderWidth: 1,
+            pointRadius: 0,
+            yAxisID,
+          },
+          {
+            type: "bar",
+            label: "Histogram",
+            data: mapToSeries(macd.histogram, visibleData, macd.signalOffset),
+            backgroundColor: macd.histogram.map((v) => (v >= 0 ? "#12b76a" : "#f04438")),
+            borderWidth: 0,
+            yAxisID,
+          }
+        );
       }
 
       const scales = {
-        x: {
-          type: 'time',
-          time: {
-            unit: interval === '1' || interval === '5' ? 'minute' : interval === '15' || interval === '60' ? 'hour' : 'day',
-          },
-          grid: { color: '#f0f0f0' },
-          display: false,
-        },
+        x: { type: "time", display: false, time: { unit: unitForInterval(interval) }, grid: { color: "#f2f4f7" } },
         y: {
-          position: 'right',
-          grid: { color: '#f0f0f0' },
+          position: "right",
           display: indicators.rsi,
+          min: indicators.rsi ? 0 : undefined,
+          max: indicators.rsi ? 100 : undefined,
+          grid: { color: "#f2f4f7" },
         },
       };
 
       if (indicators.rsi && indicators.macd) {
         scales.y1 = {
-          position: 'left',
-          grid: { display: false },
+          position: "left",
+          grid: { drawOnChartArea: false },
         };
       }
 
-      indicatorChartInstance.current = new Chart(indicatorChartRef.current, {
-        type: 'line',
-        data: { datasets: indicatorDatasets },
+      indicatorChartRef.current = new Chart(indicatorCanvasRef.current, {
+        type: "line",
+        data: { datasets: lowerDatasets },
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
           scales,
           plugins: {
             legend: {
               display: true,
-              position: 'top',
-              labels: { boxWidth: 15, padding: 10, font: { size: 11 } },
-            },
-            tooltip: {
-              mode: 'index',
-              intersect: false,
+              position: "top",
+              labels: { boxWidth: 12, usePointStyle: true, pointStyle: "line", font: { size: 11 } },
             },
           },
         },
@@ -553,110 +630,104 @@ export default function TradingViewChart({ symbol }) {
     }
 
     return () => {
-      if (mainChartInstance.current) mainChartInstance.current.destroy();
-      if (volumeChartInstance.current) volumeChartInstance.current.destroy();
-      if (indicatorChartInstance.current) indicatorChartInstance.current.destroy();
+      if (priceChartRef.current) priceChartRef.current.destroy();
+      if (volumeChartRef.current) volumeChartRef.current.destroy();
+      if (indicatorChartRef.current) indicatorChartRef.current.destroy();
     };
-  }, [symbol, interval, indicators]);
+  }, [symbol, visibleData, interval, indicators, chartType, compareData, compareSymbol]);
 
-  const timeframes = [
-    { label: '1m', value: '1' },
-    { label: '5m', value: '5' },
-    { label: '15m', value: '15' },
-    { label: '1h', value: '60' },
-    { label: '4h', value: '240' },
-    { label: '1D', value: 'D' },
-    { label: '1W', value: 'W' },
-  ];
-
-  const drawingTools = [
-    { label: 'Trend Line', value: 'trend' },
-    { label: 'Horizontal Line', value: 'horizontal' },
-    { label: 'Rectangle', value: 'rectangle' },
-    { label: 'Fibonacci', value: 'fibonacci' },
-  ];
-
-  const toggleIndicator = (key) => {
-    setIndicators(prev => ({ ...prev, [key]: !prev[key] }));
-  };
+  const toggleIndicator = (key) => setIndicators((prev) => ({ ...prev, [key]: !prev[key] }));
 
   return (
-    <div className="tradingview-wrapper">
-      <div className="tradingview-header">
-        <div className="chart-controls">
+    <div className="tradingview-wrapper tv-mimic-wrapper">
+      <div className="tradingview-header tv-mimic-header">
+        <div className="tv-top-row">
+          <div className="tv-symbol-block">
+            <h4>{(symbol || "AAPL").toUpperCase()}</h4>
+            <p>
+              ${latest?.c?.toFixed(2) || "-"} 
+              <span className={delta >= 0 ? "up" : "down"}>{` ${delta >= 0 ? "+" : ""}${delta.toFixed(2)} (${deltaPct.toFixed(2)}%)`}</span>
+            </p>
+          </div>
+          <div className="tv-stat-grid">
+            <span>H: ${latest?.h?.toFixed(2) || "-"}</span>
+            <span>L: ${latest?.l?.toFixed(2) || "-"}</span>
+            <span>O: ${latest?.o?.toFixed(2) || "-"}</span>
+            <span>Vol: {latest ? formatCompact(latest.volume) : "-"}</span>
+          </div>
+        </div>
+
+        <div className="chart-controls tv-control-grid">
           <div className="control-group">
-            <label>Timeframe:</label>
+            <label>Interval</label>
             <div className="button-group">
-              {timeframes.map(tf => (
-                <button
-                  key={tf.value}
-                  className={interval === tf.value ? 'active' : ''}
-                  onClick={() => setInterval(tf.value)}
-                >
-                  {tf.label}
+              {INTERVALS.map((item) => (
+                <button key={item} className={interval === item ? "active" : ""} onClick={() => setInterval(item)}>
+                  {item}
                 </button>
               ))}
             </div>
           </div>
 
           <div className="control-group">
-            <label>Indicators:</label>
-            <div className="checkbox-group">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={indicators.sma}
-                  onChange={() => toggleIndicator('sma')}
-                />
-                <span>SMA</span>
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={indicators.ema}
-                  onChange={() => toggleIndicator('ema')}
-                />
-                <span>EMA</span>
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={indicators.bb}
-                  onChange={() => toggleIndicator('bb')}
-                />
-                <span>Bollinger Bands</span>
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={indicators.rsi}
-                  onChange={() => toggleIndicator('rsi')}
-                />
-                <span>RSI</span>
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={indicators.macd}
-                  onChange={() => toggleIndicator('macd')}
-                />
-                <span>MACD</span>
-              </label>
+            <label>Range</label>
+            <div className="button-group">
+              {RANGES.map((item) => (
+                <button key={item} className={range === item ? "active" : ""} onClick={() => setRange(item)}>
+                  {item}
+                </button>
+              ))}
             </div>
           </div>
 
           <div className="control-group">
-            <label>Drawing Tools:</label>
+            <label>Chart Type</label>
             <div className="button-group">
-              {drawingTools.map(tool => (
-                <button
-                  key={tool.value}
-                  className={drawingMode === tool.value ? 'active' : ''}
-                  onClick={() => setDrawingMode(drawingMode === tool.value ? null : tool.value)}
-                  title={tool.label}
-                >
-                  {tool.label}
+              {CHART_TYPES.map((item) => (
+                <button key={item} className={chartType === item ? "active" : ""} onClick={() => setChartType(item)}>
+                  {item}
                 </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="control-group">
+            <label>Compare</label>
+            <div className="tv-compare-row">
+              <input
+                className="tv-compare-input"
+                placeholder="Add symbol e.g. NVDA"
+                value={compareInput}
+                onChange={(e) => setCompareInput(e.target.value.toUpperCase())}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") setCompareSymbol(compareInput.trim());
+                }}
+              />
+              <button onClick={() => setCompareSymbol(compareInput.trim())}>Add</button>
+              <button onClick={() => { setCompareSymbol(""); setCompareInput(""); }}>Clear</button>
+              <button onClick={() => setRefreshVersion((v) => v + 1)}>Reset</button>
+            </div>
+          </div>
+
+          <div className="control-group">
+            <label>Indicators & Tools</label>
+            <div className="checkbox-group tv-checkbox-grid">
+              {[
+                ["volume", "Volume"],
+                ["sma20", "SMA 20"],
+                ["sma50", "SMA 50"],
+                ["ema20", "EMA 20"],
+                ["bb", "Bollinger"],
+                ["rsi", "RSI"],
+                ["macd", "MACD"],
+                ["trendLine", "Trend"],
+                ["horizontalLine", "H-Line"],
+                ["fibLevels", "Fib"],
+              ].map(([key, label]) => (
+                <label key={key}>
+                  <input type="checkbox" checked={indicators[key]} onChange={() => toggleIndicator(key)} />
+                  <span>{label}</span>
+                </label>
               ))}
             </div>
           </div>
@@ -665,53 +736,20 @@ export default function TradingViewChart({ symbol }) {
 
       <div className="tradingview-widget-shell">
         <div className="chart-container">
-          <canvas ref={mainChartRef}></canvas>
+          <canvas ref={priceCanvasRef} />
         </div>
-        <div className="volume-container">
-          <canvas ref={volumeChartRef}></canvas>
-        </div>
-        {(indicators.rsi || indicators.macd) && (
-          <div className="indicator-container">
-            <canvas ref={indicatorChartRef}></canvas>
+
+        {indicators.volume && (
+          <div className="volume-container">
+            <canvas ref={volumeCanvasRef} />
           </div>
         )}
-      </div>
 
-      <div className="chart-footer">
-        <p className="chart-legend">
-          <span className="legend-item">
-            <span className="legend-color" style={{ backgroundColor: '#26a69a' }}></span>
-            Bullish
-          </span>
-          <span className="legend-item">
-            <span className="legend-color" style={{ backgroundColor: '#ef5350' }}></span>
-            Bearish
-          </span>
-          {indicators.sma && (
-            <>
-              <span className="legend-item">
-                <span className="legend-color" style={{ backgroundColor: '#2962FF' }}></span>
-                SMA 20
-              </span>
-              <span className="legend-item">
-                <span className="legend-color" style={{ backgroundColor: '#FF6D00' }}></span>
-                SMA 50
-              </span>
-            </>
-          )}
-          {indicators.ema && (
-            <>
-              <span className="legend-item">
-                <span className="legend-color" style={{ backgroundColor: '#7B1FA2' }}></span>
-                EMA 12
-              </span>
-              <span className="legend-item">
-                <span className="legend-color" style={{ backgroundColor: '#E91E63' }}></span>
-                EMA 26
-              </span>
-            </>
-          )}
-        </p>
+        {(indicators.rsi || indicators.macd) && (
+          <div className="indicator-container">
+            <canvas ref={indicatorCanvasRef} />
+          </div>
+        )}
       </div>
     </div>
   );
