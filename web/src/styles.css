@@ -776,11 +776,15 @@ footer {
 
 .button-group {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding-bottom: 2px;
 }
 
 .button-group button {
+  flex: 0 0 auto;
   padding: 8px 14px;
   font-size: 0.85rem;
   font-weight: 500;
@@ -947,6 +951,10 @@ footer {
   background: #fff;
 }
 
+.tv-control-grid {
+  gap: 10px;
+}
+
 .tv-compare-row {
   display: flex;
   flex-wrap: wrap;
@@ -981,5 +989,13 @@ footer {
   .tv-compare-input {
     min-width: 0;
     width: 100%;
+  }
+
+  .tv-compare-row button {
+    flex: 1 1 calc(50% - 4px);
+  }
+
+  .tv-control-grid .control-group {
+    padding: 8px;
   }
 }

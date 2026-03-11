@@ -38,6 +38,14 @@ const INTERVALS = ["1", "5", "15", "60", "240", "D", "W", "M"];
 const RANGES = ["1D", "5D", "1M", "3M", "6M", "YTD", "1Y", "3Y", "5Y", "ALL"];
 const CHART_TYPES = ["candles", "ohlc", "line", "area"];
 
+function recommendedRangeForInterval(interval) {
+  if (["1", "5", "15"].includes(interval)) return "1D";
+  if (["60", "240"].includes(interval)) return "1M";
+  if (interval === "W") return "5Y";
+  if (interval === "M") return "ALL";
+  return "1Y";
+}
+
 function symbolSeed(symbol = "AAPL") {
   return String(symbol)
     .toUpperCase()
@@ -297,6 +305,11 @@ export default function TradingViewChart({ symbol }) {
   const first = visibleData[0];
   const delta = latest && first ? latest.c - first.c : 0;
   const deltaPct = latest && first && first.c ? (delta / first.c) * 100 : 0;
+
+  useEffect(() => {
+    const recommended = recommendedRangeForInterval(interval);
+    setRange(recommended);
+  }, [interval]);
 
   useEffect(() => {
     if (!priceCanvasRef.current || visibleData.length < 30) return;
@@ -700,10 +713,20 @@ export default function TradingViewChart({ symbol }) {
                 value={compareInput}
                 onChange={(e) => setCompareInput(e.target.value.toUpperCase())}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") setCompareSymbol(compareInput.trim());
+                  if (e.key === "Enter") {
+                    const cleaned = compareInput.trim().toUpperCase();
+                    if (cleaned) setCompareSymbol(cleaned);
+                  }
                 }}
               />
-              <button onClick={() => setCompareSymbol(compareInput.trim())}>Add</button>
+              <button
+                onClick={() => {
+                  const cleaned = compareInput.trim().toUpperCase();
+                  if (cleaned) setCompareSymbol(cleaned);
+                }}
+              >
+                Add
+              </button>
               <button onClick={() => { setCompareSymbol(""); setCompareInput(""); }}>Clear</button>
               <button onClick={() => setRefreshVersion((v) => v + 1)}>Reset</button>
             </div>
