@@ -840,7 +840,7 @@ footer {
 
 .tradingview-widget-container {
   width: 100%;
-  min-height: 720px;
+  height: 640px;
 }
 
 .chart-container,

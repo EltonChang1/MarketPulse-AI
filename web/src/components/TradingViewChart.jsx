@@ -52,7 +52,8 @@ export default function TradingViewChart({ symbol }) {
         container.innerHTML = "";
 
         new window.TradingView.widget({
-          autosize: true,
+          width: "100%",
+          height: 640,
           symbol: tvSymbol,
           interval: "D",
           timezone: "Etc/UTC",
@@ -61,20 +62,15 @@ export default function TradingViewChart({ symbol }) {
           locale: "en",
           enable_publishing: false,
           allow_symbol_change: true,
-          studies: [
-            "RSI@tv-basicstudies",
-            "MACD@tv-basicstudies",
-            "StochasticRSI@tv-basicstudies",
-            "MASimple@tv-basicstudies",
-            "BB@tv-basicstudies",
-            "Volume@tv-basicstudies",
-          ],
+          studies: ["Volume@tv-basicstudies"],
           withdateranges: true,
           hide_side_toolbar: false,
-          details: true,
-          calendar: true,
-          hotlist: true,
-          show_popup_button: true,
+          details: false,
+          calendar: false,
+          hotlist: false,
+          show_popup_button: false,
+          hide_top_toolbar: false,
+          hide_legend: false,
           container_id: widgetContainerId.current,
         });
       })
