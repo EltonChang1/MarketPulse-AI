@@ -325,6 +325,7 @@ export default function TradingViewChart({ symbol }) {
         type: "candlestick",
         label: (symbol || "AAPL").toUpperCase(),
         data: visibleData,
+        parsing: false,
         borderColor: { up: "#26a69a", down: "#ef5350", unchanged: "#999" },
         backgroundColor: { up: "#26a69a", down: "#ef5350", unchanged: "#999" },
       });
@@ -333,6 +334,7 @@ export default function TradingViewChart({ symbol }) {
         type: "ohlc",
         label: (symbol || "AAPL").toUpperCase(),
         data: visibleData,
+        parsing: false,
         borderColor: { up: "#26a69a", down: "#ef5350", unchanged: "#999" },
       });
     } else {
@@ -480,37 +482,75 @@ export default function TradingViewChart({ symbol }) {
       });
     }
 
-    priceChartRef.current = new Chart(priceCanvasRef.current, {
-      type: "line",
-      data: { datasets: priceDatasets },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: "index", intersect: false },
-        scales: {
-          x: {
-            type: "time",
-            time: { unit: unitForInterval(interval) },
-            grid: { color: "#f2f4f7" },
-            ticks: { maxRotation: 0 },
+    try {
+      priceChartRef.current = new Chart(priceCanvasRef.current, {
+        type: "line",
+        data: { datasets: priceDatasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          scales: {
+            x: {
+              type: "timeseries",
+              time: { unit: unitForInterval(interval) },
+              grid: { color: "#f2f4f7" },
+              ticks: { maxRotation: 0 },
+            },
+            y: {
+              position: "right",
+              grid: { color: "#f2f4f7" },
+              ticks: {
+                callback: (v) => `$${Number(v).toFixed(2)}`,
+              },
+            },
           },
-          y: {
-            position: "right",
-            grid: { color: "#f2f4f7" },
-            ticks: {
-              callback: (v) => `$${Number(v).toFixed(2)}`,
+          plugins: {
+            legend: {
+              display: true,
+              position: "top",
+              labels: { boxWidth: 12, usePointStyle: true, pointStyle: "line", font: { size: 11 } },
             },
           },
         },
-        plugins: {
-          legend: {
-            display: true,
-            position: "top",
-            labels: { boxWidth: 12, usePointStyle: true, pointStyle: "line", font: { size: 11 } },
+      });
+    } catch (_err) {
+      priceChartRef.current = new Chart(priceCanvasRef.current, {
+        type: "line",
+        data: {
+          labels: visibleData.map((p) => new Date(p.x).toLocaleDateString()),
+          datasets: [
+            {
+              label: (symbol || "AAPL").toUpperCase(),
+              data: visibleData.map((p) => p.c),
+              borderColor: "#2962FF",
+              backgroundColor: "rgba(41, 98, 255, 0.16)",
+              borderWidth: 2,
+              pointRadius: 0,
+              fill: false,
+              tension: 0.15,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              position: "right",
+              ticks: { callback: (v) => `$${Number(v).toFixed(2)}` },
+              grid: { color: "#f2f4f7" },
+            },
+            x: {
+              grid: { color: "#f2f4f7" },
+            },
+          },
+          plugins: {
+            legend: { display: true, position: "top" },
           },
         },
-      },
-    });
+      });
+    }
 
     if (indicators.volume && volumeCanvasRef.current) {
       volumeChartRef.current = new Chart(volumeCanvasRef.current, {

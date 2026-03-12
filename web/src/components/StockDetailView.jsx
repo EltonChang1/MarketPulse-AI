@@ -122,7 +122,6 @@ export default function StockDetailView({
       )}
 
       <div className="chart-section">
-        <h3>TradingView Chart</h3>
         <TradingViewChart symbol={stock.symbol} />
       </div>
 
