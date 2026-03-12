@@ -838,6 +838,11 @@ footer {
   background: #ffffff;
 }
 
+.tradingview-widget-container {
+  width: 100%;
+  min-height: 720px;
+}
+
 .chart-container,
 .volume-container,
 .indicator-container {
