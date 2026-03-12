@@ -306,6 +306,12 @@ export default function TradingViewChart({ symbol }) {
   const delta = latest && first ? latest.c - first.c : 0;
   const deltaPct = latest && first && first.c ? (delta / first.c) * 100 : 0;
 
+  const destroyChartOnCanvas = (canvas) => {
+    if (!canvas) return;
+    const existing = Chart.getChart(canvas);
+    if (existing) existing.destroy();
+  };
+
   useEffect(() => {
     const recommended = recommendedRangeForInterval(interval);
     setRange(recommended);
@@ -317,6 +323,12 @@ export default function TradingViewChart({ symbol }) {
     if (priceChartRef.current) priceChartRef.current.destroy();
     if (volumeChartRef.current) volumeChartRef.current.destroy();
     if (indicatorChartRef.current) indicatorChartRef.current.destroy();
+    destroyChartOnCanvas(priceCanvasRef.current);
+    destroyChartOnCanvas(volumeCanvasRef.current);
+    destroyChartOnCanvas(indicatorCanvasRef.current);
+    priceChartRef.current = null;
+    volumeChartRef.current = null;
+    indicatorChartRef.current = null;
 
     const priceDatasets = [];
 
@@ -690,6 +702,12 @@ export default function TradingViewChart({ symbol }) {
       if (priceChartRef.current) priceChartRef.current.destroy();
       if (volumeChartRef.current) volumeChartRef.current.destroy();
       if (indicatorChartRef.current) indicatorChartRef.current.destroy();
+      destroyChartOnCanvas(priceCanvasRef.current);
+      destroyChartOnCanvas(volumeCanvasRef.current);
+      destroyChartOnCanvas(indicatorCanvasRef.current);
+      priceChartRef.current = null;
+      volumeChartRef.current = null;
+      indicatorChartRef.current = null;
     };
   }, [symbol, visibleData, interval, indicators, chartType, compareData, compareSymbol]);
 
