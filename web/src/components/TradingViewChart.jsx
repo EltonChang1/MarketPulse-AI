@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 function toTradingViewSymbol(symbol = "") {
   const normalized = String(symbol || "").toUpperCase().replace("-", ".");
@@ -37,6 +37,7 @@ function loadTradingViewScript() {
 
 export default function TradingViewChart({ symbol }) {
   const widgetContainerId = useRef(`tradingview_${Math.random().toString(36).slice(2)}`);
+  const [showLongTrend, setShowLongTrend] = useState(true);
   const tvSymbol = useMemo(() => toTradingViewSymbol(symbol), [symbol]);
 
   useEffect(() => {
@@ -62,7 +63,15 @@ export default function TradingViewChart({ symbol }) {
           locale: "en",
           enable_publishing: false,
           allow_symbol_change: true,
-          studies: ["Volume@tv-basicstudies"],
+          studies: showLongTrend ? ["MASimple@tv-basicstudies"] : [],
+          studies_overrides: showLongTrend
+            ? {
+                "moving average.length": 200,
+                "moving average.source": "close",
+                "moving average.plot.color": "#175CD3",
+                "moving average.plot.linewidth": 2,
+              }
+            : {},
           withdateranges: true,
           hide_side_toolbar: false,
           details: false,
@@ -83,10 +92,16 @@ export default function TradingViewChart({ symbol }) {
       const container = document.getElementById(widgetContainerId.current);
       if (container) container.innerHTML = "";
     };
-  }, [tvSymbol]);
+  }, [tvSymbol, showLongTrend]);
 
   return (
     <div className="tradingview-wrapper">
+      <div className="tradingview-header tv-trend-toggle-row">
+        <label className="indicator-toggle-item tv-trend-toggle">
+          <input type="checkbox" checked={showLongTrend} onChange={() => setShowLongTrend((v) => !v)} />
+          <span>Long-term trend (200 MA)</span>
+        </label>
+      </div>
       <div className="tradingview-widget-shell">
         <div id={widgetContainerId.current} className="tradingview-widget-container" />
       </div>

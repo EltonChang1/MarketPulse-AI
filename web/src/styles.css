@@ -754,6 +754,18 @@ footer {
   background: #f8fafc;
 }
 
+.tv-trend-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 10px 16px;
+}
+
+.tv-trend-toggle {
+  margin: 0;
+  font-weight: 500;
+}
+
 .chart-controls {
   display: flex;
   flex-direction: column;
