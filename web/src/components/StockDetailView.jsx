@@ -15,6 +15,13 @@ function formatPercent(value) {
   return `${sign}${value.toFixed(2)}%`;
 }
 
+function scorePattern(match) {
+  const text = `${match?.indicator || ""} ${match?.label || ""} ${match?.detail || ""}`.toLowerCase();
+  if (/(bear|down|sell|breakdown|resistance|descending)/.test(text)) return -1;
+  if (/(bull|up|buy|breakout|support|ascending)/.test(text)) return 1;
+  return 0;
+}
+
 export default function StockDetailView({
   stock,
   onBack,
@@ -27,6 +34,17 @@ export default function StockDetailView({
   const indicators = stock.technicalForecast?.indicators || {};
   const patternMatches = stock.technicalForecast?.patternMatches || [];
   const analysis = stock.comprehensiveAnalysis || {};
+  const patternSeries = patternMatches.slice(0, 8).map((match) => ({ ...match, score: scorePattern(match) }));
+  const patternPoints = patternSeries.map((match, index) => {
+    const x = patternSeries.length === 1 ? 50 : (index / (patternSeries.length - 1)) * 100;
+    const y = match.score > 0 ? 8 : match.score < 0 ? 32 : 20;
+    return {
+      ...match,
+      x,
+      y,
+    };
+  });
+  const patternPath = patternPoints.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
 
   const predictionButtons = [
     { key: "week", label: "1 Week", data: predictions.week },
@@ -122,6 +140,38 @@ export default function StockDetailView({
       )}
 
       <div className="chart-section">
+        {patternSeries.length > 0 && (
+          <div className="pattern-graph-card">
+            <div className="pattern-graph-header">
+              <h4>Pattern Matching Graph</h4>
+              <p>Recent detected patterns mapped as trend bias (bullish / neutral / bearish)</p>
+            </div>
+
+            <svg className="pattern-graph" viewBox="0 0 100 40" preserveAspectRatio="none" role="img" aria-label="Pattern match trend graph">
+              <line x1="0" y1="20" x2="100" y2="20" className="pattern-midline" />
+              {patternPath && <path d={patternPath} className="pattern-line" />}
+              {patternPoints.map((point, index) => (
+                <circle
+                  key={`${point.indicator}-${index}`}
+                  cx={point.x}
+                  cy={point.y}
+                  r="1.7"
+                  className={
+                    point.score > 0 ? "pattern-point bullish" : point.score < 0 ? "pattern-point bearish" : "pattern-point neutral"
+                  }
+                />
+              ))}
+            </svg>
+
+            <div className="pattern-label-row">
+              {patternPoints.map((point, index) => (
+                <span key={`${point.indicator}-label-${index}`} className="pattern-label-item" title={`${point.indicator}: ${point.label}`}>
+                  {point.indicator}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
         <TradingViewChart symbol={stock.symbol} />
       </div>
 
