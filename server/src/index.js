@@ -6,8 +6,13 @@ import { estimateNewsImpact, generateComprehensiveAnalysis, generateDetailedNews
 import { fetchQuoteAndHistory } from "./services/marketService.js";
 import { fetchLatestNews } from "./services/newsService.js";
 import { predictMultipleTimeframes } from "./services/technicalService.js";
+import { connectDB } from "./config/db.js";
+import authRoutes from "./routes/auth.js";
+import watchlistRoutes from "./routes/watchlist.js";
+import searchRoutes from "./routes/search.js";
 
 dotenv.config();
+connectDB();
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -170,6 +175,11 @@ function getPatternOptions(query = {}) {
 
 app.use(cors());
 app.use(express.json());
+
+// Auth & Watchlist Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/watchlist", watchlistRoutes);
+app.use("/api", searchRoutes);
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, service: "marketpulse-ai", timestamp: new Date().toISOString() });

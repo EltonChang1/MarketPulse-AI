@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import StockDetailView from "./components/StockDetailView";
+import SignUpPage from "./components/SignUpPage";
+import SignInPage from "./components/SignInPage";
+import HomePage from "./components/HomePage";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 const REFRESH_MS = 60_000;
@@ -105,7 +110,8 @@ function getInitialWatchlist() {
   return DEFAULT_WATCHLIST;
 }
 
-export default function App() {
+// Legacy ClassicApp component for backward compatibility
+function ClassicApp() {
   const initialView = getInitialViewState();
   const [payload, setPayload] = useState(null);
   const [selected, setSelected] = useState(initialView.selected);
@@ -180,7 +186,7 @@ export default function App() {
   }
 
   function handleRemoveSymbol(sym) {
-    if (watchlist.length <= 1) return; // keep at least 1
+    if (watchlist.length <= 1) return;
     setWatchlist((prev) => prev.filter((s) => s !== sym));
     if (selected === sym) setSelected(watchlist.find((s) => s !== sym) || "");
   }
@@ -287,7 +293,6 @@ export default function App() {
 
       {error ? <div className="error">{error}</div> : null}
 
-      {/* Watchlist management */}
       <section className="watchlist-controls">
         <div className="watchlist-add-row">
           <input
@@ -376,5 +381,93 @@ export default function App() {
         </small>
       </footer>
     </div>
+  );
+}
+
+// Protected Route Component
+function ProtectedRoute({ children }) {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>Loading...</div>;
+  }
+
+  return isAuthenticated ? children : <Navigate to="/signin" />;
+}
+
+// Header Component for authenticated pages
+function AppHeader() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  return (
+    <header style={{
+      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+      color: "white",
+      padding: "16px 20px",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      boxShadow: "0 2px 10px rgba(0,0,0,0.1)"
+    }}>
+      <h1 style={{ margin: 0, fontSize: "24px", cursor: "pointer" }} onClick={() => navigate("/")}>
+        📊 MarketPulse AI
+      </h1>
+      <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+        <span style={{ fontSize: "14px" }}>{user?.email}</span>
+        <button
+          onClick={() => {
+            logout();
+            navigate("/signin");
+          }}
+          style={{
+            padding: "8px 16px",
+            background: "rgba(255,255,255,0.2)",
+            border: "1px solid white",
+            color: "white",
+            borderRadius: "6px",
+            cursor: "pointer",
+            transition: "all 0.2s",
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.background = "white";
+            e.target.style.color = "#667eea";
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = "rgba(255,255,255,0.2)";
+            e.target.style.color = "white";
+          }}
+        >
+          Logout
+        </button>
+      </div>
+    </header>
+  );
+}
+
+// Main App Router
+export default function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <Routes>
+          <Route path="/signup" element={<SignUpPage />} />
+          <Route path="/signin" element={<SignInPage />} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <>
+                  <AppHeader />
+                  <HomePage />
+                </>
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/classic" element={<ClassicApp />} />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </AuthProvider>
+    </Router>
   );
 }
