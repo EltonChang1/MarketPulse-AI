@@ -1478,6 +1478,199 @@ footer {
 /* ══════════════════════════════════════════════════════
    RESPONSIVE
 ══════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════
+   CHART CONTROLS
+══════════════════════════════════════════════════════ */
+.chart-controls-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.chart-control-btn {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.chart-control-btn:hover {
+  background: #e2e8f0;
+}
+
+.chart-control-btn.active {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+
+/* ══════════════════════════════════════════════════════
+   SIGNAL CHARTS SECTION
+══════════════════════════════════════════════════════ */
+.signal-charts-section {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.signal-charts-section h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 12px;
+}
+
+.signal-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.signal-toggle {
+  border: 2px solid;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.signal-toggle:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.signal-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.signal-chart-wrap {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+  aspect-ratio: 16 / 9;
+  position: relative;
+}
+
+.signal-chart-wrap canvas {
+  max-height: 100%;
+}
+
+/* ══════════════════════════════════════════════════════
+   PATTERN OVERLAY PANEL
+══════════════════════════════════════════════════════ */
+.pattern-overlay-panel {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+  margin-top: 16px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.pattern-header {
+  margin-bottom: 12px;
+}
+
+.pattern-header h4 {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 2px;
+}
+
+.pattern-subtitle {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
+}
+
+.pattern-group {
+  margin-bottom: 14px;
+}
+
+.pattern-group-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 8px;
+}
+
+.pattern-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pattern-item {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pattern-item:hover {
+  background: #f1f5f9;
+  transform: translateX(4px);
+}
+
+.pattern-item.bullish {
+  background: #f0fdf4;
+  border-left: 3px solid #16a34a;
+}
+
+.pattern-item.bearish {
+  background: #fef2f2;
+  border-left: 3px solid #dc2626;
+}
+
+.pattern-item.neutral {
+  background: #f8fafc;
+  border-left: 3px solid #6b7280;
+}
+
+.pattern-date {
+  font-weight: 600;
+  color: #475569;
+  font-family: "Monaco", "Courier", monospace;
+}
+
+.pattern-label {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.pattern-detail {
+  font-size: 11px;
+  color: #64748b;
+  grid-column: 1 / -1;
+  margin-top: -2px;
+}
+
+/* ══════════════════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
   .reversal-grid {
     grid-template-columns: 1fr;
@@ -1493,4 +1686,17 @@ footer {
   .sort-controls { flex-wrap: wrap; }
 
   .basis-signal { width: 180px; }
+
+  .signal-charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-controls-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .chart-control-btn {
+    width: 100%;
+  }
 }

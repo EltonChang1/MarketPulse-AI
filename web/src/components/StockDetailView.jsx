@@ -1,5 +1,7 @@
 import { useState } from "react";
 import TradingViewChart from "./TradingViewChart";
+import SignalCharts from "./SignalCharts";
+import PatternOverlay from "./PatternOverlay";
 
 function formatCurrency(value) {
   if (typeof value !== "number" || Number.isNaN(value)) return "-";
@@ -47,6 +49,8 @@ export default function StockDetailView({
   onSelectedPredictionChange,
 }) {
   const [showBasis, setShowBasis] = useState(false);
+  const [showSignals, setShowSignals] = useState(false);
+  const [showPatterns, setShowPatterns] = useState(false);
 
   if (!stock) return null;
 
@@ -152,6 +156,24 @@ export default function StockDetailView({
 
       <div className="chart-section">
         <TradingViewChart symbol={stock.symbol} />
+        
+        <div className="chart-controls-row">
+          <button 
+            className={`chart-control-btn ${showSignals ? "active" : ""}`}
+            onClick={() => setShowSignals(!showSignals)}
+          >
+            {showSignals ? "▼" : "►"} Signal Charts
+          </button>
+          <button 
+            className={`chart-control-btn ${showPatterns ? "active" : ""}`}
+            onClick={() => setShowPatterns(!showPatterns)}
+          >
+            {showPatterns ? "▼" : "►"} Pattern Matches
+          </button>
+        </div>
+
+        {showSignals && <SignalCharts stock={stock} />}
+        {showPatterns && <PatternOverlay stock={stock} visible={true} />}
       </div>
 
       {/* ── Reversal Intelligence ── */}
