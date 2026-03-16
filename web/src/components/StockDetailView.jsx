@@ -46,6 +46,29 @@ export default function StockDetailView({
 
   const currentPrediction = predictions[selectedPrediction] || fallbackPrediction;
 
+  const predictionBasisItems = [
+    "Trend structure from moving averages (SMA/EMA)",
+    "Momentum regime from RSI, MACD, and Stochastic",
+    "Volatility and range context from Bollinger Bands and ATR",
+    "Trend strength and direction from ADX, DI+, DI-, and Aroon",
+    "Volume/flow confirmation from OBV and A/D line",
+    "Pattern matches detected from recent historical behavior",
+    "News sentiment and confidence from recent headlines",
+  ];
+
+  const dayTraderFeedbackItems = [
+    "Channel position and reversal proximity (near top/bottom of range)",
+    "Pattern-triggered direction clues: bull/bear flags, double top, head-and-shoulders, breakouts, Fibonacci levels",
+    "RSI threshold cross logic: below 30 crossing up and above 70 crossing down",
+    "Volume spike + RSI confluence for potential local tops/bottoms",
+    "Stochastic/RSI divergence as reversal warning",
+    "Top/bottom channel touch count before reversal",
+    "Typical daily up/down travel range (weekly/monthly average)",
+    "High-impact events and earnings schedule awareness",
+    "Watchlist management: add/remove symbols",
+    "Sort modes: movers up/down, alphabetical, gainers/losers",
+  ];
+
   return (
     <div className="detail-view">
       <div className="detail-header">
@@ -120,6 +143,26 @@ export default function StockDetailView({
           </div>
         </div>
       )}
+
+      <div className="prediction-summary prediction-basis">
+        <h3>What is the prediction based on?</h3>
+        <ul>
+          {predictionBasisItems.map((item, idx) => (
+            <li key={`basis-${idx}`}>{item}</li>
+          ))}
+        </ul>
+
+        <h4>Day-trader feedback (next improvements)</h4>
+        <p>
+          I took a look at the MarketPulse AI website and I like it and find it useful. Nice job. Here are the
+          highest-impact additions to improve forward-looking decision support:
+        </p>
+        <ul>
+          {dayTraderFeedbackItems.map((item, idx) => (
+            <li key={`feedback-${idx}`}>{item}</li>
+          ))}
+        </ul>
+      </div>
 
       <div className="chart-section">
         <TradingViewChart symbol={stock.symbol} />
