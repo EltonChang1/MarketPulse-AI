@@ -7,6 +7,18 @@ const REFRESH_MS = 60_000;
 const MARKER_OPTIONS = [8, 10, 12, 15, 20];
 const PER_INDICATOR_OPTIONS = [2, 3, 4, 5];
 const PERIOD_OPTIONS = ["week", "month", "quarter", "halfYear", "year"];
+const SORT_OPTIONS = [
+  { value: "default", label: "Default" },
+  { value: "gainers", label: "Gainers ↑" },
+  { value: "losers", label: "Losers ↓" },
+  { value: "az", label: "A → Z" },
+  { value: "za", label: "Z → A" },
+  { value: "bullish", label: "Bullish First" },
+  { value: "bearish", label: "Bearish First" },
+];
+const DEFAULT_WATCHLIST = ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "BRK-B", "TSLA", "AVGO", "JPM"];
+const LS_WATCHLIST_KEY = "marketpulse_watchlist";
+const SYMBOL_REGEX = /^[A-Z]{1,7}(-[A-Z])?$/;
 
 function formatCurrency(value) {
   if (typeof value !== "number" || Number.isNaN(value)) return "-";
@@ -80,6 +92,19 @@ function getInitialFilterQuery() {
   return params.get("q") || "";
 }
 
+function getInitialWatchlist() {
+  try {
+    const stored = localStorage.getItem(LS_WATCHLIST_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {
+    // ignore
+  }
+  return DEFAULT_WATCHLIST;
+}
+
 export default function App() {
   const initialView = getInitialViewState();
   const [payload, setPayload] = useState(null);
@@ -90,17 +115,23 @@ export default function App() {
   const [error, setError] = useState("");
   const [query, setQuery] = useState(getInitialFilterQuery);
   const [markerSettings, setMarkerSettings] = useState(getInitialMarkerSettings);
+  const [watchlist, setWatchlist] = useState(getInitialWatchlist);
+  const [addInput, setAddInput] = useState("");
+  const [addError, setAddError] = useState("");
+  const [sortBy, setSortBy] = useState("default");
   const effectiveSelectedPrediction = PERIOD_OPTIONS.includes(selectedPrediction)
     ? selectedPrediction
     : "week";
 
-  async function loadData() {
+  async function loadData(currentWatchlist) {
+    const symbols = (currentWatchlist || watchlist).join(",");
     try {
       setError("");
       const { data } = await axios.get(`${API_BASE_URL}/api/analyze`, {
         params: {
           markers: markerSettings.markers,
           perIndicator: markerSettings.perIndicator,
+          symbols,
         },
       });
       setPayload(data);
@@ -115,10 +146,48 @@ export default function App() {
   }
 
   useEffect(() => {
-    loadData();
-    const timer = setInterval(loadData, REFRESH_MS);
+    loadData(watchlist);
+    const timer = setInterval(() => loadData(watchlist), REFRESH_MS);
     return () => clearInterval(timer);
-  }, [markerSettings.markers, markerSettings.perIndicator]);
+  }, [markerSettings.markers, markerSettings.perIndicator, watchlist.join(",")]);
+
+  // Persist watchlist
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_WATCHLIST_KEY, JSON.stringify(watchlist));
+    } catch {
+      // ignore
+    }
+  }, [watchlist.join(",")]);
+
+  function handleAddSymbol() {
+    const sym = addInput.trim().toUpperCase();
+    if (!SYMBOL_REGEX.test(sym)) {
+      setAddError("Invalid ticker format (e.g. AAPL, BRK-B)");
+      return;
+    }
+    if (watchlist.includes(sym)) {
+      setAddError(`${sym} is already in your watchlist`);
+      return;
+    }
+    if (watchlist.length >= 20) {
+      setAddError("Max 20 symbols allowed");
+      return;
+    }
+    setAddError("");
+    setAddInput("");
+    setWatchlist((prev) => [...prev, sym]);
+  }
+
+  function handleRemoveSymbol(sym) {
+    if (watchlist.length <= 1) return; // keep at least 1
+    setWatchlist((prev) => prev.filter((s) => s !== sym));
+    if (selected === sym) setSelected(watchlist.find((s) => s !== sym) || "");
+  }
+
+  function handleResetWatchlist() {
+    setWatchlist(DEFAULT_WATCHLIST);
+  }
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -145,13 +214,46 @@ export default function App() {
   const stocks = payload?.data || [];
   const filteredStocks = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    if (!normalized) return stocks;
-    return stocks.filter(
-      (item) =>
-        item.symbol.toLowerCase().includes(normalized) ||
-        item.companyName.toLowerCase().includes(normalized)
-    );
-  }, [stocks, query]);
+    let result = normalized
+      ? stocks.filter(
+          (item) =>
+            item.symbol.toLowerCase().includes(normalized) ||
+            item.companyName.toLowerCase().includes(normalized)
+        )
+      : [...stocks];
+
+    switch (sortBy) {
+      case "gainers":
+        result.sort((a, b) => (b.dayChangePct ?? 0) - (a.dayChangePct ?? 0));
+        break;
+      case "losers":
+        result.sort((a, b) => (a.dayChangePct ?? 0) - (b.dayChangePct ?? 0));
+        break;
+      case "az":
+        result.sort((a, b) => a.symbol.localeCompare(b.symbol));
+        break;
+      case "za":
+        result.sort((a, b) => b.symbol.localeCompare(a.symbol));
+        break;
+      case "bullish":
+        result.sort((a, b) => {
+          const da = a.technicalForecast?.predictions?.week?.direction;
+          const db = b.technicalForecast?.predictions?.week?.direction;
+          return (da === "up" ? -1 : 1) - (db === "up" ? -1 : 1);
+        });
+        break;
+      case "bearish":
+        result.sort((a, b) => {
+          const da = a.technicalForecast?.predictions?.week?.direction;
+          const db = b.technicalForecast?.predictions?.week?.direction;
+          return (da === "down" ? -1 : 1) - (db === "down" ? -1 : 1);
+        });
+        break;
+      default:
+        break;
+    }
+    return result;
+  }, [stocks, query, sortBy]);
 
   const selectedStock = useMemo(
     () => stocks.find((item) => item.symbol === selected) || stocks[0],
@@ -176,14 +278,43 @@ export default function App() {
       <header className="header">
         <div>
           <h1>MarketPulse AI</h1>
-          <p>Top-10 US market cap stocks: live data + news + LLM sentiment + multi-timeframe prediction.</p>
+          <p>Custom watchlist · live data · news · LLM sentiment · multi-timeframe prediction.</p>
         </div>
-        <button onClick={loadData} disabled={loading}>
+        <button onClick={() => loadData(watchlist)} disabled={loading}>
           {loading ? "Loading..." : "Refresh"}
         </button>
       </header>
 
       {error ? <div className="error">{error}</div> : null}
+
+      {/* Watchlist management */}
+      <section className="watchlist-controls">
+        <div className="watchlist-add-row">
+          <input
+            type="text"
+            className="watchlist-input"
+            placeholder="Add ticker (e.g. TSLA)"
+            value={addInput}
+            maxLength={8}
+            onChange={(e) => { setAddInput(e.target.value.toUpperCase()); setAddError(""); }}
+            onKeyDown={(e) => e.key === "Enter" && handleAddSymbol()}
+            aria-label="Add stock symbol"
+          />
+          <button className="watchlist-add-btn" onClick={handleAddSymbol}>+ Add</button>
+          <button className="watchlist-reset-btn" onClick={handleResetWatchlist} title="Reset to default top-10">Reset</button>
+        </div>
+        {addError && <div className="watchlist-error">{addError}</div>}
+        <div className="watchlist-chips">
+          {watchlist.map((sym) => (
+            <span key={sym} className="watchlist-chip">
+              {sym}
+              {watchlist.length > 1 && (
+                <button className="chip-remove" onClick={() => handleRemoveSymbol(sym)} aria-label={`Remove ${sym}`}>✕</button>
+              )}
+            </span>
+          ))}
+        </div>
+      </section>
 
       <section className="overview-controls">
         <input
@@ -194,6 +325,18 @@ export default function App() {
           onChange={(event) => setQuery(event.target.value)}
           aria-label="Filter stocks"
         />
+        <div className="sort-controls">
+          <span className="sort-label">Sort:</span>
+          {SORT_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              className={`sort-btn ${sortBy === opt.value ? "active" : ""}`}
+              onClick={() => setSortBy(opt.value)}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </section>
 
       <section className="cards">

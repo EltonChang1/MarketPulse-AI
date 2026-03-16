@@ -1016,3 +1016,481 @@ footer {
     padding: 8px;
   }
 }
+
+/* ══════════════════════════════════════════════════════
+   WATCHLIST CONTROLS
+══════════════════════════════════════════════════════ */
+.watchlist-controls {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.watchlist-add-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.watchlist-input {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  width: 130px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.watchlist-add-btn {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.watchlist-add-btn:hover { background: #1d4ed8; }
+
+.watchlist-reset-btn {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.watchlist-reset-btn:hover { background: #e2e8f0; }
+
+.watchlist-error {
+  color: #dc2626;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.watchlist-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.watchlist-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #e0e7ff;
+  color: #3730a3;
+  border-radius: 20px;
+  padding: 3px 10px 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.chip-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6366f1;
+  padding: 0 0 0 2px;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.chip-remove:hover { color: #dc2626; }
+
+/* ══════════════════════════════════════════════════════
+   SORT CONTROLS
+══════════════════════════════════════════════════════ */
+.overview-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.sort-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sort-label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+  margin-right: 2px;
+}
+
+.sort-btn {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 16px;
+  padding: 4px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  color: #475569;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+
+.sort-btn:hover { background: #e2e8f0; }
+.sort-btn.active {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+
+/* ══════════════════════════════════════════════════════
+   REVERSAL INTELLIGENCE SECTION
+══════════════════════════════════════════════════════ */
+.reversal-section {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px 20px 16px;
+  margin-bottom: 20px;
+}
+
+.reversal-section h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 4px;
+}
+
+.reversal-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0 0 16px;
+}
+
+.reversal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.rev-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 14px 12px;
+}
+
+.rev-card.divergence-alert {
+  background: #faf5ff;
+  border-color: #a78bfa;
+}
+
+.rev-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
+}
+
+.rev-gauge-wrap { margin-bottom: 6px; }
+
+.rev-gauge {
+  position: relative;
+  height: 12px;
+  background: linear-gradient(to right, #16a34a, #d97706, #dc2626);
+  border-radius: 6px;
+  overflow: visible;
+  margin-bottom: 4px;
+}
+
+.rev-gauge.rsi-gauge {
+  background: none;
+  display: flex;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.rev-gauge-zone {
+  height: 100%;
+}
+
+.zone-oversold { flex: 30; background: #16a34a; }
+.zone-neutral  { flex: 40; background: #d97706; }
+.zone-overbought { flex: 30; background: #dc2626; }
+
+.rev-gauge-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.4s;
+}
+
+.rev-gauge-marker {
+  position: absolute;
+  top: -3px;
+  width: 4px;
+  height: 18px;
+  background: #1e293b;
+  border-radius: 2px;
+  transform: translateX(-50%);
+  box-shadow: 0 0 0 2px #fff;
+}
+
+.rev-gauge-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.rev-signal {
+  font-size: 13px;
+  font-weight: 700;
+  margin: 6px 0 4px;
+}
+
+.rev-detail {
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.5;
+  margin-top: 2px;
+}
+
+.rev-big-number {
+  font-size: 32px;
+  font-weight: 800;
+  margin: 4px 0 6px;
+}
+
+.rev-range-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 6px;
+}
+
+.rev-range-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rev-range-label {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.rev-range-val {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.rev-range-pct {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* Fibonacci */
+.fib-card { }
+
+.fib-levels {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 6px;
+}
+
+.fib-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.fib-row.fib-nearest {
+  background: #fef9c3;
+  border: 1px solid #fde047;
+  font-weight: 700;
+}
+
+.fib-label {
+  color: #64748b;
+  width: 140px;
+  flex-shrink: 0;
+}
+
+.fib-price {
+  color: #1e293b;
+  font-weight: 600;
+  flex: 1;
+}
+
+.fib-tag {
+  color: #b45309;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Channel Touch Count */
+.touch-count-row {
+  display: flex;
+  gap: 20px;
+  margin: 8px 0;
+}
+
+.touch-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.touch-item.upper { background: #fef2f2; }
+.touch-item.lower { background: #f0fdf4; }
+
+.touch-num {
+  font-size: 28px;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.touch-name {
+  font-size: 11px;
+  color: #64748b;
+  text-align: center;
+  margin-top: 2px;
+}
+
+.touch-warn {
+  font-size: 10px;
+  color: #d97706;
+  font-weight: 600;
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* ══════════════════════════════════════════════════════
+   PREDICTION BASIS SECTION
+══════════════════════════════════════════════════════ */
+.prediction-basis-section {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.basis-toggle {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 14px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+}
+
+.basis-toggle:hover { color: #2563eb; }
+
+.basis-content {
+  padding: 0 16px 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.basis-summary {
+  font-size: 13px;
+  color: #475569;
+  margin: 12px 0;
+  line-height: 1.6;
+}
+
+.basis-weights {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.basis-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.basis-signal {
+  font-size: 12px;
+  color: #334155;
+  width: 260px;
+  flex-shrink: 0;
+}
+
+.basis-bar-wrap {
+  flex: 1;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.basis-bar {
+  height: 100%;
+  background: linear-gradient(to right, #2563eb, #7c3aed);
+  border-radius: 4px;
+}
+
+.basis-weight {
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  width: 36px;
+  text-align: right;
+}
+
+.basis-amplifiers {
+  font-size: 12px;
+  color: #475569;
+}
+
+.basis-amplifiers ul {
+  margin: 4px 0 0 16px;
+  padding: 0;
+}
+
+.basis-amplifiers li {
+  margin-bottom: 2px;
+}
+
+/* ══════════════════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .reversal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .watchlist-add-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .watchlist-input { width: 100%; }
+
+  .sort-controls { flex-wrap: wrap; }
+
+  .basis-signal { width: 180px; }
+}

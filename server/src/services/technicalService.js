@@ -560,20 +560,110 @@ export function predictMultipleTimeframes(history, currentPrice, options = {}) {
 
   const predictionBasis = {
     indicatorsUsed: [
-      "On-Balance Volume (OBV)",
-      "Accumulation/Distribution Line (A/D)",
-      "Average Directional Index (ADX)",
-      "Aroon Indicator",
-      "MACD",
-      "Relative Strength Index (RSI)",
-      "Stochastic Oscillator",
+      "Linear Regression Trend Slope",
+      "MACD vs Signal Spread",
+      "SMA5 / SMA20 Short-term Crossover",
+      "SMA50 / SMA200 Long-term Trend (Golden/Death Cross)",
+      "Stochastic Overbought/Oversold",
+      "RSI Extreme Zones (<30 / >70)",
     ],
-    summary: "Prediction combines volume pressure, trend strength, momentum crossovers, and divergence checks.",
+    weights: {
+      "Linear Regression Trend": "30%",
+      "MACD Momentum": "25%",
+      "Short-term MA Crossover (SMA5/20)": "15%",
+      "Long-term Trend (SMA50/200)": "10%",
+      "Stochastic (Overbought/Oversold)": "10%",
+      "RSI Extremes (<30 or >70)": "10%",
+    },
+    amplifiers: [
+      "ADX trend-strength multiplier (up to +30% when ADX > 25)",
+      "Timeframe scaling: √(daysAhead / 7)",
+    ],
+    summary:
+      "A weighted sum of six signals (see weights) gives an expected move percent. The result is amplified by ADX trend strength and scaled by the square root of the prediction horizon. Final price is bounded by ATR-based volatility limits per timeframe.",
   };
+
+  // ─── Reversal Metrics ─────────────────────────────────────────────────────
+  const bbPosition =
+    lastBB.upper > lastBB.lower
+      ? Number(((currentPrice - lastBB.lower) / (lastBB.upper - lastBB.lower)).toFixed(3))
+      : 0.5;
+
+  const volumes = indicators.volumes;
+  const volWindow = Math.min(20, volumes.length);
+  const avgVolume20 = volumes.slice(-volWindow).reduce((a, b) => a + (b ?? 0), 0) / Math.max(1, volWindow);
+  const currentVolume = volumes[volumes.length - 1] ?? 0;
+  const volumeRatio = avgVolume20 > 0 ? Number((currentVolume / avgVolume20).toFixed(2)) : 1;
+
+  const recentHistory60 = history.slice(-60);
+  const fibHigh = Math.max(...recentHistory60.map((h) => h.high ?? currentPrice));
+  const fibLow = Math.min(...recentHistory60.map((h) => h.low ?? currentPrice));
+  const fibRange = fibHigh - fibLow || 1;
+  const fibonacci = {
+    high: Number(fibHigh.toFixed(2)),
+    level786: Number((fibLow + fibRange * 0.786).toFixed(2)),
+    level618: Number((fibLow + fibRange * 0.618).toFixed(2)),
+    level500: Number((fibLow + fibRange * 0.5).toFixed(2)),
+    level382: Number((fibLow + fibRange * 0.382).toFixed(2)),
+    level236: Number((fibLow + fibRange * 0.236).toFixed(2)),
+    low: Number(fibLow.toFixed(2)),
+  };
+
+  const bbOffset = closes.length - bollingerBands.length;
+  let upperTouches = 0;
+  let lowerTouches = 0;
+  const touchWindow = Math.min(60, bollingerBands.length);
+  for (let i = bollingerBands.length - touchWindow; i < bollingerBands.length; i += 1) {
+    const closePrice = closes[i + bbOffset];
+    const bandUpper = bollingerBands[i]?.upper;
+    const bandLower = bollingerBands[i]?.lower;
+    if (typeof closePrice === "number" && typeof bandUpper === "number" && typeof bandLower === "number") {
+      if (closePrice >= bandUpper * 0.998) upperTouches += 1;
+      if (closePrice <= bandLower * 1.002) lowerTouches += 1;
+    }
+  }
+
+  const atrValues = atr;
+  const wLen = Math.min(5, atrValues.length);
+  const mLen = Math.min(20, atrValues.length);
+  const weeklyAtrAvg = atrValues.slice(-wLen).reduce((a, b) => a + b, 0) / Math.max(1, wLen);
+  const monthlyAtrAvg = atrValues.slice(-mLen).reduce((a, b) => a + b, 0) / Math.max(1, mLen);
+
+  const rsiCurrent = rsi14[rsi14.length - 1] ?? 50;
+  const rsiPrev3 = rsi14[rsi14.length - 4] ?? rsiCurrent;
+  const stochCurrent = stochastic[stochastic.length - 1]?.k ?? 50;
+  const stochPrev3 = stochastic[stochastic.length - 4]?.k ?? stochCurrent;
+  const rsiDir = rsiCurrent > rsiPrev3 + 1 ? "up" : rsiCurrent < rsiPrev3 - 1 ? "down" : "flat";
+  const stochDir = stochCurrent > stochPrev3 + 2 ? "up" : stochCurrent < stochPrev3 - 2 ? "down" : "flat";
+  const hasDivergence = rsiDir !== "flat" && stochDir !== "flat" && rsiDir !== stochDir;
+
+  const reversalMetrics = {
+    bbPosition,
+    volumeRatio,
+    currentVolume: Number(currentVolume.toFixed(0)),
+    avgVolume20: Number(avgVolume20.toFixed(0)),
+    fibonacci,
+    channelTouches: { upper: upperTouches, lower: lowerTouches },
+    dailyRange: {
+      weeklyAvgAtr: Number(weeklyAtrAvg.toFixed(2)),
+      monthlyAvgAtr: Number(monthlyAtrAvg.toFixed(2)),
+      weeklyPct: Number(((weeklyAtrAvg / currentPrice) * 100).toFixed(2)),
+      monthlyPct: Number(((monthlyAtrAvg / currentPrice) * 100).toFixed(2)),
+    },
+    divergence: {
+      hasRsiStochDivergence: hasDivergence,
+      rsiDirection: rsiDir,
+      stochDirection: stochDir,
+      rsiCurrent: Number(rsiCurrent.toFixed(1)),
+      stochKCurrent: Number(stochCurrent.toFixed(1)),
+    },
+  };
+  // ──────────────────────────────────────────────────────────────────────────
 
   return {
     predictions,
     predictionBasis,
+    reversalMetrics,
     patternMatches,
     indicators: {
       sma5: Number((sma5[sma5.length - 1] ?? currentPrice).toFixed(2)),

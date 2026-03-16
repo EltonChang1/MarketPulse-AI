@@ -226,14 +226,36 @@ async function analyzeCompany(symbol, companyName, technicalOptions = {}) {
 app.get("/api/analyze", async (req, res) => {
   try {
     const technicalOptions = getPatternOptions(req.query);
-    const cacheKey = getCacheKey("analyze-all", technicalOptions);
+
+    // Support custom watchlist via ?symbols=AAPL,TSLA,...
+    const symbolsParam = String(req.query.symbols || "").trim();
+    const requestedSymbols = symbolsParam
+      ? symbolsParam
+          .split(",")
+          .map((s) => s.trim().toUpperCase())
+          .filter((s) => /^[A-Z]{1,7}(-[A-Z])?$/.test(s))
+          .slice(0, 20)
+      : null;
+
+    const companies =
+      requestedSymbols && requestedSymbols.length > 0
+        ? requestedSymbols.map((sym) => {
+            const known = TOP_COMPANIES.find((c) => c.symbol === sym);
+            return known || { symbol: sym, companyName: sym };
+          })
+        : TOP_COMPANIES;
+
+    const cacheKey = getCacheKey("analyze", {
+      ...technicalOptions,
+      symbols: companies.map((c) => c.symbol).join(","),
+    });
 
     const { payload, cacheStatus, marketState } = await withCache({
       key: cacheKey,
       cache: aggregateCache,
       compute: async () => {
         const settled = await Promise.allSettled(
-          TOP_COMPANIES.map((company) => analyzeCompany(company.symbol, company.companyName, technicalOptions))
+          companies.map((company) => analyzeCompany(company.symbol, company.companyName, technicalOptions))
         );
 
         const data = settled
@@ -241,7 +263,7 @@ app.get("/api/analyze", async (req, res) => {
           .map((result) => result.value);
 
         const failures = settled
-          .map((result, index) => ({ result, company: TOP_COMPANIES[index] }))
+          .map((result, index) => ({ result, company: companies[index] }))
           .filter(({ result }) => result.status === "rejected")
           .map(({ result, company }) => ({
             symbol: company.symbol,
@@ -276,14 +298,11 @@ app.get("/api/analyze", async (req, res) => {
 app.get("/api/analyze/:symbol", async (req, res) => {
   try {
     const symbol = String(req.params.symbol || "").toUpperCase();
-    const technicalOptions = getPatternOptions(req.query);
-    const company = TOP_COMPANIES.find((c) => c.symbol === symbol);
-
-    if (!company) {
-      return res.status(404).json({
-        message: `Symbol not in top-10 list. Allowed: ${TOP_COMPANIES.map((c) => c.symbol).join(", ")}`,
-      });
+    if (!/^[A-Z]{1,7}(-[A-Z])?$/.test(symbol)) {
+      return res.status(400).json({ message: `Invalid symbol format: ${symbol}` });
     }
+    const technicalOptions = getPatternOptions(req.query);
+    const company = TOP_COMPANIES.find((c) => c.symbol === symbol) || { symbol, companyName: symbol };
 
     const cacheKey = getCacheKey(`analyze-${symbol}`, technicalOptions);
 

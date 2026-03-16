@@ -1,3 +1,4 @@
+import { useState } from "react";
 import TradingViewChart from "./TradingViewChart";
 
 function formatCurrency(value) {
@@ -15,18 +16,46 @@ function formatPercent(value) {
   return `${sign}${value.toFixed(2)}%`;
 }
 
+function bbPositionLabel(v) {
+  if (v <= 0.15) return { label: "Near Lower Band ↑ Potential Bounce", color: "#16a34a" };
+  if (v <= 0.35) return { label: "Lower Half — Mild Bullish Bias", color: "#65a30d" };
+  if (v <= 0.65) return { label: "Mid Channel — Neutral", color: "#d97706" };
+  if (v <= 0.85) return { label: "Upper Half — Mild Bearish Bias", color: "#ea580c" };
+  return { label: "Near Upper Band ↓ Potential Reversal", color: "#dc2626" };
+}
+
+function rsiZoneInfo(rsi) {
+  if (rsi < 30) return { label: `Oversold (${rsi.toFixed(1)}) — Watch for bullish reversal`, color: "#16a34a", bg: "#f0fdf4" };
+  if (rsi < 45) return { label: `Bearish zone (${rsi.toFixed(1)})`, color: "#d97706", bg: "#fffbeb" };
+  if (rsi < 55) return { label: `Neutral (${rsi.toFixed(1)})`, color: "#6b7280", bg: "#f9fafb" };
+  if (rsi < 70) return { label: `Bullish zone (${rsi.toFixed(1)})`, color: "#2563eb", bg: "#eff6ff" };
+  return { label: `Overbought (${rsi.toFixed(1)}) — Watch for bearish reversal`, color: "#dc2626", bg: "#fef2f2" };
+}
+
+function volumeLabel(ratio) {
+  if (ratio >= 3) return { label: `${ratio}× avg — Extreme spike! Strong signal`, color: "#7c3aed" };
+  if (ratio >= 2) return { label: `${ratio}× avg — Big spike`, color: "#dc2626" };
+  if (ratio >= 1.5) return { label: `${ratio}× avg — Notable volume`, color: "#ea580c" };
+  if (ratio >= 0.8) return { label: `${ratio}× avg — Normal`, color: "#16a34a" };
+  return { label: `${ratio}× avg — Low volume (weak signal)`, color: "#9ca3af" };
+}
+
 export default function StockDetailView({
   stock,
   onBack,
   selectedPrediction,
   onSelectedPredictionChange,
 }) {
+  const [showBasis, setShowBasis] = useState(false);
+
   if (!stock) return null;
 
   const predictions = stock.technicalForecast?.predictions || {};
   const indicators = stock.technicalForecast?.indicators || {};
   const patternMatches = stock.technicalForecast?.patternMatches || [];
   const analysis = stock.comprehensiveAnalysis || {};
+  const rm = stock.technicalForecast?.reversalMetrics || {};
+  const pb = stock.technicalForecast?.predictionBasis || {};
 
   const predictionButtons = [
     { key: "week", label: "1 Week", data: predictions.week },
@@ -45,29 +74,6 @@ export default function StockDetailView({
     null;
 
   const currentPrediction = predictions[selectedPrediction] || fallbackPrediction;
-
-  const predictionBasisItems = [
-    "Trend structure from moving averages (SMA/EMA)",
-    "Momentum regime from RSI, MACD, and Stochastic",
-    "Volatility and range context from Bollinger Bands and ATR",
-    "Trend strength and direction from ADX, DI+, DI-, and Aroon",
-    "Volume/flow confirmation from OBV and A/D line",
-    "Pattern matches detected from recent historical behavior",
-    "News sentiment and confidence from recent headlines",
-  ];
-
-  const dayTraderFeedbackItems = [
-    "Channel position and reversal proximity (near top/bottom of range)",
-    "Pattern-triggered direction clues: bull/bear flags, double top, head-and-shoulders, breakouts, Fibonacci levels",
-    "RSI threshold cross logic: below 30 crossing up and above 70 crossing down",
-    "Volume spike + RSI confluence for potential local tops/bottoms",
-    "Stochastic/RSI divergence as reversal warning",
-    "Top/bottom channel touch count before reversal",
-    "Typical daily up/down travel range (weekly/monthly average)",
-    "High-impact events and earnings schedule awareness",
-    "Watchlist management: add/remove symbols",
-    "Sort modes: movers up/down, alphabetical, gainers/losers",
-  ];
 
   return (
     <div className="detail-view">
@@ -144,28 +150,216 @@ export default function StockDetailView({
         </div>
       )}
 
-      <div className="prediction-summary prediction-basis">
-        <h3>What is the prediction based on?</h3>
-        <ul>
-          {predictionBasisItems.map((item, idx) => (
-            <li key={`basis-${idx}`}>{item}</li>
-          ))}
-        </ul>
-
-        <h4>Day-trader feedback (next improvements)</h4>
-        <p>
-          I took a look at the MarketPulse AI website and I like it and find it useful. Nice job. Here are the
-          highest-impact additions to improve forward-looking decision support:
-        </p>
-        <ul>
-          {dayTraderFeedbackItems.map((item, idx) => (
-            <li key={`feedback-${idx}`}>{item}</li>
-          ))}
-        </ul>
-      </div>
-
       <div className="chart-section">
         <TradingViewChart symbol={stock.symbol} />
+      </div>
+
+      {/* ── Reversal Intelligence ── */}
+      <div className="reversal-section">
+        <h3>🔄 Reversal Intelligence</h3>
+        <p className="reversal-subtitle">Key signals for identifying trend tops, bottoms, and reversals</p>
+
+        <div className="reversal-grid">
+
+          {/* BB Channel Position */}
+          {rm.bbPosition !== undefined && (() => {
+            const bb = bbPositionLabel(rm.bbPosition);
+            const pct = Math.round(rm.bbPosition * 100);
+            return (
+              <div className="rev-card">
+                <div className="rev-card-title">📊 Channel Position (Bollinger Bands)</div>
+                <div className="rev-gauge-wrap">
+                  <div className="rev-gauge">
+                    <div className="rev-gauge-fill" style={{ width: `${Math.min(100, Math.max(0, pct))}%`, background: bb.color }} />
+                    <div className="rev-gauge-marker" style={{ left: `${Math.min(100, Math.max(0, pct))}%` }} />
+                  </div>
+                  <div className="rev-gauge-labels"><span>Lower Band</span><span>Upper Band</span></div>
+                </div>
+                <div className="rev-signal" style={{ color: bb.color }}>{bb.label}</div>
+                <div className="rev-detail">Position: {pct}% up the channel (0=lower band, 100=upper band)</div>
+              </div>
+            );
+          })()}
+
+          {/* RSI Zone */}
+          {indicators.rsi14 !== undefined && (() => {
+            const rsi = rsiZoneInfo(indicators.rsi14);
+            const pct = Math.min(100, Math.max(0, indicators.rsi14));
+            return (
+              <div className="rev-card" style={{ background: rsi.bg }}>
+                <div className="rev-card-title">📈 RSI (14) Zone</div>
+                <div className="rev-gauge-wrap">
+                  <div className="rev-gauge rsi-gauge">
+                    <div className="rev-gauge-zone zone-oversold" />
+                    <div className="rev-gauge-zone zone-neutral" />
+                    <div className="rev-gauge-zone zone-overbought" />
+                    <div className="rev-gauge-marker" style={{ left: `${pct}%` }} />
+                  </div>
+                  <div className="rev-gauge-labels" style={{ fontSize: "10px" }}>
+                    <span>0</span><span>30</span><span>50</span><span>70</span><span>100</span>
+                  </div>
+                </div>
+                <div className="rev-signal" style={{ color: rsi.color }}>{rsi.label}</div>
+                <div className="rev-detail">Below 30 → potential upswing · Above 70 → potential downturn</div>
+              </div>
+            );
+          })()}
+
+          {/* Volume Spike */}
+          {rm.volumeRatio !== undefined && (() => {
+            const vol = volumeLabel(rm.volumeRatio);
+            return (
+              <div className="rev-card">
+                <div className="rev-card-title">📦 Volume vs 20-Day Average</div>
+                <div className="rev-big-number" style={{ color: vol.color }}>{rm.volumeRatio}×</div>
+                <div className="rev-signal" style={{ color: vol.color }}>{vol.label}</div>
+                <div className="rev-detail">
+                  Today: {(rm.currentVolume || 0).toLocaleString()} · 20-day avg: {(rm.avgVolume20 || 0).toLocaleString()}
+                </div>
+                <div className="rev-detail">High volume + RSI extreme = stronger reversal signal</div>
+              </div>
+            );
+          })()}
+
+          {/* Daily Range (ATR) */}
+          {rm.dailyRange && (
+            <div className="rev-card">
+              <div className="rev-card-title">📏 Typical Daily Range (ATR)</div>
+              <div className="rev-range-row">
+                <div className="rev-range-item">
+                  <span className="rev-range-label">Weekly avg</span>
+                  <span className="rev-range-val">{formatCurrency(rm.dailyRange.weeklyAvgAtr)}</span>
+                  <span className="rev-range-pct">({rm.dailyRange.weeklyPct}% of price)</span>
+                </div>
+                <div className="rev-range-item">
+                  <span className="rev-range-label">Monthly avg</span>
+                  <span className="rev-range-val">{formatCurrency(rm.dailyRange.monthlyAvgAtr)}</span>
+                  <span className="rev-range-pct">({rm.dailyRange.monthlyPct}% of price)</span>
+                </div>
+              </div>
+              <div className="rev-detail">Expected move before reversal based on recent volatility</div>
+            </div>
+          )}
+
+          {/* Fibonacci Levels */}
+          {rm.fibonacci && (() => {
+            const price = stock.currentPrice;
+            const fib = rm.fibonacci;
+            const levels = [
+              { key: "high", label: "100% (High)", val: fib.high },
+              { key: "level786", label: "78.6%", val: fib.level786 },
+              { key: "level618", label: "61.8% (Golden)", val: fib.level618 },
+              { key: "level500", label: "50%", val: fib.level500 },
+              { key: "level382", label: "38.2%", val: fib.level382 },
+              { key: "level236", label: "23.6%", val: fib.level236 },
+              { key: "low", label: "0% (Low)", val: fib.low },
+            ];
+            const nearest = levels.reduce((best, l) =>
+              Math.abs(l.val - price) < Math.abs(best.val - price) ? l : best
+            );
+            return (
+              <div className="rev-card fib-card">
+                <div className="rev-card-title">🌀 Fibonacci Retracement (60-day)</div>
+                <div className="fib-levels">
+                  {levels.map((l) => (
+                    <div
+                      key={l.key}
+                      className={`fib-row ${l.key === nearest.key ? "fib-nearest" : ""}`}
+                    >
+                      <span className="fib-label">{l.label}</span>
+                      <span className="fib-price">{formatCurrency(l.val)}</span>
+                      {l.key === nearest.key && <span className="fib-tag">◄ current</span>}
+                    </div>
+                  ))}
+                </div>
+                <div className="rev-detail">Price is nearest to the {nearest.label} level</div>
+              </div>
+            );
+          })()}
+
+          {/* Channel Touch Count */}
+          {rm.channelTouches && (
+            <div className="rev-card">
+              <div className="rev-card-title">🏓 Channel Touch Count (last 60 bars)</div>
+              <div className="touch-count-row">
+                <div className="touch-item upper">
+                  <span className="touch-num">{rm.channelTouches.upper}</span>
+                  <span className="touch-name">Upper Band Touches</span>
+                  {rm.channelTouches.upper >= 4 && (
+                    <span className="touch-warn">⚠ May be due for downward reversal</span>
+                  )}
+                </div>
+                <div className="touch-item lower">
+                  <span className="touch-num">{rm.channelTouches.lower}</span>
+                  <span className="touch-name">Lower Band Touches</span>
+                  {rm.channelTouches.lower >= 4 && (
+                    <span className="touch-warn">⚠ May be due for upward reversal</span>
+                  )}
+                </div>
+              </div>
+              <div className="rev-detail">Multiple touches without breakout strengthens band as support/resistance</div>
+            </div>
+          )}
+
+          {/* RSI + Stoch Divergence */}
+          {rm.divergence && (
+            <div className={`rev-card ${rm.divergence.hasRsiStochDivergence ? "divergence-alert" : ""}`}>
+              <div className="rev-card-title">⚡ RSI vs Stochastic Divergence</div>
+              {rm.divergence.hasRsiStochDivergence ? (
+                <>
+                  <div className="rev-signal" style={{ color: "#7c3aed" }}>
+                    DIVERGENCE DETECTED — Possible trend reversal ahead
+                  </div>
+                  <div className="rev-detail">
+                    RSI trend: <strong>{rm.divergence.rsiDirection}</strong> ({rm.divergence.rsiCurrent}) ·
+                    Stoch %K trend: <strong>{rm.divergence.stochDirection}</strong> ({rm.divergence.stochKCurrent})
+                  </div>
+                  <div className="rev-detail">When RSI and Stochastic disagree, it often precedes a reversal</div>
+                </>
+              ) : (
+                <>
+                  <div className="rev-signal" style={{ color: "#16a34a" }}>
+                    Aligned — RSI & Stochastic agree on direction
+                  </div>
+                  <div className="rev-detail">
+                    RSI: {rm.divergence.rsiCurrent} ({rm.divergence.rsiDirection}) ·
+                    Stoch %K: {rm.divergence.stochKCurrent} ({rm.divergence.stochDirection})
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+        </div>
+      </div>
+
+      {/* ── Prediction Basis ── */}
+      <div className="prediction-basis-section">
+        <button className="basis-toggle" onClick={() => setShowBasis((v) => !v)}>
+          {showBasis ? "▼" : "►"} How is this prediction calculated?
+        </button>
+        {showBasis && (
+          <div className="basis-content">
+            <p className="basis-summary">{pb.summary || "Multi-factor technical model."}</p>
+            <div className="basis-weights">
+              {Object.entries(pb.weights || {}).map(([signal, weight]) => (
+                <div key={signal} className="basis-row">
+                  <span className="basis-signal">{signal}</span>
+                  <div className="basis-bar-wrap">
+                    <div className="basis-bar" style={{ width: weight }} />
+                  </div>
+                  <span className="basis-weight">{weight}</span>
+                </div>
+              ))}
+            </div>
+            {pb.amplifiers && pb.amplifiers.length > 0 && (
+              <div className="basis-amplifiers">
+                <strong>Amplifiers:</strong>
+                <ul>{pb.amplifiers.map((a, i) => <li key={i}>{a}</li>)}</ul>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {patternMatches.length > 0 && (
