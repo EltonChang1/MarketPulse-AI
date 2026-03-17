@@ -42,9 +42,9 @@ export default function HomePage() {
     }
   }, [user?.watchlist]);
 
-  // Auto-refresh watchlist data
+  // Auto-refresh watchlist data (authenticated users only)
   useEffect(() => {
-    if (!watchlist.length) return;
+    if (!isAuthenticated || !watchlist.length) return;
 
     const symbols = watchlist.join(",");
     const loadData = async () => {
@@ -66,7 +66,7 @@ export default function HomePage() {
     loadData();
     const timer = setInterval(loadData, REFRESH_MS);
     return () => clearInterval(timer);
-  }, [watchlist, markerSettings]);
+  }, [watchlist, markerSettings, isAuthenticated]);
 
   // Navigate to individual stock page (require sign-in)
   function handleSelectStock(symbol) {
