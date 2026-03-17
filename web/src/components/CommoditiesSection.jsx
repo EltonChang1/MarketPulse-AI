@@ -151,7 +151,16 @@ function MarketCard({ item, onSelectStock }) {
         </span>
       </div>
       {typeof item.volume === "number" ? <div className="market-volume">Vol: {formatVolume(item.volume)}</div> : null}
-      <button className="market-card-btn">View Analysis →</button>
+      <button
+        type="button"
+        className="market-card-btn"
+        onClick={(event) => {
+          event.stopPropagation();
+          onSelectStock(item.symbol);
+        }}
+      >
+        View Analysis →
+      </button>
     </div>
   );
 }

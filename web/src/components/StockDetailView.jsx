@@ -66,6 +66,7 @@ export default function StockDetailView({
   onSelectedPredictionChange,
 }) {
   const { isAuthenticated, user, addToWatchlist, removeFromWatchlist } = useAuth();
+  const [internalSelectedPrediction, setInternalSelectedPrediction] = useState("week");
   const [showBasis, setShowBasis] = useState(false);
   const [showSignals, setShowSignals] = useState(false);
   const [showPatterns, setShowPatterns] = useState(false);
@@ -102,7 +103,17 @@ export default function StockDetailView({
     predictions.year ||
     null;
 
-  const currentPrediction = predictions[selectedPrediction] || fallbackPrediction;
+  const effectiveSelectedPrediction = selectedPrediction || internalSelectedPrediction;
+
+  const currentPrediction = predictions[effectiveSelectedPrediction] || fallbackPrediction;
+
+  function handlePredictionChange(nextKey) {
+    if (typeof onSelectedPredictionChange === "function") {
+      onSelectedPredictionChange(nextKey);
+      return;
+    }
+    setInternalSelectedPrediction(nextKey);
+  }
 
   async function handleAddToMyWatchlist() {
     if (!isAuthenticated) {
@@ -182,8 +193,8 @@ export default function StockDetailView({
           {predictionButtons.map((btn) => (
             <button
               key={btn.key}
-              className={`prediction-btn ${selectedPrediction === btn.key ? "active" : ""}`}
-              onClick={() => onSelectedPredictionChange?.(btn.key)}
+              className={`prediction-btn ${effectiveSelectedPrediction === btn.key ? "active" : ""}`}
+              onClick={() => handlePredictionChange(btn.key)}
             >
               <div className="btn-label">{btn.label}</div>
               {btn.data && (
