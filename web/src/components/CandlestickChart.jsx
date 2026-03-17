@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CandlestickSeries, LineSeries, createChart, createSeriesMarkers } from "lightweight-charts";
 
 export default function CandlestickChart({
@@ -12,7 +12,8 @@ export default function CandlestickChart({
 }) {
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
-  const indicatorVisibility = {
+  const [selectedRange, setSelectedRange] = useState("1Y");
+  const [indicatorVisibility, setIndicatorVisibility] = useState(() => ({
     sma5: true,
     sma20: true,
     sma50: true,
@@ -20,9 +21,56 @@ export default function CandlestickChart({
     supportLine: true,
     resistanceLine: true,
     predictionMarker: true,
-    patternMarkers: true,
+    patternMarkers: false,
     ...(visibleIndicators || {}),
+  }));
+
+  useEffect(() => {
+    if (!visibleIndicators) return;
+    setIndicatorVisibility((current) => ({
+      ...current,
+      ...visibleIndicators,
+    }));
+  }, [visibleIndicators]);
+
+  const normalizedData = useMemo(
+    () =>
+      (Array.isArray(data) ? data : [])
+        .filter(
+          (point) =>
+            point &&
+            point.date &&
+            typeof point.open === "number" &&
+            typeof point.high === "number" &&
+            typeof point.low === "number" &&
+            typeof point.close === "number"
+        )
+        .map((point) => ({
+          date: point.date,
+          open: point.open,
+          high: point.high,
+          low: point.low,
+          close: point.close,
+        })),
+    [data]
+  );
+
+  const rangeToBars = {
+    "1M": 22,
+    "3M": 66,
+    "6M": 132,
+    "1Y": 252,
+    ALL: Number.POSITIVE_INFINITY,
   };
+
+  const visibleData = useMemo(() => {
+    if (!normalizedData.length) return [];
+    const bars = rangeToBars[selectedRange] ?? rangeToBars["1Y"];
+    if (!Number.isFinite(bars)) return normalizedData;
+    return normalizedData.slice(-bars);
+  }, [normalizedData, selectedRange]);
+
+  const visibleStartDate = visibleData[0]?.date;
   const trendDirection = selectedPeriod?.direction || "flat";
   const trendLabel = trendDirection === "up" ? "Bullish" : trendDirection === "down" ? "Bearish" : "Neutral";
   const trendPeriodLabel = selectedPeriod?.period || "Selected";
@@ -50,7 +98,7 @@ export default function CandlestickChart({
   useEffect(() => {
     if (!chartContainerRef.current) return;
     
-    if (!data || data.length === 0) {
+    if (!visibleData || visibleData.length === 0) {
       // Show placeholder when no data
       chartContainerRef.current.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 500px; background: #f9fafb; color: #667085; font-size: 1rem;">No chart data available for this symbol</div>';
       return;
@@ -82,6 +130,17 @@ export default function CandlestickChart({
         crosshair: {
           mode: 1,
         },
+        handleScroll: {
+          mouseWheel: true,
+          pressedMouseMove: true,
+          horzTouchDrag: true,
+          vertTouchDrag: false,
+        },
+        handleScale: {
+          axisPressedMouseMove: true,
+          mouseWheel: true,
+          pinch: true,
+        },
         rightPriceScale: {
           borderColor: "#d1d4dc",
         },
@@ -106,24 +165,13 @@ export default function CandlestickChart({
       return;
     }
 
-    // Prepare candlestick data
-    const candleData = data
-      .filter(
-        (point) =>
-          point &&
-          point.date &&
-          typeof point.open === "number" &&
-          typeof point.high === "number" &&
-          typeof point.low === "number" &&
-          typeof point.close === "number"
-      )
-      .map((point) => ({
-        time: point.date,
-        open: point.open,
-        high: point.high,
-        low: point.low,
-        close: point.close,
-      }));
+    const candleData = visibleData.map((point) => ({
+      time: point.date,
+      open: point.open,
+      high: point.high,
+      low: point.low,
+      close: point.close,
+    }));
 
     if (candleData.length === 0) {
       chart.remove();
@@ -186,51 +234,52 @@ export default function CandlestickChart({
         })
       : null;
 
-    // Calculate padding to align with candlestick data
-    const sma5Start = Math.max(0, data.length - (indicators.sma5?.length || 0));
-    const sma20Start = Math.max(0, data.length - (indicators.sma20?.length || 0));
-    const sma50Start = Math.max(0, data.length - (indicators.sma50?.length || 0));
+    const fullDataLength = normalizedData.length;
+    const visibleStartIndex = Math.max(0, fullDataLength - visibleData.length);
+
+    const alignSmaToVisibleWindow = (smaValues = []) => {
+      if (!Array.isArray(smaValues) || smaValues.length === 0) return [];
+      const smaStart = Math.max(0, fullDataLength - smaValues.length);
+      const aligned = [];
+      for (let index = 0; index < smaValues.length; index += 1) {
+        const fullIndex = smaStart + index;
+        if (fullIndex < visibleStartIndex) continue;
+        const point = normalizedData[fullIndex];
+        const value = smaValues[index];
+        if (!point?.date || typeof value !== "number") continue;
+        aligned.push({ time: point.date, value });
+      }
+      return aligned;
+    };
 
     if (sma5Series && indicators.sma5 && indicators.sma5.length > 0) {
-      const sma5Data = indicators.sma5
-        .map((value, index) => {
-          const point = data[sma5Start + index];
-          return point?.date ? { time: point.date, value } : null;
-        })
-        .filter(Boolean);
+      const sma5Data = alignSmaToVisibleWindow(indicators.sma5);
       sma5Series.setData(sma5Data);
     }
 
     if (sma20Series && indicators.sma20 && indicators.sma20.length > 0) {
-      const sma20Data = indicators.sma20
-        .map((value, index) => {
-          const point = data[sma20Start + index];
-          return point?.date ? { time: point.date, value } : null;
-        })
-        .filter(Boolean);
+      const sma20Data = alignSmaToVisibleWindow(indicators.sma20);
       sma20Series.setData(sma20Data);
     }
 
     if (sma50Series && indicators.sma50 && indicators.sma50.length > 0) {
-      const sma50Data = indicators.sma50
-        .map((value, index) => {
-          const point = data[sma50Start + index];
-          return point?.date ? { time: point.date, value } : null;
-        })
-        .filter(Boolean);
+      const sma50Data = alignSmaToVisibleWindow(indicators.sma50);
       sma50Series.setData(sma50Data);
     }
 
     if (trendLineSeries && indicators.trendLine?.length) {
-      trendLineSeries.setData(indicators.trendLine);
+      const filteredTrendLine = indicators.trendLine.filter((point) => !visibleStartDate || point.time >= visibleStartDate);
+      trendLineSeries.setData(filteredTrendLine);
     }
 
     if (supportLineSeries && indicators.supportLine?.length) {
-      supportLineSeries.setData(indicators.supportLine);
+      const filteredSupportLine = indicators.supportLine.filter((point) => !visibleStartDate || point.time >= visibleStartDate);
+      supportLineSeries.setData(filteredSupportLine);
     }
 
     if (resistanceLineSeries && indicators.resistanceLine?.length) {
-      resistanceLineSeries.setData(indicators.resistanceLine);
+      const filteredResistanceLine = indicators.resistanceLine.filter((point) => !visibleStartDate || point.time >= visibleStartDate);
+      resistanceLineSeries.setData(filteredResistanceLine);
     }
 
     // Add prediction marker if available
@@ -238,7 +287,7 @@ export default function CandlestickChart({
 
     if (indicatorVisibility.predictionMarker && selectedPeriod) {
       const prediction = selectedPeriod.predictedPrice;
-      const lastDate = data[data.length - 1]?.date;
+      const lastDate = visibleData[visibleData.length - 1]?.date;
       
       if (lastDate && prediction) {
         markers.push({
@@ -252,12 +301,15 @@ export default function CandlestickChart({
     }
 
     if (indicatorVisibility.patternMarkers && Array.isArray(patternMatches) && patternMatches.length) {
-      const patternMarkers = patternMatches.slice(0, 10).map((match) => ({
+      const patternMarkers = patternMatches
+        .filter((match) => !visibleStartDate || match.time >= visibleStartDate)
+        .slice(0, 4)
+        .map((match) => ({
         time: match.time,
         position: match.direction === "down" ? "aboveBar" : "belowBar",
         color: match.direction === "down" ? "#f04438" : "#12b76a",
         shape: "circle",
-        text: `${match.indicator}: ${match.label}`,
+        text: `${match.indicator}`,
       }));
       markers.push(...patternMarkers);
     }
@@ -312,10 +364,55 @@ export default function CandlestickChart({
         chartRef.current = null;
       }
     };
-  }, [data, indicators, selectedPeriod, currentPrice, patternMatches, visibleIndicators]);
+  }, [
+    visibleData,
+    normalizedData,
+    indicators,
+    selectedPeriod,
+    currentPrice,
+    patternMatches,
+    indicatorVisibility,
+    visibleStartDate,
+  ]);
+
+  const toggleIndicator = (key) => {
+    setIndicatorVisibility((current) => ({
+      ...current,
+      [key]: !current[key],
+    }));
+  };
+
+  const rangeButtons = ["1M", "3M", "6M", "1Y", "ALL"];
 
   return (
     <div className="chart-wrapper">
+      <div className="chart-toolbar">
+        <div className="chart-range-controls">
+          {rangeButtons.map((range) => (
+            <button
+              key={range}
+              type="button"
+              className={`chart-range-btn ${selectedRange === range ? "active" : ""}`}
+              onClick={() => setSelectedRange(range)}
+            >
+              {range}
+            </button>
+          ))}
+        </div>
+        <div className="chart-nav-hint">Scroll to zoom • Drag to pan</div>
+      </div>
+
+      <div className="indicator-toggle-grid">
+        <label className="indicator-toggle-item"><input type="checkbox" checked={indicatorVisibility.sma5} onChange={() => toggleIndicator("sma5")} />SMA 5</label>
+        <label className="indicator-toggle-item"><input type="checkbox" checked={indicatorVisibility.sma20} onChange={() => toggleIndicator("sma20")} />SMA 20</label>
+        <label className="indicator-toggle-item"><input type="checkbox" checked={indicatorVisibility.sma50} onChange={() => toggleIndicator("sma50")} />SMA 50</label>
+        <label className="indicator-toggle-item"><input type="checkbox" checked={indicatorVisibility.trendLine} onChange={() => toggleIndicator("trendLine")} />Trend Line</label>
+        <label className="indicator-toggle-item"><input type="checkbox" checked={indicatorVisibility.supportLine} onChange={() => toggleIndicator("supportLine")} />Support</label>
+        <label className="indicator-toggle-item"><input type="checkbox" checked={indicatorVisibility.resistanceLine} onChange={() => toggleIndicator("resistanceLine")} />Resistance</label>
+        <label className="indicator-toggle-item"><input type="checkbox" checked={indicatorVisibility.predictionMarker} onChange={() => toggleIndicator("predictionMarker")} />Prediction Marker</label>
+        <label className="indicator-toggle-item"><input type="checkbox" checked={indicatorVisibility.patternMarkers} onChange={() => toggleIndicator("patternMarkers")} />Pattern Markers</label>
+      </div>
+
       <div className="prediction-basis">
         <strong>Prediction Indicators:</strong>{" "}
         {(predictionBasis?.indicatorsUsed || [

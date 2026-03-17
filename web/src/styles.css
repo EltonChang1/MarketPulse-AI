@@ -477,6 +477,43 @@ footer {
   position: relative;
 }
 
+.chart-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.chart-range-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chart-range-btn {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #d0d5dd;
+  background: #ffffff;
+  color: #344054;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chart-range-btn.active {
+  background: #eef4ff;
+  border-color: #84adff;
+  color: #175cd3;
+}
+
+.chart-nav-hint {
+  font-size: 0.8rem;
+  color: #667085;
+}
+
 .prediction-basis {
   font-size: 0.82rem;
   color: #344054;
