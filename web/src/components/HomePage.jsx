@@ -1,8 +1,8 @@
 import { useMemo, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import SearchBar from "./SearchBar";
 import CommoditiesSection from "./CommoditiesSection";
-import StockDetailView from "./StockDetailView";
 import axios from "axios";
 import "../styles/dashboard.css";
 
@@ -27,10 +27,8 @@ function formatPercent(value) {
 
 export default function HomePage() {
   const { user, addToWatchlist, removeFromWatchlist } = useAuth();
-  const [selectedStock, setSelectedStock] = useState(null);
+  const navigate = useNavigate();
   const [watchlistPayload, setWatchlistPayload] = useState(null);
-  const [selectedStockPayload, setSelectedStockPayload] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [markerSettings, setMarkerSettings] = useState({ markers: 10, perIndicator: 3 });
   const [watchlist, setWatchlist] = useState(user?.watchlist || DEFAULT_COMMODITY_WATCHLIST);
@@ -70,21 +68,9 @@ export default function HomePage() {
     return () => clearInterval(timer);
   }, [watchlist, markerSettings]);
 
-  // Handle stock selection from search or commodities
-  async function handleSelectStock(symbol) {
-    try {
-      setLoading(true);
-      setError("");
-      const { data } = await axios.get(`${API_BASE_URL}/api/analyze/${symbol}`, {
-        params: markerSettings,
-      });
-      setSelectedStock(symbol);
-      setSelectedStockPayload(data);
-    } catch (err) {
-      setError(err?.response?.data?.message || err.message);
-    } finally {
-      setLoading(false);
-    }
+  // Navigate to individual stock page
+  function handleSelectStock(symbol) {
+    navigate(`/stock/${symbol.toUpperCase()}`);
   }
 
   async function handleAddToWatchlist(symbol) {
@@ -119,24 +105,8 @@ export default function HomePage() {
           {/* Search Bar */}
           <SearchBar onSelect={handleSelectStock} />
 
-          {/* Detail View (if stock selected) */}
-          {selectedStock && selectedStockPayload && (
-            <div className="selected-stock-section">
-              <button
-                className="close-detail-btn"
-                onClick={() => {
-                  setSelectedStock(null);
-                  setSelectedStockPayload(null);
-                }}
-              >
-                ← Back to Overview
-              </button>
-              <StockDetailView stock={selectedStockPayload} />
-            </div>
-          )}
-
-          {/* Commodities & ETFs Section (if no stock selected) */}
-          {!selectedStock && <CommoditiesSection onSelectStock={handleSelectStock} />}
+          {/* Commodities & ETFs Section */}
+          <CommoditiesSection onSelectStock={handleSelectStock} />
         </main>
 
         {/* Sidebar - Personal Watchlist */}

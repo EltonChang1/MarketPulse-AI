@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "r
 import axios from "axios";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import StockDetailView from "./components/StockDetailView";
+import StockDetailPage from "./components/StockDetailPage";
 import SignUpPage from "./components/SignUpPage";
 import SignInPage from "./components/SignInPage";
 import HomePage from "./components/HomePage";
@@ -460,6 +461,17 @@ export default function App() {
                 <>
                   <AppHeader />
                   <HomePage />
+                </>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/stock/:symbol"
+            element={
+              <ProtectedRoute>
+                <>
+                  <AppHeader />
+                  <StockDetailPage />
                 </>
               </ProtectedRoute>
             }
