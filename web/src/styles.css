@@ -250,6 +250,39 @@ footer {
   margin-left: 12px;
 }
 
+.detail-header-actions {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.watchlist-quick-add-btn {
+  border: 1px solid #2e90fa;
+  color: #175cd3;
+  background: #eff8ff;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.watchlist-quick-add-btn:hover:not(:disabled) {
+  background: #d1e9ff;
+}
+
+.watchlist-quick-add-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.watchlist-quick-status {
+  font-size: 12px;
+  color: #475467;
+}
+
 /* Prediction Selector */
 .prediction-selector {
   background: #fff;

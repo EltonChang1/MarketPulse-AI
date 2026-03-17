@@ -2,6 +2,7 @@ import { useState } from "react";
 import TradingViewChart from "./TradingViewChart";
 import SignalCharts from "./SignalCharts";
 import PatternOverlay from "./PatternOverlay";
+import { useAuth } from "../context/AuthContext";
 
 function formatCurrency(value) {
   if (typeof value !== "number" || Number.isNaN(value)) return "-";
@@ -48,9 +49,12 @@ export default function StockDetailView({
   selectedPrediction,
   onSelectedPredictionChange,
 }) {
+  const { isAuthenticated, addToWatchlist } = useAuth();
   const [showBasis, setShowBasis] = useState(false);
   const [showSignals, setShowSignals] = useState(false);
   const [showPatterns, setShowPatterns] = useState(false);
+  const [watchlistStatus, setWatchlistStatus] = useState("");
+  const [addingWatchlist, setAddingWatchlist] = useState(false);
 
   if (!stock) return null;
 
@@ -79,12 +83,31 @@ export default function StockDetailView({
 
   const currentPrediction = predictions[selectedPrediction] || fallbackPrediction;
 
+  async function handleAddToMyWatchlist() {
+    if (!isAuthenticated) {
+      setWatchlistStatus("Sign in to save this symbol to your profile watchlist.");
+      return;
+    }
+
+    setAddingWatchlist(true);
+    setWatchlistStatus("");
+    const result = await addToWatchlist(stock.symbol);
+    if (result?.success) {
+      setWatchlistStatus(`${stock.symbol} added to your watchlist.`);
+    } else {
+      setWatchlistStatus(result?.error || "Unable to add symbol to watchlist.");
+    }
+    setAddingWatchlist(false);
+  }
+
   return (
     <div className="detail-view">
       <div className="detail-header">
-        <button onClick={onBack} className="back-button">
-          ← Back to Overview
-        </button>
+        {onBack ? (
+          <button onClick={onBack} className="back-button">
+            ← Back to Overview
+          </button>
+        ) : null}
         <div>
           <h1>
             {stock.companyName} ({stock.symbol})
@@ -96,6 +119,16 @@ export default function StockDetailView({
               {formatPercent(stock.dayChangePct)} today
             </span>
           </p>
+          <div className="detail-header-actions">
+            <button
+              className="watchlist-quick-add-btn"
+              onClick={handleAddToMyWatchlist}
+              disabled={addingWatchlist}
+            >
+              {addingWatchlist ? "Adding..." : "+ Add to My Watchlist"}
+            </button>
+            {watchlistStatus ? <span className="watchlist-quick-status">{watchlistStatus}</span> : null}
+          </div>
         </div>
       </div>
 
