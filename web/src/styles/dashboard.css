@@ -193,17 +193,21 @@
 
 .market-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 18px;
 }
 
 .market-card {
   background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
   border: 2px solid #e5e7eb;
   border-radius: 10px;
-  padding: 20px;
+  padding: 22px;
   cursor: pointer;
   transition: all 0.3s ease;
+}
+
+.market-card-lg {
+  min-height: 320px;
 }
 
 .market-card:hover {
@@ -247,7 +251,7 @@
 .market-mini-candles {
   display: block;
   width: 100%;
-  height: 64px;
+  height: 120px;
   margin: 4px 0 12px;
   background: #ffffff;
   border: 1px solid #e5e7eb;
@@ -255,7 +259,7 @@
 }
 
 .market-mini-candles-empty {
-  height: 64px;
+  height: 120px;
   margin: 4px 0 12px;
   border: 1px dashed #d1d5db;
   border-radius: 8px;
@@ -275,7 +279,7 @@
 }
 
 .market-price {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   color: #111827;
 }
@@ -291,6 +295,13 @@
 
 .market-change.negative {
   color: #dc2626;
+}
+
+.market-volume {
+  margin-bottom: 10px;
+  color: #4b5563;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .market-card-btn {
@@ -309,6 +320,66 @@
 .market-card-btn:hover {
   transform: scale(1.02);
   box-shadow: 0 6px 15px rgba(102, 126, 234, 0.3);
+}
+
+.movers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.movers-list-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.movers-list-card h4 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  color: #1f2937;
+}
+
+.movers-list-card ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.movers-list-card li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 4px;
+  border-bottom: 1px solid #f3f4f6;
+  cursor: pointer;
+}
+
+.movers-list-card li:last-child {
+  border-bottom: none;
+}
+
+.movers-symbol {
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.movers-price {
+  font-weight: 600;
+  color: #111827;
+}
+
+.movers-change {
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.movers-empty {
+  color: #9ca3af;
+  font-size: 13px;
+  padding: 8px 2px;
 }
 
 /* Selected Stock Section */

@@ -59,6 +59,75 @@ function buildChartUrls(symbol) {
   return urls;
 }
 
+function toNumber(value, fallback = NaN) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : fallback;
+  if (value && typeof value === "object" && typeof value.raw === "number") return value.raw;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+async function fetchScreenerWithRetry(url, maxAttempts = 3) {
+  let lastError;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await axios.get(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0",
+          Accept: "application/json",
+        },
+        timeout: 15000,
+      });
+    } catch (error) {
+      lastError = error;
+      const status = error?.response?.status;
+      const retryable = RETRYABLE_STATUS_CODES.has(status) || !status || status === 401;
+      const canRetry = retryable && attempt < maxAttempts;
+      if (!canRetry) break;
+      await sleep(300 * attempt);
+    }
+  }
+
+  throw lastError;
+}
+
+export async function fetchScreenerQuotes(scrId, count = 5) {
+  const urls = YAHOO_HOSTS.map(
+    (host) =>
+      `https://${host}/v1/finance/screener/predefined/saved?formatted=false&scrIds=${encodeURIComponent(scrId)}&count=${count}&start=0`
+  );
+
+  let lastError;
+  for (const url of urls) {
+    try {
+      const response = await fetchScreenerWithRetry(url, 2);
+      const quotes = response?.data?.finance?.result?.[0]?.quotes || [];
+
+      return quotes.map((quote) => {
+        const symbol = String(quote?.symbol || "").toUpperCase();
+        const currentPrice = toNumber(quote?.regularMarketPrice);
+        const changePercent = toNumber(quote?.regularMarketChangePercent);
+        const volume = toNumber(quote?.regularMarketVolume, 0);
+
+        return {
+          symbol,
+          displaySymbol: symbol.replace(/^\^/, ""),
+          name: quote?.longName || quote?.shortName || symbol,
+          type: quote?.quoteType || "Equity",
+          exchange: quote?.fullExchangeName || quote?.exchange || "",
+          currentPrice: Number.isFinite(currentPrice) ? Number(currentPrice.toFixed(2)) : NaN,
+          changePercent: Number.isFinite(changePercent) ? Number(changePercent.toFixed(2)) : NaN,
+          volume: Number.isFinite(volume) ? volume : 0,
+        };
+      });
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error(`Failed to load screener quotes for ${scrId}`);
+}
+
 export async function fetchQuoteAndHistory(symbol) {
   const chartUrls = buildChartUrls(symbol);
   let lastError;

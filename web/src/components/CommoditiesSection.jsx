@@ -3,37 +3,7 @@ import axios from "axios";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
-function buildFallbackCandles(seed = 100) {
-  return Array.from({ length: 24 }, (_, index) => {
-    const base = seed + Math.sin(index / 2.5) * 3 + index * 0.12;
-    const open = Number((base + Math.sin(index) * 0.6).toFixed(2));
-    const close = Number((base + Math.cos(index / 1.8) * 0.6).toFixed(2));
-    const high = Number((Math.max(open, close) + 0.7).toFixed(2));
-    const low = Number((Math.min(open, close) - 0.7).toFixed(2));
-    return {
-      time: index,
-      open,
-      high,
-      low,
-      close,
-    };
-  });
-}
-
-const FALLBACK_COMMODITIES = [
-  { symbol: "USO", displaySymbol: "USO", name: "Crude Oil", type: "Commodity", currentPrice: NaN, changePercent: NaN, candles: buildFallbackCandles(76) },
-  { symbol: "GLD", displaySymbol: "GLD", name: "Gold", type: "Commodity", currentPrice: NaN, changePercent: NaN, candles: buildFallbackCandles(215) },
-  { symbol: "SLV", displaySymbol: "SLV", name: "Silver", type: "Commodity", currentPrice: NaN, changePercent: NaN, candles: buildFallbackCandles(27) },
-  { symbol: "UUP", displaySymbol: "UUP", name: "US Dollar Index", type: "Currency", currentPrice: NaN, changePercent: NaN, candles: buildFallbackCandles(29) },
-];
-
-const FALLBACK_INDICATORS = [
-  { symbol: "^GSPC", displaySymbol: "GSPC", name: "S&P 500", type: "Index", currentPrice: NaN, changePercent: NaN, candles: buildFallbackCandles(5100) },
-  { symbol: "^DJI", displaySymbol: "DJI", name: "Dow Jones", type: "Index", currentPrice: NaN, changePercent: NaN, candles: buildFallbackCandles(39200) },
-  { symbol: "^IXIC", displaySymbol: "IXIC", name: "NASDAQ Composite", type: "Index", currentPrice: NaN, changePercent: NaN, candles: buildFallbackCandles(18100) },
-  { symbol: "^RUT", displaySymbol: "RUT", name: "Russell 2000", type: "Index", currentPrice: NaN, changePercent: NaN, candles: buildFallbackCandles(2050) },
-  { symbol: "^VIX", displaySymbol: "VIX", name: "CBOE Volatility Index", type: "Index", currentPrice: NaN, changePercent: NaN, candles: buildFallbackCandles(18) },
-];
+const EMPTY_LIST = [];
 
 function MiniCandles({ candles = [] }) {
   const valid = candles.filter(
@@ -108,9 +78,80 @@ function formatPercent(value) {
   return `${sign}${value.toFixed(2)}%`;
 }
 
+function formatVolume(value) {
+  if (typeof value !== "number" || Number.isNaN(value)) return "-";
+  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)}B`;
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+  return `${value}`;
+}
+
+function MarketCard({ item, onSelectStock }) {
+  return (
+    <div
+      key={item.symbol}
+      className="market-card market-card-lg"
+      onClick={() => onSelectStock(item.symbol)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSelectStock(item.symbol);
+        }
+      }}
+      role="button"
+      tabIndex={0}
+    >
+      <div className="market-card-header">
+        <div className="market-symbol">{item.displaySymbol || item.symbol.replace(/^\^/, "")}</div>
+        <span className="market-type">{item.type}</span>
+      </div>
+      <div className="market-name">{item.name}</div>
+      <MiniCandles candles={item.candles} />
+      <div className="market-price-row">
+        <span className="market-price">{formatCurrency(item.currentPrice)}</span>
+        <span className={`market-change ${(item.changePercent ?? 0) >= 0 ? "positive" : "negative"}`}>
+          {formatPercent(item.changePercent)}
+        </span>
+      </div>
+      {typeof item.volume === "number" ? <div className="market-volume">Vol: {formatVolume(item.volume)}</div> : null}
+      <button className="market-card-btn">View Analysis →</button>
+    </div>
+  );
+}
+
+function MoversList({ title, items, onSelectStock }) {
+  return (
+    <div className="movers-list-card">
+      <h4>{title}</h4>
+      {items.length === 0 ? (
+        <div className="movers-empty">No data available</div>
+      ) : (
+        <ul>
+          {items.map((item) => (
+            <li key={`${title}-${item.symbol}`} onClick={() => onSelectStock(item.symbol)}>
+              <span className="movers-symbol">{item.displaySymbol || item.symbol.replace(/^\^/, "")}</span>
+              <span className="movers-price">{formatCurrency(item.currentPrice)}</span>
+              <span className={`movers-change ${(item.changePercent ?? 0) >= 0 ? "positive" : "negative"}`}>
+                {formatPercent(item.changePercent)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export default function CommoditiesSection({ onSelectStock }) {
-  const [commodities, setCommodities] = useState([]);
-  const [marketIndicators, setMarketIndicators] = useState([]);
+  const [commodities, setCommodities] = useState(EMPTY_LIST);
+  const [marketIndicators, setMarketIndicators] = useState(EMPTY_LIST);
+  const [topVolumeStocks, setTopVolumeStocks] = useState(EMPTY_LIST);
+  const [movers, setMovers] = useState({
+    mostActive: EMPTY_LIST,
+    gainers: EMPTY_LIST,
+    losers: EMPTY_LIST,
+    ipoThisMonth: EMPTY_LIST,
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -119,13 +160,29 @@ export default function CommoditiesSection({ onSelectStock }) {
         const { data } = await axios.get(`${API_BASE_URL}/api/commodities-etfs`);
         const nextCommodities = data.commodities || [];
         const nextIndicators = data.indicators || data.etfs || [];
+        const nextTopVolume = data.topVolumeStocks || [];
+        const nextMovers = data.movers || {};
 
-        setCommodities(nextCommodities.length ? nextCommodities : FALLBACK_COMMODITIES);
-        setMarketIndicators(nextIndicators.length ? nextIndicators : FALLBACK_INDICATORS);
+        setCommodities(nextCommodities);
+        setMarketIndicators(nextIndicators);
+        setTopVolumeStocks(nextTopVolume);
+        setMovers({
+          mostActive: nextMovers.mostActive || EMPTY_LIST,
+          gainers: nextMovers.gainers || EMPTY_LIST,
+          losers: nextMovers.losers || EMPTY_LIST,
+          ipoThisMonth: nextMovers.ipoThisMonth || EMPTY_LIST,
+        });
       } catch (error) {
         console.error("Failed to fetch commodities/ETFs:", error);
-        setCommodities(FALLBACK_COMMODITIES);
-        setMarketIndicators(FALLBACK_INDICATORS);
+        setCommodities(EMPTY_LIST);
+        setMarketIndicators(EMPTY_LIST);
+        setTopVolumeStocks(EMPTY_LIST);
+        setMovers({
+          mostActive: EMPTY_LIST,
+          gainers: EMPTY_LIST,
+          losers: EMPTY_LIST,
+          ipoThisMonth: EMPTY_LIST,
+        });
       } finally {
         setLoading(false);
       }
@@ -153,71 +210,34 @@ export default function CommoditiesSection({ onSelectStock }) {
       <div className="commodities-subsection">
         <h3>📊 Market Indicators</h3>
         <div className="market-grid">
-          {marketIndicators.map((item) => (
-            <div
-              key={item.symbol}
-              className="market-card"
-              onClick={() => onSelectStock(item.symbol)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  onSelectStock(item.symbol);
-                }
-              }}
-              role="button"
-              tabIndex={0}
-            >
-              <div className="market-card-header">
-                <div className="market-symbol">{item.displaySymbol || item.symbol.replace(/^\^/, "")}</div>
-                <span className="market-type">{item.type}</span>
-              </div>
-              <div className="market-name">{item.name}</div>
-              <MiniCandles candles={item.candles} />
-              <div className="market-price-row">
-                <span className="market-price">{formatCurrency(item.currentPrice)}</span>
-                <span className={`market-change ${(item.changePercent ?? 0) >= 0 ? "positive" : "negative"}`}>
-                  {formatPercent(item.changePercent)}
-                </span>
-              </div>
-              <button className="market-card-btn">View Analysis →</button>
-            </div>
-          ))}
+          {marketIndicators.map((item) => <MarketCard key={item.symbol} item={item} onSelectStock={onSelectStock} />)}
         </div>
       </div>
 
       {/* Commodities */}
       <div className="commodities-subsection">
-        <h3>💰 Commodities & Indices</h3>
+        <h3>💰 Commodities</h3>
         <div className="market-grid">
-          {commodities.map((item) => (
-            <div
-              key={item.symbol}
-              className="market-card"
-              onClick={() => onSelectStock(item.symbol)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  onSelectStock(item.symbol);
-                }
-              }}
-              role="button"
-              tabIndex={0}
-            >
-              <div className="market-card-header">
-                <div className="market-symbol">{item.displaySymbol || item.symbol.replace(/^\^/, "")}</div>
-                <span className="market-type">{item.type}</span>
-              </div>
-              <div className="market-name">{item.name}</div>
-              <MiniCandles candles={item.candles} />
-              <div className="market-price-row">
-                <span className="market-price">{formatCurrency(item.currentPrice)}</span>
-                <span className={`market-change ${(item.changePercent ?? 0) >= 0 ? "positive" : "negative"}`}>
-                  {formatPercent(item.changePercent)}
-                </span>
-              </div>
-              <button className="market-card-btn">View Analysis →</button>
-            </div>
-          ))}
+          {commodities.map((item) => <MarketCard key={item.symbol} item={item} onSelectStock={onSelectStock} />)}
+        </div>
+      </div>
+
+      {/* Top volume stocks */}
+      <div className="commodities-subsection">
+        <h3>🏆 Top 5 Individual Stocks by Volume</h3>
+        <div className="market-grid">
+          {topVolumeStocks.map((item) => <MarketCard key={item.symbol} item={item} onSelectStock={onSelectStock} />)}
+        </div>
+      </div>
+
+      {/* Movers lists */}
+      <div className="commodities-subsection">
+        <h3>🔥 Market Movers</h3>
+        <div className="movers-grid">
+          <MoversList title="Most Active" items={movers.mostActive || EMPTY_LIST} onSelectStock={onSelectStock} />
+          <MoversList title="Most Gainers" items={movers.gainers || EMPTY_LIST} onSelectStock={onSelectStock} />
+          <MoversList title="Most Losers" items={movers.losers || EMPTY_LIST} onSelectStock={onSelectStock} />
+          <MoversList title="Biggest IPO This Month" items={movers.ipoThisMonth || EMPTY_LIST} onSelectStock={onSelectStock} />
         </div>
       </div>
     </div>

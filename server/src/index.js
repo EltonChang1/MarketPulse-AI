@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 import express from "express";
 
 import { estimateNewsImpact, generateComprehensiveAnalysis, generateDetailedNewsSummary } from "./services/analysisService.js";
-import { fetchQuoteAndHistory } from "./services/marketService.js";
+import { fetchQuoteAndHistory, fetchScreenerQuotes } from "./services/marketService.js";
 import { fetchLatestNews } from "./services/newsService.js";
 import { predictMultipleTimeframes } from "./services/technicalService.js";
 import { connectDB } from "./config/db.js";
@@ -214,6 +214,15 @@ app.get("/api/commodities-etfs", async (req, res) => {
       key: cacheKey,
       cache: aggregateCache,
       compute: async () => {
+        const loadScreenerSafe = async (scrId, count = 5) => {
+          try {
+            return await fetchScreenerQuotes(scrId, count);
+          } catch (error) {
+            console.warn(`Screener ${scrId} failed: ${error?.message || error}`);
+            return [];
+          }
+        };
+
         const fetchData = async (items) => {
           const results = [];
 
@@ -253,13 +262,35 @@ app.get("/api/commodities-etfs", async (req, res) => {
         const commodities = await fetchData(commoditySymbols);
         const indicators = await fetchData(indicatorSymbols);
 
-        if (commodities.length === 0 && indicators.length === 0) {
+        const mostActiveRaw = await loadScreenerSafe("most_actives", 12);
+        const topVolumeCandidates = mostActiveRaw
+          .filter((item) => item?.symbol)
+          .filter((item, index, arr) => arr.findIndex((candidate) => candidate.symbol === item.symbol) === index)
+          .slice(0, 5)
+          .map((item) => ({ symbol: item.symbol, name: item.name, type: "Stock" }));
+
+        const topVolumeStocks = await fetchData(topVolumeCandidates);
+
+        const gainers = await loadScreenerSafe("day_gainers", 5);
+        const losers = await loadScreenerSafe("day_losers", 5);
+        const ipoThisMonth = await loadScreenerSafe("recent_ipo", 5);
+
+        const movers = {
+          mostActive: mostActiveRaw.slice(0, 5),
+          gainers: gainers.slice(0, 5),
+          losers: losers.slice(0, 5),
+          ipoThisMonth: ipoThisMonth.slice(0, 5),
+        };
+
+        if (commodities.length === 0 && indicators.length === 0 && topVolumeStocks.length === 0) {
           throw new Error("No market overview data available from upstream providers");
         }
 
         return {
           commodities,
           indicators,
+          topVolumeStocks,
+          movers,
           generatedAt: new Date().toISOString(),
         };
       },

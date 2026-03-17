@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 function toTradingViewSymbol(symbol = "") {
-  const normalized = String(symbol || "").toUpperCase().replace("-", ".");
+  const normalized = String(symbol || "").toUpperCase().replace(/-/g, ".");
   if (!normalized) return "NASDAQ:AAPL";
+  if (normalized.includes(":")) return normalized;
 
   const specialSymbolMap = {
     "^IXIC": "NASDAQ:IXIC",
@@ -12,12 +13,25 @@ function toTradingViewSymbol(symbol = "") {
     "^VIX": "TVC:VIX",
     DXY: "TVC:DXY",
     "DX.Y.NYB": "TVC:DXY",
+    USO: "AMEX:USO",
+    GLD: "AMEX:GLD",
+    SLV: "AMEX:SLV",
+    UUP: "AMEX:UUP",
+    SPY: "AMEX:SPY",
+    IWM: "AMEX:IWM",
+    VTI: "AMEX:VTI",
+    AGG: "AMEX:AGG",
+    QQQ: "NASDAQ:QQQ",
     "BRK.B": "NYSE:BRK.B",
     JPM: "NYSE:JPM",
   };
 
   if (specialSymbolMap[normalized]) {
     return specialSymbolMap[normalized];
+  }
+
+  if (normalized.startsWith("^")) {
+    return `TVC:${normalized.slice(1)}`;
   }
 
   const nyseSymbols = new Set(["BRK.B", "JPM"]);
