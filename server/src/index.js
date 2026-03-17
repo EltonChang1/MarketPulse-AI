@@ -263,20 +263,22 @@ app.get("/api/commodities-etfs", async (req, res) => {
         const indicators = await fetchData(indicatorSymbols);
 
         const mostActiveRaw = await loadScreenerSafe("most_actives", 12);
+        const mostActive = mostActiveRaw.filter((item) => isValidMarketSymbol(item?.symbol || ""));
         const topVolumeCandidates = mostActiveRaw
           .filter((item) => item?.symbol)
+          .filter((item) => isValidMarketSymbol(item.symbol))
           .filter((item, index, arr) => arr.findIndex((candidate) => candidate.symbol === item.symbol) === index)
           .slice(0, 5)
           .map((item) => ({ symbol: item.symbol, name: item.name, type: "Stock" }));
 
         const topVolumeStocks = await fetchData(topVolumeCandidates);
 
-        const gainers = await loadScreenerSafe("day_gainers", 5);
-        const losers = await loadScreenerSafe("day_losers", 5);
-        const ipoThisMonth = await loadScreenerSafe("recent_ipo", 5);
+        const gainers = (await loadScreenerSafe("day_gainers", 5)).filter((item) => isValidMarketSymbol(item?.symbol || ""));
+        const losers = (await loadScreenerSafe("day_losers", 5)).filter((item) => isValidMarketSymbol(item?.symbol || ""));
+        const ipoThisMonth = (await loadScreenerSafe("recent_ipo", 5)).filter((item) => isValidMarketSymbol(item?.symbol || ""));
 
         const movers = {
-          mostActive: mostActiveRaw.slice(0, 5),
+          mostActive: mostActive.slice(0, 5),
           gainers: gainers.slice(0, 5),
           losers: losers.slice(0, 5),
           ipoThisMonth: ipoThisMonth.slice(0, 5),

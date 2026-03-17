@@ -35,8 +35,11 @@ function toTradingViewSymbol(symbol = "") {
   }
 
   const nyseSymbols = new Set(["BRK.B", "JPM"]);
-  const exchange = nyseSymbols.has(normalized) ? "NYSE" : "NASDAQ";
-  return `${exchange}:${normalized}`;
+  if (nyseSymbols.has(normalized)) {
+    return `NYSE:${normalized}`;
+  }
+
+  return normalized;
 }
 
 function loadTradingViewScript() {
