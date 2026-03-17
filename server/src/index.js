@@ -188,6 +188,74 @@ app.get("/api/health", (_req, res) => {
 app.get("/api/companies", (_req, res) => {
   res.json(TOP_COMPANIES);
 });
+app.get("/api/commodities-etfs", async (req, res) => {
+  try {
+    const commoditySymbols = [
+      { symbol: "USO", name: "Crude Oil", type: "Commodity" },
+      { symbol: "GLD", name: "Gold", type: "Commodity" },
+      { symbol: "SLV", name: "Silver", type: "Commodity" },
+      { symbol: "DXY", name: "US Dollar Index", type: "Currency" },
+    ];
+
+    const etfSymbols = [
+      { symbol: "SPY", name: "S&P 500 ETF", type: "ETF" },
+      { symbol: "QQQ", name: "Nasdaq-100 ETF", type: "ETF" },
+      { symbol: "IWM", name: "Russell 2000 ETF", type: "ETF" },
+      { symbol: "VTI", name: "Total US Market ETF", type: "ETF" },
+      { symbol: "AGG", name: "Aggregate Bond ETF", type: "ETF" },
+    ];
+
+    const cacheKey = getCacheKey("commodities-etfs", {});
+    const { payload, cacheStatus, marketState } = await withCache({
+      key: cacheKey,
+      cache: aggregateCache,
+      compute: async () => {
+        const fetchData = async (items) => {
+          const settled = await Promise.allSettled(
+            items.map(async (item) => {
+              const market = await fetchQuoteAndHistory(item.symbol);
+              return {
+                symbol: item.symbol,
+                name: item.name,
+                type: item.type,
+                currentPrice: Number(market.currentPrice.toFixed(2)),
+                changePercent: Number(
+                  (((market.currentPrice - market.previousClose) / market.previousClose) * 100).toFixed(2)
+                ),
+                previousClose: Number(market.previousClose.toFixed(2)),
+              };
+            })
+          );
+
+          return settled
+            .filter((result) => result.status === "fulfilled")
+            .map((result) => result.value);
+        };
+
+        const commodities = await fetchData(commoditySymbols);
+        const etfs = await fetchData(etfSymbols);
+
+        return {
+          commodities,
+          etfs,
+          generatedAt: new Date().toISOString(),
+        };
+      },
+    });
+
+    return res.json({
+      ...payload,
+      marketOpen: marketState.isOpen,
+      cacheStatus,
+    });
+  } catch (error) {
+    console.error("Error fetching commodities-etfs:", error);
+    return res.status(500).json({
+      message: "Failed to fetch commodities and ETFs",
+      error: error.message,
+    });
+  }
+});
 
 async function analyzeCompany(symbol, companyName, technicalOptions = {}) {
   const market = await fetchQuoteAndHistory(symbol);
