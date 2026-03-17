@@ -8,7 +8,7 @@ import "../styles/dashboard.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 const REFRESH_MS = 60_000;
-const DEFAULT_COMMODITY_WATCHLIST = ["USO", "GLD", "SLV"];
+const DEFAULT_WATCHLIST = [];
 
 function formatCurrency(value) {
   if (typeof value !== "number" || Number.isNaN(value)) return "-";
@@ -31,7 +31,7 @@ export default function HomePage() {
   const [watchlistPayload, setWatchlistPayload] = useState(null);
   const [error, setError] = useState("");
   const [markerSettings, setMarkerSettings] = useState({ markers: 10, perIndicator: 3 });
-  const [watchlist, setWatchlist] = useState(user?.watchlist || DEFAULT_COMMODITY_WATCHLIST);
+  const [watchlist, setWatchlist] = useState(user?.watchlist || DEFAULT_WATCHLIST);
   const [showWatchlistDetails, setShowWatchlistDetails] = useState(true);
 
   const watchlistData = useMemo(() => watchlistPayload?.data || [], [watchlistPayload]);

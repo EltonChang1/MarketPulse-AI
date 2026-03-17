@@ -20,7 +20,7 @@ function formatPercent(value) {
 
 export default function CommoditiesSection({ onSelectStock }) {
   const [commodities, setCommodities] = useState([]);
-  const [etfs, setETFs] = useState([]);
+  const [marketIndicators, setMarketIndicators] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,7 +28,7 @@ export default function CommoditiesSection({ onSelectStock }) {
       try {
         const { data } = await axios.get(`${API_BASE_URL}/api/commodities-etfs`);
         setCommodities(data.commodities || []);
-        setETFs(data.etfs || []);
+        setMarketIndicators(data.indicators || data.etfs || []);
       } catch (error) {
         console.error("Failed to fetch commodities/ETFs:", error);
       } finally {
@@ -89,11 +89,11 @@ export default function CommoditiesSection({ onSelectStock }) {
         </div>
       </div>
 
-      {/* ETFs */}
+      {/* Market Indicators */}
       <div className="commodities-subsection">
-        <h3>📊 Popular ETFs</h3>
+        <h3>📊 Market Indicators</h3>
         <div className="market-grid">
-          {etfs.map((item) => (
+          {marketIndicators.map((item) => (
             <div
               key={item.symbol}
               className="market-card"

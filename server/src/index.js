@@ -173,6 +173,10 @@ function getPatternOptions(query = {}) {
   };
 }
 
+function isValidMarketSymbol(symbol = "") {
+  return /^(\^[A-Z]{1,7}|[A-Z]{1,7}(?:-[A-Z])?)$/.test(String(symbol).toUpperCase());
+}
+
 app.use(cors());
 app.use(express.json());
 
@@ -197,12 +201,12 @@ app.get("/api/commodities-etfs", async (req, res) => {
       { symbol: "DXY", name: "US Dollar Index", type: "Currency" },
     ];
 
-    const etfSymbols = [
-      { symbol: "SPY", name: "S&P 500 ETF", type: "ETF" },
-      { symbol: "QQQ", name: "Nasdaq-100 ETF", type: "ETF" },
-      { symbol: "IWM", name: "Russell 2000 ETF", type: "ETF" },
-      { symbol: "VTI", name: "Total US Market ETF", type: "ETF" },
-      { symbol: "AGG", name: "Aggregate Bond ETF", type: "ETF" },
+    const indicatorSymbols = [
+      { symbol: "^GSPC", name: "S&P 500", type: "Index" },
+      { symbol: "^DJI", name: "Dow Jones", type: "Index" },
+      { symbol: "^IXIC", name: "NASDAQ Composite", type: "Index" },
+      { symbol: "^RUT", name: "Russell 2000", type: "Index" },
+      { symbol: "^VIX", name: "CBOE Volatility Index", type: "Index" },
     ];
 
     const cacheKey = getCacheKey("commodities-etfs", {});
@@ -233,11 +237,11 @@ app.get("/api/commodities-etfs", async (req, res) => {
         };
 
         const commodities = await fetchData(commoditySymbols);
-        const etfs = await fetchData(etfSymbols);
+        const indicators = await fetchData(indicatorSymbols);
 
         return {
           commodities,
-          etfs,
+          indicators,
           generatedAt: new Date().toISOString(),
         };
       },
@@ -311,7 +315,7 @@ app.get("/api/analyze", async (req, res) => {
       ? symbolsParam
           .split(",")
           .map((s) => s.trim().toUpperCase())
-          .filter((s) => /^[A-Z]{1,7}(-[A-Z])?$/.test(s))
+          .filter((s) => isValidMarketSymbol(s))
           .slice(0, 20)
       : null;
 
@@ -376,7 +380,7 @@ app.get("/api/analyze", async (req, res) => {
 app.get("/api/analyze/:symbol", async (req, res) => {
   try {
     const symbol = String(req.params.symbol || "").toUpperCase();
-    if (!/^[A-Z]{1,7}(-[A-Z])?$/.test(symbol)) {
+    if (!isValidMarketSymbol(symbol)) {
       return res.status(400).json({ message: `Invalid symbol format: ${symbol}` });
     }
     const technicalOptions = getPatternOptions(req.query);
