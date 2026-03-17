@@ -1,5 +1,5 @@
 import { useState } from "react";
-import TradingViewChart from "./TradingViewChart";
+import CandlestickChart from "./CandlestickChart";
 import SignalCharts from "./SignalCharts";
 import PatternOverlay from "./PatternOverlay";
 import { useAuth } from "../context/AuthContext";
@@ -214,7 +214,14 @@ export default function StockDetailView({
       )}
 
       <div className="chart-section">
-        <TradingViewChart symbol={stock.symbol} />
+        <CandlestickChart
+          data={stock.candlestickData || []}
+          indicators={indicators}
+          selectedPeriod={currentPrediction}
+          currentPrice={stock.currentPrice}
+          patternMatches={patternMatches}
+          predictionBasis={pb}
+        />
         
         <div className="chart-controls-row">
           <button 
