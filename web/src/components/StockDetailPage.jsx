@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, Navigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import StockDetailView from "./StockDetailView";
 
@@ -9,14 +8,12 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 export default function StockDetailPage() {
   const { symbol } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated, loading: authLoading } = useAuth();
   const [stockData, setStockData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Fetch only when authenticated
   useEffect(() => {
-    if (!symbol || !isAuthenticated) return;
+    if (!symbol) return;
     setLoading(true);
     setError("");
     setStockData(null);
@@ -32,21 +29,7 @@ export default function StockDetailPage() {
         setError(err?.response?.data?.message || err.message || "Failed to load stock data.");
       })
       .finally(() => setLoading(false));
-  }, [symbol, isAuthenticated]);
-
-  // Wait for auth to resolve before deciding
-  if (authLoading) {
-    return (
-      <div className="stock-page-state">
-        <div className="stock-page-spinner" />
-      </div>
-    );
-  }
-
-  // Redirect guests to sign up
-  if (!isAuthenticated) {
-    return <Navigate to="/signup" replace />;
-  }
+  }, [symbol]);
 
   if (loading) {
     return (

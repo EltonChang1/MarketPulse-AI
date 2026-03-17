@@ -2,19 +2,37 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
+
+function buildFallbackCandles(seed = 100) {
+  return Array.from({ length: 24 }, (_, index) => {
+    const base = seed + Math.sin(index / 2.5) * 3 + index * 0.12;
+    const open = Number((base + Math.sin(index) * 0.6).toFixed(2));
+    const close = Number((base + Math.cos(index / 1.8) * 0.6).toFixed(2));
+    const high = Number((Math.max(open, close) + 0.7).toFixed(2));
+    const low = Number((Math.min(open, close) - 0.7).toFixed(2));
+    return {
+      time: index,
+      open,
+      high,
+      low,
+      close,
+    };
+  });
+}
+
 const FALLBACK_COMMODITIES = [
-  { symbol: "USO", displaySymbol: "USO", name: "Crude Oil", type: "Commodity", currentPrice: NaN, changePercent: NaN, candles: [] },
-  { symbol: "GLD", displaySymbol: "GLD", name: "Gold", type: "Commodity", currentPrice: NaN, changePercent: NaN, candles: [] },
-  { symbol: "SLV", displaySymbol: "SLV", name: "Silver", type: "Commodity", currentPrice: NaN, changePercent: NaN, candles: [] },
-  { symbol: "UUP", displaySymbol: "UUP", name: "US Dollar Index", type: "Currency", currentPrice: NaN, changePercent: NaN, candles: [] },
+  { symbol: "USO", displaySymbol: "USO", name: "Crude Oil", type: "Commodity", currentPrice: NaN, changePercent: NaN, candles: buildFallbackCandles(76) },
+  { symbol: "GLD", displaySymbol: "GLD", name: "Gold", type: "Commodity", currentPrice: NaN, changePercent: NaN, candles: buildFallbackCandles(215) },
+  { symbol: "SLV", displaySymbol: "SLV", name: "Silver", type: "Commodity", currentPrice: NaN, changePercent: NaN, candles: buildFallbackCandles(27) },
+  { symbol: "UUP", displaySymbol: "UUP", name: "US Dollar Index", type: "Currency", currentPrice: NaN, changePercent: NaN, candles: buildFallbackCandles(29) },
 ];
 
 const FALLBACK_INDICATORS = [
-  { symbol: "^GSPC", displaySymbol: "GSPC", name: "S&P 500", type: "Index", currentPrice: NaN, changePercent: NaN, candles: [] },
-  { symbol: "^DJI", displaySymbol: "DJI", name: "Dow Jones", type: "Index", currentPrice: NaN, changePercent: NaN, candles: [] },
-  { symbol: "^IXIC", displaySymbol: "IXIC", name: "NASDAQ Composite", type: "Index", currentPrice: NaN, changePercent: NaN, candles: [] },
-  { symbol: "^RUT", displaySymbol: "RUT", name: "Russell 2000", type: "Index", currentPrice: NaN, changePercent: NaN, candles: [] },
-  { symbol: "^VIX", displaySymbol: "VIX", name: "CBOE Volatility Index", type: "Index", currentPrice: NaN, changePercent: NaN, candles: [] },
+  { symbol: "^GSPC", displaySymbol: "GSPC", name: "S&P 500", type: "Index", currentPrice: NaN, changePercent: NaN, candles: buildFallbackCandles(5100) },
+  { symbol: "^DJI", displaySymbol: "DJI", name: "Dow Jones", type: "Index", currentPrice: NaN, changePercent: NaN, candles: buildFallbackCandles(39200) },
+  { symbol: "^IXIC", displaySymbol: "IXIC", name: "NASDAQ Composite", type: "Index", currentPrice: NaN, changePercent: NaN, candles: buildFallbackCandles(18100) },
+  { symbol: "^RUT", displaySymbol: "RUT", name: "Russell 2000", type: "Index", currentPrice: NaN, changePercent: NaN, candles: buildFallbackCandles(2050) },
+  { symbol: "^VIX", displaySymbol: "VIX", name: "CBOE Volatility Index", type: "Index", currentPrice: NaN, changePercent: NaN, candles: buildFallbackCandles(18) },
 ];
 
 function MiniCandles({ candles = [] }) {

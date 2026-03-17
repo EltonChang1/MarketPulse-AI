@@ -215,8 +215,10 @@ app.get("/api/commodities-etfs", async (req, res) => {
       cache: aggregateCache,
       compute: async () => {
         const fetchData = async (items) => {
-          const settled = await Promise.allSettled(
-            items.map(async (item) => {
+          const results = [];
+
+          for (const item of items) {
+            try {
               const market = await fetchQuoteAndHistory(item.symbol);
               const candles = (market.candlestickData || [])
                 .slice(-24)
@@ -228,7 +230,7 @@ app.get("/api/commodities-etfs", async (req, res) => {
                   close: candle.close,
                 }));
 
-              return {
+              results.push({
                 symbol: item.symbol,
                 displaySymbol: item.symbol.replace(/^\^/, ""),
                 name: item.name,
@@ -239,13 +241,13 @@ app.get("/api/commodities-etfs", async (req, res) => {
                 ),
                 previousClose: Number(market.previousClose.toFixed(2)),
                 candles,
-              };
-            })
-          );
+              });
+            } catch (error) {
+              console.warn(`Market overview fetch failed for ${item.symbol}: ${error?.message || error}`);
+            }
+          }
 
-          return settled
-            .filter((result) => result.status === "fulfilled")
-            .map((result) => result.value);
+          return results;
         };
 
         const commodities = await fetchData(commoditySymbols);
@@ -280,27 +282,70 @@ app.get("/api/commodities-etfs", async (req, res) => {
 async function analyzeCompany(symbol, companyName, technicalOptions = {}) {
   const market = await fetchQuoteAndHistory(symbol);
   const technicalForecast = predictMultipleTimeframes(market.history, market.currentPrice, technicalOptions);
-  const news = await fetchLatestNews(companyName, symbol, 10);
-  const sentiment = await estimateNewsImpact({
-    symbol,
-    companyName,
-    newsItems: news,
-    technicalForecast,
-  });
-  const comprehensiveAnalysis = await generateComprehensiveAnalysis({
-    symbol,
-    companyName,
-    newsItems: news,
-    technicalForecast,
-    currentPrice: market.currentPrice,
-  });
-  const newsSummary = await generateDetailedNewsSummary({
-    symbol,
-    companyName,
-    newsItems: news,
-    technicalForecast,
-    currentPrice: market.currentPrice,
-  });
+  let news = [];
+  try {
+    news = await fetchLatestNews(companyName, symbol, 10);
+  } catch (error) {
+    console.warn(`News fetch failed for ${symbol}: ${error?.message || error}`);
+  }
+
+  let sentiment = {
+    impact: "neutral",
+    confidence: 0.55,
+    summary: "News sentiment unavailable; using technical signals only.",
+    source: "fallback",
+  };
+  try {
+    sentiment = await estimateNewsImpact({
+      symbol,
+      companyName,
+      newsItems: news,
+      technicalForecast,
+    });
+  } catch (error) {
+    console.warn(`Sentiment estimation failed for ${symbol}: ${error?.message || error}`);
+  }
+
+  let comprehensiveAnalysis = {
+    financialSummary: `${companyName} (${symbol}) is currently trading at $${market.currentPrice.toFixed(2)}. Technical indicators are available for analysis.`,
+    newsSummary: news.length ? `Loaded ${news.length} recent news items.` : "Recent news is currently unavailable.",
+    riskFactors: ["Market volatility", "Macro conditions", "Execution risk"],
+    opportunities: ["Trend continuation", "Technical reversal setups", "Sector momentum"],
+    source: "fallback",
+  };
+  try {
+    comprehensiveAnalysis = await generateComprehensiveAnalysis({
+      symbol,
+      companyName,
+      newsItems: news,
+      technicalForecast,
+      currentPrice: market.currentPrice,
+    });
+  } catch (error) {
+    console.warn(`Comprehensive analysis failed for ${symbol}: ${error?.message || error}`);
+  }
+
+  let newsSummary = {
+    factsParagraphs: news.length
+      ? news.slice(0, 5).map((item, index) => `${index + 1}. ${item.title || "Recent market update."}`)
+      : [`No recent news found for ${companyName} (${symbol}).`],
+    factsParagraph: news.length
+      ? news.slice(0, 5).map((item, index) => `${index + 1}. ${item.title || "Recent market update."}`).join(" ")
+      : `No recent news found for ${companyName} (${symbol}).`,
+    impactParagraph: "Short-term price action may depend more on technical signals until reliable fresh news data is available.",
+    source: "fallback",
+  };
+  try {
+    newsSummary = await generateDetailedNewsSummary({
+      symbol,
+      companyName,
+      newsItems: news,
+      technicalForecast,
+      currentPrice: market.currentPrice,
+    });
+  } catch (error) {
+    console.warn(`News summary generation failed for ${symbol}: ${error?.message || error}`);
+  }
 
   return {
     symbol,

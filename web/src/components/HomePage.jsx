@@ -70,10 +70,6 @@ export default function HomePage() {
 
   // Navigate to individual stock page (require sign-in)
   function handleSelectStock(symbol) {
-    if (!isAuthenticated) {
-      navigate("/signup");
-      return;
-    }
     navigate(`/stock/${symbol.toUpperCase()}`);
   }
 
