@@ -1,6 +1,6 @@
 import express from "express";
-import User from "../models/User.js";
 import { authenticateToken } from "../middleware/auth.js";
+import { createUser, getUserById, signInUser, updateUserProfile } from "../services/userStore.js";
 
 const router = express.Router();
 
@@ -17,35 +17,23 @@ router.post("/signup", async (req, res) => {
       return res.status(400).json({ message: "Password must be at least 6 characters" });
     }
 
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
-    if (existingUser) {
-      return res.status(400).json({ message: "Email already in use" });
-    }
-
-    const user = new User({
-      email: email.toLowerCase(),
+    const { user, token } = await createUser({
+      email,
       password,
       firstName: firstName || "",
       lastName: lastName || "",
-      watchlist: [],
     });
-
-    await user.save();
-    const token = user.getToken();
 
     res.status(201).json({
       success: true,
       message: "Account created successfully",
       token,
-      user: {
-        id: user._id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        watchlist: user.watchlist,
-      },
+      user,
     });
   } catch (error) {
+    if (error?.code === "DUPLICATE_EMAIL") {
+      return res.status(400).json({ message: "Email already in use" });
+    }
     console.error("Signup error:", error);
     res.status(500).json({ message: "Signup failed", error: error.message });
   }
@@ -60,29 +48,16 @@ router.post("/signin", async (req, res) => {
       return res.status(400).json({ message: "Email and password required" });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) {
+    const auth = await signInUser({ email, password });
+    if (!auth) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
-
-    const isPasswordValid = await user.comparePassword(password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ message: "Invalid email or password" });
-    }
-
-    const token = user.getToken();
 
     res.json({
       success: true,
       message: "Signed in successfully",
-      token,
-      user: {
-        id: user._id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        watchlist: user.watchlist,
-      },
+      token: auth.token,
+      user: auth.user,
     });
   } catch (error) {
     console.error("Signin error:", error);
@@ -93,7 +68,8 @@ router.post("/signin", async (req, res) => {
 // Get Current User
 router.get("/me", authenticateToken, async (req, res) => {
   try {
-    const user = await User.findById(req.userId).select("-password");
+    const user = await getUserById(req.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
     res.json({ user });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch user", error: error.message });
@@ -104,11 +80,8 @@ router.get("/me", authenticateToken, async (req, res) => {
 router.put("/profile", authenticateToken, async (req, res) => {
   try {
     const { firstName, lastName } = req.body;
-    const user = await User.findByIdAndUpdate(
-      req.userId,
-      { firstName, lastName },
-      { new: true }
-    ).select("-password");
+    const user = await updateUserProfile(req.userId, { firstName, lastName });
+    if (!user) return res.status(404).json({ message: "User not found" });
 
     res.json({ user });
   } catch (error) {

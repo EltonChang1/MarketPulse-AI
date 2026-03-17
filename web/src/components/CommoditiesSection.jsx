@@ -3,6 +3,21 @@ import axios from "axios";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
+function formatCurrency(value) {
+  if (typeof value !== "number" || Number.isNaN(value)) return "-";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+function formatPercent(value) {
+  if (typeof value !== "number" || Number.isNaN(value)) return "-";
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${value.toFixed(2)}%`;
+}
+
 export default function CommoditiesSection({ onSelectStock }) {
   const [commodities, setCommodities] = useState([]);
   const [etfs, setETFs] = useState([]);
@@ -48,6 +63,12 @@ export default function CommoditiesSection({ onSelectStock }) {
               key={item.symbol}
               className="market-card"
               onClick={() => onSelectStock(item.symbol)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onSelectStock(item.symbol);
+                }
+              }}
               role="button"
               tabIndex={0}
             >
@@ -56,6 +77,12 @@ export default function CommoditiesSection({ onSelectStock }) {
                 <span className="market-type">{item.type}</span>
               </div>
               <div className="market-name">{item.name}</div>
+              <div className="market-price-row">
+                <span className="market-price">{formatCurrency(item.currentPrice)}</span>
+                <span className={`market-change ${(item.changePercent ?? 0) >= 0 ? "positive" : "negative"}`}>
+                  {formatPercent(item.changePercent)}
+                </span>
+              </div>
               <button className="market-card-btn">View Analysis →</button>
             </div>
           ))}
@@ -71,6 +98,12 @@ export default function CommoditiesSection({ onSelectStock }) {
               key={item.symbol}
               className="market-card"
               onClick={() => onSelectStock(item.symbol)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onSelectStock(item.symbol);
+                }
+              }}
               role="button"
               tabIndex={0}
             >
@@ -79,6 +112,12 @@ export default function CommoditiesSection({ onSelectStock }) {
                 <span className="market-type">{item.type}</span>
               </div>
               <div className="market-name">{item.name}</div>
+              <div className="market-price-row">
+                <span className="market-price">{formatCurrency(item.currentPrice)}</span>
+                <span className={`market-change ${(item.changePercent ?? 0) >= 0 ? "positive" : "negative"}`}>
+                  {formatPercent(item.changePercent)}
+                </span>
+              </div>
               <button className="market-card-btn">View Analysis →</button>
             </div>
           ))}

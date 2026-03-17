@@ -21,51 +21,91 @@ const TOP_ETFS = [
   { symbol: "GLD", name: "Gold ETF", type: "etf" },
 ];
 
-// Popular stocks for search autocomplete
-const TOP_STOCKS = [
-  { symbol: "AAPL", name: "Apple" },
-  { symbol: "MSFT", name: "Microsoft" },
-  { symbol: "NVDA", name: "NVIDIA" },
-  { symbol: "AMZN", name: "Amazon" },
-  { symbol: "GOOGL", name: "Alphabet" },
-  { symbol: "META", name: "Meta Platforms" },
-  { symbol: "TSLA", name: "Tesla" },
-  { symbol: "JPM", name: "JPMorgan Chase" },
-  { symbol: "JNJ", name: "Johnson & Johnson" },
-  { symbol: "V", name: "Visa" },
-  { symbol: "WMT", name: "Walmart" },
-  { symbol: "KO", name: "Coca-Cola" },
-  { symbol: "BAC", name: "Bank of America" },
-  { symbol: "CSCO", name: "Cisco" },
-  { symbol: "ABBV", name: "AbbVie" },
-];
+const ALLOWED_QUOTE_TYPES = new Set(["EQUITY", "ETF", "MUTUALFUND", "INDEX"]);
 
-// Get Commodities & ETFs
-router.get("/commodities-etfs", (req, res) => {
+async function fetchQuotes(symbols = []) {
+  if (!Array.isArray(symbols) || symbols.length === 0) return new Map();
+
+  const endpoint = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbols.join(","))}`;
+  const response = await axios.get(endpoint, {
+    timeout: 12000,
+    headers: {
+      "User-Agent": "Mozilla/5.0",
+      Accept: "application/json",
+    },
+  });
+
+  const quoteMap = new Map();
+  const results = response.data?.quoteResponse?.result || [];
+  for (const quote of results) {
+    if (quote?.symbol) {
+      quoteMap.set(quote.symbol, {
+        symbol: quote.symbol,
+        name: quote.longName || quote.shortName || quote.symbol,
+        currentPrice: quote.regularMarketPrice ?? null,
+        changePercent: quote.regularMarketChangePercent ?? null,
+      });
+    }
+  }
+
+  return quoteMap;
+}
+
+// Get Commodities & ETFs with live price snapshot
+router.get("/commodities-etfs", async (req, res) => {
   try {
+    const symbols = [...COMMODITIES.map((x) => x.symbol), ...TOP_ETFS.map((x) => x.symbol)];
+    const quotes = await fetchQuotes(symbols);
+
+    const commodities = COMMODITIES.map((item) => ({
+      ...item,
+      currentPrice: quotes.get(item.symbol)?.currentPrice ?? null,
+      changePercent: quotes.get(item.symbol)?.changePercent ?? null,
+    }));
+
+    const etfs = TOP_ETFS.map((item) => ({
+      ...item,
+      currentPrice: quotes.get(item.symbol)?.currentPrice ?? null,
+      changePercent: quotes.get(item.symbol)?.changePercent ?? null,
+    }));
+
     res.json({
-      commodities: COMMODITIES,
-      etfs: TOP_ETFS,
+      commodities,
+      etfs,
     });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch commodities/ETFs", error: error.message });
   }
 });
 
-// Search Stocks
-router.get("/search", (req, res) => {
+// Search symbols dynamically from Yahoo Finance API
+router.get("/search", async (req, res) => {
   try {
-    const query = (req.query.q || "").toUpperCase().trim();
+    const query = String(req.query.q || "").trim();
 
     if (!query || query.length === 0) {
       return res.json({ results: [] });
     }
 
-    const results = TOP_STOCKS.filter(
-      (stock) =>
-        stock.symbol.includes(query) ||
-        stock.name.toUpperCase().includes(query)
-    ).slice(0, 10);
+    const endpoint = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=20&newsCount=0`;
+    const response = await axios.get(endpoint, {
+      timeout: 12000,
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+        Accept: "application/json",
+      },
+    });
+
+    const quotes = response.data?.quotes || [];
+    const results = quotes
+      .filter((item) => item?.symbol && item?.shortname && ALLOWED_QUOTE_TYPES.has(item.quoteType))
+      .map((item) => ({
+        symbol: item.symbol,
+        name: item.shortname,
+        exchange: item.exchange || item.exchDisp || "",
+        type: item.quoteType,
+      }))
+      .slice(0, 12);
 
     res.json({ results });
   } catch (error) {

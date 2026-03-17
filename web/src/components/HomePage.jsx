@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import SearchBar from "./SearchBar";
 import CommoditiesSection from "./CommoditiesSection";
@@ -8,8 +8,6 @@ import "../styles/dashboard.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 const REFRESH_MS = 60_000;
-const MARKER_OPTIONS = [8, 10, 12, 15, 20];
-const PER_INDICATOR_OPTIONS = [2, 3, 4, 5];
 const DEFAULT_COMMODITY_WATCHLIST = ["USO", "GLD", "SLV"];
 
 function formatCurrency(value) {
@@ -30,12 +28,21 @@ function formatPercent(value) {
 export default function HomePage() {
   const { user, addToWatchlist, removeFromWatchlist } = useAuth();
   const [selectedStock, setSelectedStock] = useState(null);
-  const [payload, setPayload] = useState(null);
+  const [watchlistPayload, setWatchlistPayload] = useState(null);
+  const [selectedStockPayload, setSelectedStockPayload] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [markerSettings, setMarkerSettings] = useState({ markers: 10, perIndicator: 3 });
   const [watchlist, setWatchlist] = useState(user?.watchlist || DEFAULT_COMMODITY_WATCHLIST);
   const [showWatchlistDetails, setShowWatchlistDetails] = useState(true);
+
+  const watchlistData = useMemo(() => watchlistPayload?.data || [], [watchlistPayload]);
+
+  useEffect(() => {
+    if (Array.isArray(user?.watchlist) && user.watchlist.length > 0) {
+      setWatchlist(user.watchlist);
+    }
+  }, [user?.watchlist]);
 
   // Auto-refresh watchlist data
   useEffect(() => {
@@ -52,7 +59,7 @@ export default function HomePage() {
             symbols,
           },
         });
-        setPayload(data);
+        setWatchlistPayload(data);
       } catch (err) {
         setError(err?.response?.data?.message || err.message);
       }
@@ -72,7 +79,7 @@ export default function HomePage() {
         params: markerSettings,
       });
       setSelectedStock(symbol);
-      setPayload(data);
+      setSelectedStockPayload(data);
     } catch (err) {
       setError(err?.response?.data?.message || err.message);
     } finally {
@@ -83,14 +90,16 @@ export default function HomePage() {
   async function handleAddToWatchlist(symbol) {
     const result = await addToWatchlist(symbol);
     if (result.success) {
-      setWatchlist([...watchlist, symbol.toUpperCase()]);
+      const next = symbol.toUpperCase();
+      setWatchlist((prev) => (prev.includes(next) ? prev : [...prev, next]));
     }
   }
 
   async function handleRemoveFromWatchlist(symbol) {
     const result = await removeFromWatchlist(symbol);
     if (result.success) {
-      setWatchlist(watchlist.filter((s) => s !== symbol.toUpperCase()));
+      const next = symbol.toUpperCase();
+      setWatchlist((prev) => prev.filter((s) => s !== next));
     }
   }
 
@@ -111,12 +120,18 @@ export default function HomePage() {
           <SearchBar onSelect={handleSelectStock} />
 
           {/* Detail View (if stock selected) */}
-          {selectedStock && payload && (
+          {selectedStock && selectedStockPayload && (
             <div className="selected-stock-section">
-              <button className="close-detail-btn" onClick={() => setSelectedStock(null)}>
+              <button
+                className="close-detail-btn"
+                onClick={() => {
+                  setSelectedStock(null);
+                  setSelectedStockPayload(null);
+                }}
+              >
                 ← Back to Overview
               </button>
-              <StockDetailView stock={payload.data?.[0]} />
+              <StockDetailView stock={selectedStockPayload} />
             </div>
           )}
 
@@ -138,9 +153,9 @@ export default function HomePage() {
 
           {showWatchlistDetails && (
             <div className="watchlist-content">
-              {payload?.data && payload.data.length > 0 ? (
+              {watchlistData.length > 0 ? (
                 <div className="watchlist-items">
-                  {payload.data.map((stock) => (
+                  {watchlistData.map((stock) => (
                     <div key={stock.symbol} className="watchlist-item">
                       <div className="watchlist-item-header">
                         <div className="watchlist-symbol">{stock.symbol}</div>
@@ -158,10 +173,10 @@ export default function HomePage() {
                       </div>
                       <div
                         className={`watchlist-change ${
-                          stock.changePercent >= 0 ? "positive" : "negative"
+                          (stock.changePercent ?? stock.dayChangePct ?? 0) >= 0 ? "positive" : "negative"
                         }`}
                       >
-                        {formatPercent(stock.changePercent)}
+                        {formatPercent(stock.changePercent ?? stock.dayChangePct)}
                       </div>
                       <button
                         className="watchlist-view-btn"

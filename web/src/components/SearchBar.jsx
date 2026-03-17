@@ -57,7 +57,7 @@ export default function SearchBar({ onSelect }) {
     setQuery("");
     setShowResults(false);
     setResults([]);
-    onSelect(result);
+    onSelect(result.symbol);
   }
 
   return (
@@ -86,6 +86,7 @@ export default function SearchBar({ onSelect }) {
               >
                 <div className="result-symbol">{result.symbol}</div>
                 <div className="result-name">{result.name}</div>
+                <div className="result-exchange">{result.exchange || result.type || ""}</div>
               </div>
             ))
           ) : query.trim() ? (
