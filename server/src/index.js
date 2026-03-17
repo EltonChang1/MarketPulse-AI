@@ -30,6 +30,15 @@ const TOP_COMPANIES = [
   { symbol: "JPM", companyName: "JPMorgan Chase" },
 ];
 
+const SIX_LARGEST_MARKET_CAP_COMPANIES = [
+  { symbol: "AAPL", name: "Apple", type: "Stock" },
+  { symbol: "MSFT", name: "Microsoft", type: "Stock" },
+  { symbol: "NVDA", name: "NVIDIA", type: "Stock" },
+  { symbol: "AMZN", name: "Amazon", type: "Stock" },
+  { symbol: "GOOGL", name: "Alphabet", type: "Stock" },
+  { symbol: "META", name: "Meta Platforms", type: "Stock" },
+];
+
 const MARKET_TZ = "America/New_York";
 const MARKET_OPEN_MINUTE = 9 * 60 + 30; // 9:30 ET
 const MARKET_CLOSE_MINUTE = 16 * 60; // 16:00 ET
@@ -238,7 +247,8 @@ async function getStockFallbackOverview() {
   return {
     indicators: cards.slice(0, 5),
     commodities: [],
-    topVolumeStocks: cards.slice(5),
+    sixLargestCompanies: cards.slice(0, 6),
+    topVolumeStocks: cards.slice(0, 6),
     movers: buildFallbackMoversFromCards(cards),
     generatedAt: new Date().toISOString(),
     fallback: true,
@@ -332,14 +342,7 @@ app.get("/api/commodities-etfs", async (req, res) => {
 
         const mostActiveRaw = await loadScreenerSafe("most_actives", 12);
         const mostActive = mostActiveRaw.filter((item) => isValidMarketSymbol(item?.symbol || ""));
-        const topVolumeCandidates = mostActiveRaw
-          .filter((item) => item?.symbol)
-          .filter((item) => isValidMarketSymbol(item.symbol))
-          .filter((item, index, arr) => arr.findIndex((candidate) => candidate.symbol === item.symbol) === index)
-          .slice(0, 5)
-          .map((item) => ({ symbol: item.symbol, name: item.name, type: "Stock" }));
-
-        const topVolumeStocks = await fetchData(topVolumeCandidates);
+        const sixLargestCompanies = await fetchData(SIX_LARGEST_MARKET_CAP_COMPANIES);
 
         const gainers = (await loadScreenerSafe("day_gainers", 5)).filter((item) => isValidMarketSymbol(item?.symbol || ""));
         const losers = (await loadScreenerSafe("day_losers", 5)).filter((item) => isValidMarketSymbol(item?.symbol || ""));
@@ -352,14 +355,15 @@ app.get("/api/commodities-etfs", async (req, res) => {
           ipoThisMonth: ipoThisMonth.slice(0, 5),
         };
 
-        if (commodities.length === 0 && indicators.length === 0 && topVolumeStocks.length === 0) {
+        if (commodities.length === 0 && indicators.length === 0 && sixLargestCompanies.length === 0) {
           throw new Error("No market overview data available from upstream providers");
         }
 
         return {
           commodities,
           indicators,
-          topVolumeStocks,
+          sixLargestCompanies,
+          topVolumeStocks: sixLargestCompanies,
           movers,
           generatedAt: new Date().toISOString(),
         };

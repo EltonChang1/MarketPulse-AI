@@ -207,7 +207,7 @@ export default function CommoditiesSection({ onSelectStock }) {
         const { data } = await axios.get(`${API_BASE_URL}/api/commodities-etfs`);
         const nextCommodities = data.commodities || [];
         const nextIndicators = data.indicators || data.etfs || [];
-        const nextTopVolume = data.topVolumeStocks || [];
+        const nextTopVolume = data.sixLargestCompanies || data.topVolumeStocks || [];
         const nextMovers = data.movers || {};
 
         setCommodities(nextCommodities);
@@ -289,9 +289,9 @@ export default function CommoditiesSection({ onSelectStock }) {
         </div>
       </div>
 
-      {/* Top volume stocks */}
+      {/* Largest market cap companies */}
       <div className="commodities-subsection">
-        <h3>🏆 Top 5 Individual Stocks by Volume</h3>
+        <h3>🏆 6 Largest Companies by Market Cap</h3>
         <div className="market-grid">
           {topVolumeStocks.map((item) => <MarketCard key={item.symbol} item={item} onSelectStock={onSelectStock} />)}
         </div>
