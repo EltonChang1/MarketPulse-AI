@@ -4,6 +4,22 @@ function toTradingViewSymbol(symbol = "") {
   const normalized = String(symbol || "").toUpperCase().replace("-", ".");
   if (!normalized) return "NASDAQ:AAPL";
 
+  const specialSymbolMap = {
+    "^IXIC": "NASDAQ:IXIC",
+    "^GSPC": "SP:SPX",
+    "^DJI": "DJ:DJI",
+    "^RUT": "TVC:RUT",
+    "^VIX": "TVC:VIX",
+    DXY: "TVC:DXY",
+    "DX.Y.NYB": "TVC:DXY",
+    "BRK.B": "NYSE:BRK.B",
+    JPM: "NYSE:JPM",
+  };
+
+  if (specialSymbolMap[normalized]) {
+    return specialSymbolMap[normalized];
+  }
+
   const nyseSymbols = new Set(["BRK.B", "JPM"]);
   const exchange = nyseSymbols.has(normalized) ? "NYSE" : "NASDAQ";
   return `${exchange}:${normalized}`;
