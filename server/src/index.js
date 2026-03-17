@@ -218,8 +218,19 @@ app.get("/api/commodities-etfs", async (req, res) => {
           const settled = await Promise.allSettled(
             items.map(async (item) => {
               const market = await fetchQuoteAndHistory(item.symbol);
+              const candles = (market.candlestickData || [])
+                .slice(-24)
+                .map((candle) => ({
+                  time: candle.time,
+                  open: candle.open,
+                  high: candle.high,
+                  low: candle.low,
+                  close: candle.close,
+                }));
+
               return {
                 symbol: item.symbol,
+                displaySymbol: item.symbol.replace(/^\^/, ""),
                 name: item.name,
                 type: item.type,
                 currentPrice: Number(market.currentPrice.toFixed(2)),
@@ -227,6 +238,7 @@ app.get("/api/commodities-etfs", async (req, res) => {
                   (((market.currentPrice - market.previousClose) / market.previousClose) * 100).toFixed(2)
                 ),
                 previousClose: Number(market.previousClose.toFixed(2)),
+                candles,
               };
             })
           );
