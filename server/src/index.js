@@ -251,6 +251,10 @@ app.get("/api/commodities-etfs", async (req, res) => {
         const commodities = await fetchData(commoditySymbols);
         const indicators = await fetchData(indicatorSymbols);
 
+        if (commodities.length === 0 && indicators.length === 0) {
+          throw new Error("No market overview data available from upstream providers");
+        }
+
         return {
           commodities,
           indicators,

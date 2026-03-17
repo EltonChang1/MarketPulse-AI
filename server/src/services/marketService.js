@@ -1,6 +1,11 @@
 import axios from "axios";
 
 const RETRYABLE_STATUS_CODES = new Set([429, 500, 502, 503, 504]);
+const YAHOO_HOSTS = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"];
+
+const SYMBOL_ALIASES = {
+  DXY: ["DX-Y.NYB", "DXY"],
+};
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -33,59 +38,83 @@ async function fetchChartWithRetry(url, maxAttempts = 3) {
   throw lastError;
 }
 
+function getSymbolCandidates(symbol) {
+  const normalized = String(symbol || "").toUpperCase();
+  const aliases = SYMBOL_ALIASES[normalized] || [normalized];
+
+  return [...new Set([normalized, ...aliases])];
+}
+
+function buildChartUrls(symbol) {
+  const candidates = getSymbolCandidates(symbol);
+  const urls = [];
+
+  for (const candidate of candidates) {
+    const encoded = encodeURIComponent(candidate);
+    for (const host of YAHOO_HOSTS) {
+      urls.push(`https://${host}/v8/finance/chart/${encoded}?range=2y&interval=1d`);
+    }
+  }
+
+  return urls;
+}
+
 export async function fetchQuoteAndHistory(symbol) {
-  const chartUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?range=2y&interval=1d`;
+  const chartUrls = buildChartUrls(symbol);
+  let lastError;
 
-  const chartResponse = await fetchChartWithRetry(chartUrl);
+  for (const chartUrl of chartUrls) {
+    try {
+      const chartResponse = await fetchChartWithRetry(chartUrl, 2);
+      const result = chartResponse.data?.chart?.result?.[0];
+      if (!result) {
+        throw new Error(`No chart data found for ${symbol}`);
+      }
 
-  const result = chartResponse.data?.chart?.result?.[0];
-  if (!result) {
-    throw new Error(`No chart data found for ${symbol}`);
+      const timestamps = result.timestamp || [];
+      const quote = result.indicators?.quote?.[0] || {};
+      const opens = quote.open || [];
+      const highs = quote.high || [];
+      const lows = quote.low || [];
+      const closes = quote.close || [];
+      const volumes = quote.volume || [];
+
+      const history = timestamps
+        .map((t, i) => ({
+          date: new Date(t * 1000).toISOString().split("T")[0],
+          time: t,
+          open: opens[i],
+          high: highs[i],
+          low: lows[i],
+          close: closes[i],
+          volume: volumes[i],
+        }))
+        .filter((point) => 
+          typeof point.close === "number" && 
+          typeof point.open === "number" &&
+          typeof point.high === "number" &&
+          typeof point.low === "number"
+        );
+
+      if (history.length < 250) {
+        throw new Error(`Insufficient history for ${symbol}`);
+      }
+
+      const latestData = history[history.length - 1];
+      const previousData = history[history.length - 2];
+
+      return {
+        symbol,
+        currentPrice: latestData.close,
+        previousClose: previousData.close,
+        marketCap: null,
+        history,
+        candlestickData: history,
+      };
+    } catch (error) {
+      lastError = error;
+    }
   }
 
-  const timestamps = result.timestamp || [];
-  const quote = result.indicators?.quote?.[0] || {};
-  const opens = quote.open || [];
-  const highs = quote.high || [];
-  const lows = quote.low || [];
-  const closes = quote.close || [];
-  const volumes = quote.volume || [];
-
-  const history = timestamps
-    .map((t, i) => ({
-      date: new Date(t * 1000).toISOString().split("T")[0],
-      time: t,
-      open: opens[i],
-      high: highs[i],
-      low: lows[i],
-      close: closes[i],
-      volume: volumes[i],
-    }))
-    .filter((point) => 
-      typeof point.close === "number" && 
-      typeof point.open === "number" &&
-      typeof point.high === "number" &&
-      typeof point.low === "number"
-    );
-
-  if (history.length < 250) {
-    throw new Error(`Insufficient history for ${symbol}`);
-  }
-
-  // Get the most recent trading day's data
-  const latestData = history[history.length - 1];
-  const previousData = history[history.length - 2];
-  
-  // Use the latest close as current price, and previous day's close for comparison
-  const currentPrice = latestData.close;
-  const previousClose = previousData.close;
-
-  return {
-    symbol,
-    currentPrice,
-    previousClose,
-    marketCap: null,
-    history,
-    candlestickData: history,
-  };
+  throw lastError || new Error(`Failed to fetch chart data for ${symbol}`);
 }
