@@ -31,12 +31,12 @@ const TOP_COMPANIES = [
 ];
 
 const SIX_LARGEST_MARKET_CAP_COMPANIES = [
+  { symbol: "NVDA", name: "NVIDIA", type: "Stock" },
+  { symbol: "GOOG", name: "Alphabet (Google)", type: "Stock" },
   { symbol: "AAPL", name: "Apple", type: "Stock" },
   { symbol: "MSFT", name: "Microsoft", type: "Stock" },
-  { symbol: "NVDA", name: "NVIDIA", type: "Stock" },
   { symbol: "AMZN", name: "Amazon", type: "Stock" },
-  { symbol: "GOOGL", name: "Alphabet", type: "Stock" },
-  { symbol: "META", name: "Meta Platforms", type: "Stock" },
+  { symbol: "TSM", name: "TSMC", type: "Stock" },
 ];
 
 const MARKET_TZ = "America/New_York";

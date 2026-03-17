@@ -28,13 +28,22 @@ export default function CandlestickChart({
   const trendPeriodLabel = selectedPeriod?.period || "Selected";
 
   useEffect(() => {
-    if (!chartContainerRef.current || !data || data.length === 0) return;
+    if (!chartContainerRef.current) return;
+    
+    if (!data || data.length === 0) {
+      // Show placeholder when no data
+      chartContainerRef.current.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 500px; background: #f9fafb; color: #667085; font-size: 1rem;">No chart data available for this symbol</div>';
+      return;
+    }
 
     // Clear existing chart
     if (chartRef.current) {
       chartRef.current.remove();
       chartRef.current = null;
     }
+    
+    // Clear placeholder
+    chartContainerRef.current.innerHTML = '';
 
     const chart = createChart(chartContainerRef.current, {
       width: chartContainerRef.current.clientWidth,

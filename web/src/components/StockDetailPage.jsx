@@ -52,6 +52,17 @@ export default function StockDetailPage() {
     );
   }
 
+  if (!stockData) {
+    return (
+      <div className="stock-page-state stock-page-error">
+        <p>⚠️ No data available for {normalizedSymbol}</p>
+        <button className="back-button" onClick={() => navigate("/")}>
+          ← Back to Dashboard
+        </button>
+      </div>
+    );
+  }
+
   return (
     <StockDetailView
       stock={stockData}

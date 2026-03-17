@@ -76,7 +76,16 @@ export default function StockDetailView({
 
   const isInWatchlist = isAuthenticated && Array.isArray(user?.watchlist) && user.watchlist.includes(stock?.symbol);
 
-  if (!stock) return null;
+  if (!stock) {
+    return (
+      <div className="detail-view">
+        <div style={{ padding: "40px", textAlign: "center" }}>
+          <p style={{ color: "#667085", fontSize: "1rem" }}>No stock data available</p>
+          {onBack && <button onClick={onBack} className="back-button" style={{ marginTop: "16px" }}>← Back</button>}
+        </div>
+      </div>
+    );
+  }
 
   const predictions = stock.technicalForecast?.predictions || {};
   const indicators = stock.technicalForecast?.indicators || {};
