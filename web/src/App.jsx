@@ -385,62 +385,61 @@ function ClassicApp() {
   );
 }
 
-// Protected Route Component
-function ProtectedRoute({ children }) {
+// Redirect already-authenticated users away from auth pages
+function RedirectIfAuth({ children }) {
   const { isAuthenticated, loading } = useAuth();
-
-  if (loading) {
-    return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>Loading...</div>;
-  }
-
-  return isAuthenticated ? children : <Navigate to="/signin" />;
+  if (loading) return <div className="app-page-loading">Loading…</div>;
+  return isAuthenticated ? <Navigate to="/" replace /> : children;
 }
 
-// Header Component for authenticated pages
+// Global header — shows Login/Sign Up when guest, user avatar + name when authenticated
 function AppHeader() {
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
 
+  const initials = user
+    ? (user.firstName ? user.firstName[0] : user.email[0]).toUpperCase()
+    : "";
+
+  const displayName = user?.firstName
+    ? `${user.firstName}${user.lastName ? " " + user.lastName : ""}`
+    : user?.email || "";
+
   return (
-    <header style={{
-      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-      color: "white",
-      padding: "16px 20px",
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      boxShadow: "0 2px 10px rgba(0,0,0,0.1)"
-    }}>
-      <h1 style={{ margin: 0, fontSize: "24px", cursor: "pointer" }} onClick={() => navigate("/")}>
-        📊 MarketPulse AI
-      </h1>
-      <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-        <span style={{ fontSize: "14px" }}>{user?.email}</span>
-        <button
-          onClick={() => {
-            logout();
-            navigate("/signin");
-          }}
-          style={{
-            padding: "8px 16px",
-            background: "rgba(255,255,255,0.2)",
-            border: "1px solid white",
-            color: "white",
-            borderRadius: "6px",
-            cursor: "pointer",
-            transition: "all 0.2s",
-          }}
-          onMouseEnter={(e) => {
-            e.target.style.background = "white";
-            e.target.style.color = "#667eea";
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.background = "rgba(255,255,255,0.2)";
-            e.target.style.color = "white";
-          }}
-        >
-          Logout
-        </button>
+    <header className="app-header">
+      <div className="app-header-brand" onClick={() => navigate("/")}>
+        📊 <span>MarketPulse AI</span>
+      </div>
+      <div className="app-header-actions">
+        {!loading && (
+          isAuthenticated ? (
+            <>
+              <div className="user-avatar" title={displayName}>{initials}</div>
+              <span className="user-display-name">{displayName}</span>
+              <button
+                className="header-btn header-btn-outline"
+                onClick={() => { logout(); navigate("/"); }}
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                className="header-btn header-btn-outline"
+                onClick={() => navigate("/signin")}
+              >
+                Log In
+              </button>
+              <button
+                className="header-btn header-btn-primary"
+                onClick={() => navigate("/signup")}
+              >
+                Sign Up
+              </button>
+            </>
+          )
+        )}
       </div>
     </header>
   );
@@ -451,33 +450,14 @@ export default function App() {
   return (
     <Router>
       <AuthProvider>
+        <AppHeader />
         <Routes>
-          <Route path="/signup" element={<SignUpPage />} />
-          <Route path="/signin" element={<SignInPage />} />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <>
-                  <AppHeader />
-                  <HomePage />
-                </>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/stock/:symbol"
-            element={
-              <ProtectedRoute>
-                <>
-                  <AppHeader />
-                  <StockDetailPage />
-                </>
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/signup" element={<RedirectIfAuth><SignUpPage /></RedirectIfAuth>} />
+          <Route path="/signin" element={<RedirectIfAuth><SignInPage /></RedirectIfAuth>} />
+          <Route path="/" element={<HomePage />} />
+          <Route path="/stock/:symbol" element={<StockDetailPage />} />
           <Route path="/classic" element={<ClassicApp />} />
-          <Route path="*" element={<Navigate to="/" />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
     </Router>

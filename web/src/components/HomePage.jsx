@@ -26,7 +26,7 @@ function formatPercent(value) {
 }
 
 export default function HomePage() {
-  const { user, addToWatchlist, removeFromWatchlist } = useAuth();
+  const { user, isAuthenticated, addToWatchlist, removeFromWatchlist } = useAuth();
   const navigate = useNavigate();
   const [watchlistPayload, setWatchlistPayload] = useState(null);
   const [error, setError] = useState("");
@@ -68,8 +68,12 @@ export default function HomePage() {
     return () => clearInterval(timer);
   }, [watchlist, markerSettings]);
 
-  // Navigate to individual stock page
+  // Navigate to individual stock page (require sign-in)
   function handleSelectStock(symbol) {
+    if (!isAuthenticated) {
+      navigate("/signup");
+      return;
+    }
     navigate(`/stock/${symbol.toUpperCase()}`);
   }
 
@@ -91,11 +95,16 @@ export default function HomePage() {
 
   return (
     <div className="dashboard-container">
-      {/* Header */}
+      {/* Dashboard Header — only show welcome if authenticated */}
       <header className="dashboard-header">
         <div className="header-content">
           <h1>📊 MarketPulse AI Dashboard</h1>
-          {user && <p className="user-greeting">Welcome back, {user.firstName || user.email}!</p>}
+          {isAuthenticated && user && (
+            <p className="user-greeting">Welcome back, {user.firstName || user.email}!</p>
+          )}
+          {!isAuthenticated && (
+            <p className="user-greeting guest-hint">Sign in to save stocks to your personal watchlist and access detailed analysis.</p>
+          )}
         </div>
       </header>
 
@@ -111,15 +120,25 @@ export default function HomePage() {
 
         {/* Sidebar - Personal Watchlist */}
         <aside className="dashboard-sidebar">
-          <div className="sidebar-header">
-            <h3>📌 My Watchlist</h3>
-            <button
-              className="sidebar-toggle"
-              onClick={() => setShowWatchlistDetails(!showWatchlistDetails)}
-            >
-              {showWatchlistDetails ? "−" : "+"}
-            </button>
-          </div>
+          {!isAuthenticated ? (
+            <div className="sidebar-guest-cta">
+              <div className="sidebar-guest-icon">📈</div>
+              <h3>Your Watchlist</h3>
+              <p>Sign in to track your favourite stocks and get personalised analysis.</p>
+              <button className="sidebar-cta-btn" onClick={() => navigate("/signup")}>Get Started</button>
+              <button className="sidebar-cta-btn sidebar-cta-secondary" onClick={() => navigate("/signin")}>Log In</button>
+            </div>
+          ) : (
+            <>
+              <div className="sidebar-header">
+                <h3>📌 My Watchlist</h3>
+                <button
+                  className="sidebar-toggle"
+                  onClick={() => setShowWatchlistDetails(!showWatchlistDetails)}
+                >
+                  {showWatchlistDetails ? "−" : "+"}
+                </button>
+              </div>
 
           {showWatchlistDetails && (
             <div className="watchlist-content">
@@ -179,6 +198,8 @@ export default function HomePage() {
                 />
               </div>
             </div>
+          )}
+            </>
           )}
         </aside>
       </div>

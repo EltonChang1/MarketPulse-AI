@@ -1735,6 +1735,168 @@ footer {
   }
 }
 
+/* ===== Global App Header ===== */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 0 24px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+
+.app-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  letter-spacing: -0.3px;
+}
+
+.app-header-brand span {
+  font-size: 18px;
+}
+
+.app-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.user-display-name {
+  font-size: 14px;
+  font-weight: 500;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-btn {
+  padding: 7px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  line-height: 1;
+}
+
+.header-btn-outline {
+  background: transparent;
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  color: white;
+}
+
+.header-btn-outline:hover {
+  background: white;
+  color: #667eea;
+}
+
+.header-btn-primary {
+  background: white;
+  border: 1.5px solid white;
+  color: #667eea;
+}
+
+.header-btn-primary:hover {
+  background: #f0f0ff;
+  border-color: #f0f0ff;
+}
+
+/* Global app loading state */
+.app-page-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-size: 15px;
+  color: #667eea;
+}
+
+/* Guest hint in dashboard header */
+.guest-hint {
+  opacity: 0.9;
+  font-size: 13px !important;
+}
+
+/* ===== Sidebar Guest CTA ===== */
+.sidebar-guest-cta {
+  padding: 24px 16px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.sidebar-guest-icon {
+  font-size: 36px;
+}
+
+.sidebar-guest-cta h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #101828;
+}
+
+.sidebar-guest-cta p {
+  margin: 0;
+  font-size: 13px;
+  color: #475467;
+  line-height: 1.5;
+}
+
+.sidebar-cta-btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  background: #667eea;
+  color: white;
+  border: none;
+}
+
+.sidebar-cta-btn:hover {
+  background: #5a6fd6;
+}
+
+.sidebar-cta-secondary {
+  background: transparent;
+  border: 1.5px solid #d0d5dd;
+  color: #344054;
+}
+
+.sidebar-cta-secondary:hover {
+  background: #f9fafb;
+}
+
 /* Stock Detail Page — loading / error states */
 .stock-page-state {
   display: flex;
