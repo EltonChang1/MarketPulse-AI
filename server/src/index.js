@@ -266,15 +266,15 @@ app.get("/api/commodities-etfs", async (req, res) => {
       { symbol: "USO", name: "Crude Oil", type: "Commodity" },
       { symbol: "GLD", name: "Gold", type: "Commodity" },
       { symbol: "SLV", name: "Silver", type: "Commodity" },
-      { symbol: "DXY", name: "US Dollar Index", type: "Currency" },
+      { symbol: "UNG", name: "Natural Gas", type: "Commodity" },
     ];
 
     const indicatorSymbols = [
-      { symbol: "^GSPC", name: "S&P 500", type: "Index" },
-      { symbol: "^DJI", name: "Dow Jones", type: "Index" },
+      { symbol: "^DJI", name: "Dow Jones Industrial Average", type: "Index" },
       { symbol: "^IXIC", name: "NASDAQ Composite", type: "Index" },
       { symbol: "^RUT", name: "Russell 2000", type: "Index" },
-      { symbol: "^VIX", name: "CBOE Volatility Index", type: "Index" },
+      { symbol: "^GSPC", name: "S&P 500", type: "Index" },
+      { symbol: "^NYA", name: "NYSE Composite", type: "Index" },
     ];
 
     const cacheKey = getCacheKey("commodities-etfs", {});
