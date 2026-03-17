@@ -49,12 +49,15 @@ export default function StockDetailView({
   selectedPrediction,
   onSelectedPredictionChange,
 }) {
-  const { isAuthenticated, addToWatchlist } = useAuth();
+  const { isAuthenticated, user, addToWatchlist, removeFromWatchlist } = useAuth();
   const [showBasis, setShowBasis] = useState(false);
   const [showSignals, setShowSignals] = useState(false);
   const [showPatterns, setShowPatterns] = useState(false);
   const [watchlistStatus, setWatchlistStatus] = useState("");
   const [addingWatchlist, setAddingWatchlist] = useState(false);
+  const [removingWatchlist, setRemovingWatchlist] = useState(false);
+
+  const isInWatchlist = isAuthenticated && Array.isArray(user?.watchlist) && user.watchlist.includes(stock?.symbol);
 
   if (!stock) return null;
 
@@ -100,6 +103,19 @@ export default function StockDetailView({
     setAddingWatchlist(false);
   }
 
+  async function handleRemoveFromWatchlist() {
+    if (!isAuthenticated) return;
+    setRemovingWatchlist(true);
+    setWatchlistStatus("");
+    const result = await removeFromWatchlist(stock.symbol);
+    if (result?.success) {
+      setWatchlistStatus(`${stock.symbol} removed from your watchlist.`);
+    } else {
+      setWatchlistStatus(result?.error || "Unable to remove symbol from watchlist.");
+    }
+    setRemovingWatchlist(false);
+  }
+
   return (
     <div className="detail-view">
       <div className="detail-header">
@@ -120,13 +136,23 @@ export default function StockDetailView({
             </span>
           </p>
           <div className="detail-header-actions">
-            <button
-              className="watchlist-quick-add-btn"
-              onClick={handleAddToMyWatchlist}
-              disabled={addingWatchlist}
-            >
-              {addingWatchlist ? "Adding..." : "+ Add to My Watchlist"}
-            </button>
+            {isInWatchlist ? (
+              <button
+                className="watchlist-quick-remove-btn"
+                onClick={handleRemoveFromWatchlist}
+                disabled={removingWatchlist}
+              >
+                {removingWatchlist ? "Removing..." : "✕ Remove from My Watchlist"}
+              </button>
+            ) : (
+              <button
+                className="watchlist-quick-add-btn"
+                onClick={handleAddToMyWatchlist}
+                disabled={addingWatchlist}
+              >
+                {addingWatchlist ? "Adding..." : "+ Add to My Watchlist"}
+              </button>
+            )}
             {watchlistStatus ? <span className="watchlist-quick-status">{watchlistStatus}</span> : null}
           </div>
         </div>
