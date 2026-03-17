@@ -1,8 +1,24 @@
 import { useState } from "react";
+import TradingViewChart from "./TradingViewChart";
 import CandlestickChart from "./CandlestickChart";
 import SignalCharts from "./SignalCharts";
 import PatternOverlay from "./PatternOverlay";
 import { useAuth } from "../context/AuthContext";
+
+const MARKET_INDICATOR_SYMBOLS = new Set([
+  "^DJI",
+  "DJI",
+  "^IXIC",
+  "IXIC",
+  "^RUT",
+  "RUT",
+  "^GSPC",
+  "GSPC",
+  "^NYA",
+  "NYA",
+  "^VIX",
+  "VIX",
+]);
 
 function formatCurrency(value) {
   if (typeof value !== "number" || Number.isNaN(value)) return "-";
@@ -67,6 +83,8 @@ export default function StockDetailView({
   const analysis = stock.comprehensiveAnalysis || {};
   const rm = stock.technicalForecast?.reversalMetrics || {};
   const pb = stock.technicalForecast?.predictionBasis || {};
+  const normalizedSymbol = String(stock.symbol || "").toUpperCase();
+  const useYahooChart = normalizedSymbol.startsWith("^") || MARKET_INDICATOR_SYMBOLS.has(normalizedSymbol);
 
   const predictionButtons = [
     { key: "week", label: "1 Week", data: predictions.week },
@@ -214,14 +232,18 @@ export default function StockDetailView({
       )}
 
       <div className="chart-section">
-        <CandlestickChart
-          data={stock.candlestickData || []}
-          indicators={indicators}
-          selectedPeriod={currentPrediction}
-          currentPrice={stock.currentPrice}
-          patternMatches={patternMatches}
-          predictionBasis={pb}
-        />
+        {useYahooChart ? (
+          <CandlestickChart
+            data={stock.candlestickData || []}
+            indicators={indicators}
+            selectedPeriod={currentPrediction}
+            currentPrice={stock.currentPrice}
+            patternMatches={patternMatches}
+            predictionBasis={pb}
+          />
+        ) : (
+          <TradingViewChart symbol={stock.symbol} />
+        )}
         
         <div className="chart-controls-row">
           <button 
