@@ -2,6 +2,20 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
+const FALLBACK_COMMODITIES = [
+  { symbol: "USO", name: "Crude Oil", type: "Commodity", currentPrice: NaN, changePercent: NaN },
+  { symbol: "GLD", name: "Gold", type: "Commodity", currentPrice: NaN, changePercent: NaN },
+  { symbol: "SLV", name: "Silver", type: "Commodity", currentPrice: NaN, changePercent: NaN },
+  { symbol: "UUP", name: "US Dollar Index", type: "Currency", currentPrice: NaN, changePercent: NaN },
+];
+
+const FALLBACK_INDICATORS = [
+  { symbol: "^GSPC", name: "S&P 500", type: "Index", currentPrice: NaN, changePercent: NaN },
+  { symbol: "^DJI", name: "Dow Jones", type: "Index", currentPrice: NaN, changePercent: NaN },
+  { symbol: "^IXIC", name: "NASDAQ Composite", type: "Index", currentPrice: NaN, changePercent: NaN },
+  { symbol: "^RUT", name: "Russell 2000", type: "Index", currentPrice: NaN, changePercent: NaN },
+  { symbol: "^VIX", name: "CBOE Volatility Index", type: "Index", currentPrice: NaN, changePercent: NaN },
+];
 
 function formatCurrency(value) {
   if (typeof value !== "number" || Number.isNaN(value)) return "-";
@@ -27,10 +41,15 @@ export default function CommoditiesSection({ onSelectStock }) {
     async function fetchData() {
       try {
         const { data } = await axios.get(`${API_BASE_URL}/api/commodities-etfs`);
-        setCommodities(data.commodities || []);
-        setMarketIndicators(data.indicators || data.etfs || []);
+        const nextCommodities = data.commodities || [];
+        const nextIndicators = data.indicators || data.etfs || [];
+
+        setCommodities(nextCommodities.length ? nextCommodities : FALLBACK_COMMODITIES);
+        setMarketIndicators(nextIndicators.length ? nextIndicators : FALLBACK_INDICATORS);
       } catch (error) {
         console.error("Failed to fetch commodities/ETFs:", error);
+        setCommodities(FALLBACK_COMMODITIES);
+        setMarketIndicators(FALLBACK_INDICATORS);
       } finally {
         setLoading(false);
       }

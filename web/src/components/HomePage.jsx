@@ -95,19 +95,6 @@ export default function HomePage() {
 
   return (
     <div className="dashboard-container">
-      {/* Dashboard Header — only show welcome if authenticated */}
-      <header className="dashboard-header">
-        <div className="header-content">
-          <h1>📊 MarketPulse AI Dashboard</h1>
-          {isAuthenticated && user && (
-            <p className="user-greeting">Welcome back, {user.firstName || user.email}!</p>
-          )}
-          {!isAuthenticated && (
-            <p className="user-greeting guest-hint">Sign in to save stocks to your personal watchlist and access detailed analysis.</p>
-          )}
-        </div>
-      </header>
-
       <div className="dashboard-layout">
         {/* Main Content */}
         <main className="dashboard-main">
