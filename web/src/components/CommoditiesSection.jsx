@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
+const FALLBACK_SYMBOLS = ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA", "AVGO", "JPM", "BRK-B"];
 
 const EMPTY_LIST = [];
 
@@ -86,6 +87,42 @@ function formatVolume(value) {
   return `${value}`;
 }
 
+function toCardItem(stock = {}) {
+  const candles = Array.isArray(stock.candlestickData)
+    ? stock.candlestickData.slice(-24).map((point) => ({
+        time: point?.date || point?.time,
+        open: point?.open,
+        high: point?.high,
+        low: point?.low,
+        close: point?.close,
+      }))
+    : [];
+
+  return {
+    symbol: stock.symbol,
+    displaySymbol: (stock.symbol || "").replace(/^\^/, ""),
+    name: stock.companyName || stock.symbol,
+    type: "Stock",
+    currentPrice: stock.currentPrice,
+    changePercent: stock.dayChangePct,
+    candles,
+    volume: stock.technicalForecast?.reversalMetrics?.currentVolume,
+  };
+}
+
+function buildFallbackMovers(items = []) {
+  const byChangeDesc = [...items].sort((a, b) => (b.changePercent ?? -Infinity) - (a.changePercent ?? -Infinity));
+  const byChangeAsc = [...items].sort((a, b) => (a.changePercent ?? Infinity) - (b.changePercent ?? Infinity));
+  const byVolumeDesc = [...items].sort((a, b) => (b.volume ?? -Infinity) - (a.volume ?? -Infinity));
+
+  return {
+    mostActive: byVolumeDesc.slice(0, 5),
+    gainers: byChangeDesc.slice(0, 5),
+    losers: byChangeAsc.slice(0, 5),
+    ipoThisMonth: EMPTY_LIST,
+  };
+}
+
 function MarketCard({ item, onSelectStock }) {
   return (
     <div
@@ -153,6 +190,7 @@ export default function CommoditiesSection({ onSelectStock }) {
     ipoThisMonth: EMPTY_LIST,
   });
   const [loading, setLoading] = useState(true);
+  const [dataSource, setDataSource] = useState("overview");
 
   useEffect(() => {
     async function fetchData() {
@@ -172,17 +210,34 @@ export default function CommoditiesSection({ onSelectStock }) {
           losers: nextMovers.losers || EMPTY_LIST,
           ipoThisMonth: nextMovers.ipoThisMonth || EMPTY_LIST,
         });
+        setDataSource("overview");
       } catch (error) {
         console.error("Failed to fetch commodities/ETFs:", error);
-        setCommodities(EMPTY_LIST);
-        setMarketIndicators(EMPTY_LIST);
-        setTopVolumeStocks(EMPTY_LIST);
-        setMovers({
-          mostActive: EMPTY_LIST,
-          gainers: EMPTY_LIST,
-          losers: EMPTY_LIST,
-          ipoThisMonth: EMPTY_LIST,
-        });
+        try {
+          const symbols = FALLBACK_SYMBOLS.join(",");
+          const { data: fallbackData } = await axios.get(`${API_BASE_URL}/api/analyze`, {
+            params: { symbols, markers: 10, perIndicator: 3 },
+          });
+
+          const fallbackItems = (fallbackData?.data || []).map(toCardItem);
+          setCommodities(EMPTY_LIST);
+          setMarketIndicators(fallbackItems.slice(0, 5));
+          setTopVolumeStocks(fallbackItems.slice(5));
+          setMovers(buildFallbackMovers(fallbackItems));
+          setDataSource("stocks-fallback");
+        } catch (fallbackError) {
+          console.error("Fallback market data failed:", fallbackError);
+          setCommodities(EMPTY_LIST);
+          setMarketIndicators(EMPTY_LIST);
+          setTopVolumeStocks(EMPTY_LIST);
+          setMovers({
+            mostActive: EMPTY_LIST,
+            gainers: EMPTY_LIST,
+            losers: EMPTY_LIST,
+            ipoThisMonth: EMPTY_LIST,
+          });
+          setDataSource("empty");
+        }
       } finally {
         setLoading(false);
       }
@@ -204,6 +259,9 @@ export default function CommoditiesSection({ onSelectStock }) {
       <div className="commodities-header">
         <h2>📈 Market Overview</h2>
         <p>Track essential commodities and market indices</p>
+        {dataSource === "stocks-fallback" ? (
+          <p className="market-overview-note">Live commodities feed is unavailable right now. Showing live stock market fallback data.</p>
+        ) : null}
       </div>
 
       {/* Market Indicators */}

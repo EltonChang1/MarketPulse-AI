@@ -177,6 +177,74 @@ function isValidMarketSymbol(symbol = "") {
   return /^(\^[A-Z]{1,7}|[A-Z]{1,7}(?:-[A-Z])?)$/.test(String(symbol).toUpperCase());
 }
 
+function toMarketCardFromQuote(item, market) {
+  const previousClose = Number(market.previousClose);
+  const currentPrice = Number(market.currentPrice);
+  const changePercent =
+    Number.isFinite(currentPrice) && Number.isFinite(previousClose) && previousClose !== 0
+      ? Number((((currentPrice - previousClose) / previousClose) * 100).toFixed(2))
+      : NaN;
+
+  const candles = (market.candlestickData || []).slice(-24).map((candle) => ({
+    time: candle.time,
+    open: candle.open,
+    high: candle.high,
+    low: candle.low,
+    close: candle.close,
+  }));
+
+  return {
+    symbol: item.symbol,
+    displaySymbol: item.symbol.replace(/^\^/, ""),
+    name: item.name || item.symbol,
+    type: item.type || "Stock",
+    currentPrice: Number.isFinite(currentPrice) ? Number(currentPrice.toFixed(2)) : NaN,
+    changePercent,
+    previousClose: Number.isFinite(previousClose) ? Number(previousClose.toFixed(2)) : NaN,
+    candles,
+    volume: null,
+  };
+}
+
+function buildFallbackMoversFromCards(cards = []) {
+  const byChangeDesc = [...cards].sort((a, b) => (b.changePercent ?? -Infinity) - (a.changePercent ?? -Infinity));
+  const byChangeAsc = [...cards].sort((a, b) => (a.changePercent ?? Infinity) - (b.changePercent ?? Infinity));
+
+  return {
+    mostActive: cards.slice(0, 5),
+    gainers: byChangeDesc.slice(0, 5),
+    losers: byChangeAsc.slice(0, 5),
+    ipoThisMonth: [],
+  };
+}
+
+async function getStockFallbackOverview() {
+  const fallbackCompanies = TOP_COMPANIES.slice(0, 10).map((company) => ({
+    symbol: company.symbol,
+    name: company.companyName,
+    type: "Stock",
+  }));
+
+  const cards = [];
+  for (const item of fallbackCompanies) {
+    try {
+      const market = await fetchQuoteAndHistory(item.symbol);
+      cards.push(toMarketCardFromQuote(item, market));
+    } catch (error) {
+      console.warn(`Fallback overview fetch failed for ${item.symbol}: ${error?.message || error}`);
+    }
+  }
+
+  return {
+    indicators: cards.slice(0, 5),
+    commodities: [],
+    topVolumeStocks: cards.slice(5),
+    movers: buildFallbackMoversFromCards(cards),
+    generatedAt: new Date().toISOString(),
+    fallback: true,
+  };
+}
+
 app.use(cors());
 app.use(express.json());
 
@@ -305,6 +373,25 @@ app.get("/api/commodities-etfs", async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching commodities-etfs:", error);
+    try {
+      const fallback = await getStockFallbackOverview();
+      const hasAnyCards =
+        fallback.indicators.length > 0 ||
+        fallback.commodities.length > 0 ||
+        fallback.topVolumeStocks.length > 0;
+
+      if (hasAnyCards) {
+        return res.json({
+          ...fallback,
+          marketOpen: getMarketState().isOpen,
+          cacheStatus: "fallback",
+          message: "Commodities feed unavailable; serving stock fallback overview",
+        });
+      }
+    } catch (fallbackError) {
+      console.error("Fallback market overview failed:", fallbackError);
+    }
+
     return res.status(500).json({
       message: "Failed to fetch commodities and ETFs",
       error: error.message,
