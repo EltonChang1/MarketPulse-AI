@@ -8,18 +8,19 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 export default function StockDetailPage() {
   const { symbol } = useParams();
   const navigate = useNavigate();
+  const normalizedSymbol = decodeURIComponent(String(symbol || "")).toUpperCase();
   const [stockData, setStockData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!symbol) return;
+    if (!normalizedSymbol) return;
     setLoading(true);
     setError("");
     setStockData(null);
 
     axios
-      .get(`${API_BASE_URL}/api/analyze/${symbol.toUpperCase()}`, {
+      .get(`${API_BASE_URL}/api/analyze/${encodeURIComponent(normalizedSymbol)}`, {
         params: { markers: 10, perIndicator: 3 },
       })
       .then(({ data }) => {
@@ -29,13 +30,13 @@ export default function StockDetailPage() {
         setError(err?.response?.data?.message || err.message || "Failed to load stock data.");
       })
       .finally(() => setLoading(false));
-  }, [symbol]);
+  }, [normalizedSymbol]);
 
   if (loading) {
     return (
       <div className="stock-page-state">
         <div className="stock-page-spinner" />
-        <p>Loading analysis for <strong>{symbol?.toUpperCase()}</strong>…</p>
+        <p>Loading analysis for <strong>{normalizedSymbol}</strong>…</p>
       </div>
     );
   }

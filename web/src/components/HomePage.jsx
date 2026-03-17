@@ -70,7 +70,8 @@ export default function HomePage() {
 
   // Navigate to individual stock page (require sign-in)
   function handleSelectStock(symbol) {
-    navigate(`/stock/${symbol.toUpperCase()}`);
+    const normalized = String(symbol || "").toUpperCase();
+    navigate(`/stock/${encodeURIComponent(normalized)}`);
   }
 
   async function handleAddToWatchlist(symbol) {
