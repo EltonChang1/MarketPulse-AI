@@ -122,6 +122,7 @@ export default function CandlestickChart({
         layout: {
           background: { color: "#ffffff" },
           textColor: "#333",
+          attributionLogo: false,
         },
         grid: {
           vertLines: { color: "#f0f0f0" },
