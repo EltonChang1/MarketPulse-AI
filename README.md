@@ -1,76 +1,102 @@
 # MarketPulse AI
 
-MarketPulse AI is a full-stack stock analysis and portfolio tracking application.
+MarketPulse AI is a full-stack market intelligence and portfolio platform.
 
-The current release focuses on a transaction-ledger portfolio workflow: users record buy/sell activity with trade dates, derive holdings from that ledger, and compare portfolio performance against major US indexes.
+It combines market overview data, commodities, top company tracking, watchlists, personal portfolio analytics, and deep single-stock analysis (charting, signals, prediction calculations, and AI summaries).
 
-## What This Version Delivers
+## What the Website Can Do
 
-- Transaction-based portfolio tracking (`buy`/`sell` with date, quantity, price)
-- Time-accurate performance replay from historical trades
-- Allocation donut chart based on current derived holdings
-- Benchmark comparison against DJIA, NASDAQ, S&P 500, and Russell 2000
-- Dashboard integration showing portfolio symbols under watchlist
-- Refresh-safe hash routing for deep-linked pages
+- Show a live market overview with quick context for current conditions
+- Track commodities alongside equities for broader macro awareness
+- Surface the largest companies and market movers in one dashboard
+- Let users maintain a watchlist and jump quickly to detail pages
+- Let users manage a personal portfolio and inspect position-level details
+- Provide individual stock intelligence:
+  - chart review
+  - reversal/pattern signals
+  - prediction calculations
+  - technical indicators
+  - comprehensive AI-style analysis
 
-## Screenshot Tour (In Order)
+## Product Walkthrough (Image Order)
 
-### 11) Portfolio Overview
-![Portfolio Overview](docs/images/11-portfolio-overview.png)
+### 1) Market Overview
+![Market Overview](docs/images/1-market-overview.png)
 
-### 12) Add Transaction Form
-![Add Transaction Form](docs/images/12-portfolio-add-transaction-form.png)
+### 2) Commodities
+![Commodities](docs/images/2-commodities.png)
 
-### 13) Allocation Donut
-![Allocation Donut](docs/images/13-portfolio-allocation-donut.png)
+### 3) Largest Companies
+![Largest Companies](docs/images/3-largest-companies.png)
 
-### 14) Portfolio vs Market Comparison
-![Portfolio vs Market Comparison](docs/images/14-portfolio-vs-market-comparison.png)
+### 4) Market Movers
+![Market Movers](docs/images/4-market-movers.png)
 
-### 15) Dashboard Portfolio Sidebar
-![Dashboard Portfolio Sidebar](docs/images/15-dashboard-portfolio-sidebar.png)
+### 5) Watchlist Sidebar
+![Watchlist Sidebar](docs/images/5-watchlist-sidebar.png)
 
-### 16) Transaction History
-![Transaction History](docs/images/16-portfolio-transaction-history.png)
+### 6) Personal Portfolio
+![Personal Portfolio](docs/images/6-personal-portfolio.png)
 
-### 17) Derived Holdings
-![Derived Holdings](docs/images/17-portfolio-derived-holdings.png)
+### 7) Portfolio Details
+![Portfolio Details](docs/images/7-portfolio-details.png)
+
+### 8) Individual Stock Review
+![Individual Stock Review](docs/images/8-individual-stock-review.png)
+
+### 9) Individual Stock Chart
+![Individual Stock Chart](docs/images/9-individual-stock-chart.png)
+
+### 10) Individual Stock Reversal Intelligence
+![Individual Stock Reversal Intelligence](docs/images/10-individual-stock-reversal-intelligence.png)
+
+### 11) Individual Stock Prediction Calculation
+![Individual Stock Prediction Calculation](docs/images/11-individual-stock-prediction-calculation.png)
+
+### 12) Individual Stock Pattern Match
+![Individual Stock Pattern Match](docs/images/12-individual-stock-pattern-match.png)
+
+### 13) Individual Stock Technical Indicators
+![Individual Stock Technical Indicators](docs/images/13-individual-stock-technical-indicators.png)
+
+### 14) Individual Stock Comprehensive Analysis
+![Individual Stock Comprehensive Analysis](docs/images/14-individual-stock-comprehensive-analysis.png)
 
 ## Architecture
 
 - `web/` — React + Vite frontend
-- `server/` — Express API and market analysis pipeline
-- `docs/images/` — documentation image assets used by README and USERGUIDE
+- `server/` — Node.js + Express backend and analysis services
+- `docs/images/` — documentation screenshots used in this README and USERGUIDE
 
 ## Tech Stack
 
 - Frontend: React, Vite, React Router, Axios, lightweight-charts
 - Backend: Node.js, Express, Axios, technicalindicators
-- Data: market data + technical analysis + news/sentiment pipeline
-- Persistence: browser localStorage (portfolio scoped by user key)
+- Data pipeline: market feeds, technical analysis, and analysis/signal orchestration
+- Persistence: localStorage for user-side state (watchlist/portfolio context)
 
 ## Quick Start
 
-### 1) Install dependencies
+### 1. Install dependencies
 
 ```bash
 npm install
 npm run install:all
 ```
 
-### 2) Optional environment setup
+### 2. Optional environment setup
 
 ```bash
 cp .env.example server/.env
 ```
 
-### 3) Run frontend and backend
+### 3. Run frontend and backend
 
 ```bash
 npm run dev
 ```
 
-### 4) Open locally
+### 4. Open locally
 
 - Frontend: `http://localhost:5173`
 - Backend health: `http://localhost:4000/api/health`
@@ -94,19 +120,11 @@ Example:
 curl "http://localhost:4000/api/analyze/AAPL?markers=10&perIndicator=3"
 ```
 
-## Portfolio Data Model
-
-Portfolio state uses a transaction-ledger model:
-
-- Source of truth: transaction rows
-- Derived state: current holdings and allocation
-- Migration: legacy holdings are auto-converted to transaction rows
-
 ## Documentation
 
-- User guide: `USERGUIDE.md`
-- Screenshot index: `docs/images/README.md`
+- Full walkthrough: `USERGUIDE.md`
+- Screenshot reference: `docs/images/README.md`
 
 ## Disclaimer
 
-This project is for educational/demo purposes and is not financial advice.
+This project is for educational/demo usage only and is not financial advice.
