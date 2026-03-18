@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { HashRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import StockDetailView from "./components/StockDetailView";
