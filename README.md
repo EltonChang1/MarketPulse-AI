@@ -19,8 +19,9 @@ It combines market overview data, commodities, top company tracking, watchlists,
   - prediction calculations
   - technical indicators
   - comprehensive AI-style analysis
+  - latest news monitoring
 
-## Product Walkthrough
+## Product Walkthrough (Latest Images)
 
 ### 1) Market Overview
 ![Market Overview](docs/images/1-market-overview.png)
@@ -63,6 +64,9 @@ It combines market overview data, commodities, top company tracking, watchlists,
 
 ### 14) Individual Stock Comprehensive Analysis
 ![Individual Stock Comprehensive Analysis](docs/images/14-individual-stock-comprehensive-analysis.png)
+
+### 15) Individual Stock Latest News
+![Individual Stock Latest News](docs/images/15-individual-stock-latest-news.png)
 
 ## Architecture
 

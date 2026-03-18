@@ -35,6 +35,7 @@ It helps you move from broad market context to detailed single-stock analysis:
   - pattern recognition
   - technical indicator dashboard
   - comprehensive final analysis summary
+  - latest news feed and publication timeline
 
 ## Walkthrough
 
@@ -161,6 +162,16 @@ What this screen provides:
 What this screen provides:
 - Final integrated view that combines key signals and context
 - End-to-end summary for the selected stock
+
+---
+
+### 15) Individual Stock Latest News
+![Individual Stock Latest News](docs/images/15-individual-stock-latest-news.png)
+
+What this screen provides:
+- Latest related articles for the selected symbol
+- Click-through access to sources for deeper reading
+- Time context via publication timestamp ordering
 
 ## Run Locally
 
