@@ -1,85 +1,96 @@
 # MarketPulse AI
 
-A full-stack website that tracks the **top 10 largest US companies by market cap** and combines:
+MarketPulse AI is a full-stack stock analysis app with a portfolio tracker built on a transaction ledger.
 
-- Real-time stock data (Yahoo Finance endpoints)
-- Real-time online news (Google News RSS)
-- LLM sentiment impact analysis (or heuristic fallback)
-- Technical analysis + multi-timeframe stock price prediction (1W / 1M / 3M / 6M / 1Y)
+It helps users:
+- Track portfolio positions from buy/sell history (with trade dates)
+- View allocation by symbol
+- Compare portfolio performance against major market indexes
+- Keep portfolio symbols visible on the main dashboard under watchlist
 
-## Top 10 companies
+## What is new in this version
 
-- AAPL (Apple)
-- MSFT (Microsoft)
-- NVDA (NVIDIA)
-- AMZN (Amazon)
-- GOOGL (Alphabet)
-- META (Meta Platforms)
-- BRK-B (Berkshire Hathaway)
-- TSLA (Tesla)
-- AVGO (Broadcom)
-- JPM (JPMorgan Chase)
+- Portfolio page with transaction-first workflow (buy/sell + date + price)
+- Time-accurate performance replay across multiple buys and sells
+- Allocation donut chart by current holdings weight
+- Benchmark comparison against DJIA, NASDAQ, S&P 500, and Russell 2000
+- Dashboard sidebar section for portfolio symbols
+
+## Screenshots (latest)
+
+### Portfolio overview
+![Portfolio Overview](docs/images/11-portfolio-overview.png)
+
+### Add buy/sell transaction
+![Add Transaction Form](docs/images/12-portfolio-add-transaction-form.png)
+
+### Allocation donut
+![Allocation Donut](docs/images/13-portfolio-allocation-donut.png)
+
+### Portfolio vs market comparison
+![Portfolio vs Market Comparison](docs/images/14-portfolio-vs-market-comparison.png)
+
+### Dashboard portfolio section under watchlist
+![Dashboard Portfolio Sidebar](docs/images/15-dashboard-portfolio-sidebar.png)
+
+### Transaction history
+![Transaction History](docs/images/16-portfolio-transaction-history.png)
+
+### Derived holdings
+![Derived Holdings](docs/images/17-portfolio-derived-holdings.png)
+
+## Tech stack
+
+- Frontend: React + Vite + React Router
+- Backend: Node.js + Express
+- Data & analysis: Yahoo market data, technical indicator pipeline, news/sentiment integration
+- Persistence: Browser localStorage (portfolio model scoped by signed-in user)
 
 ## Project structure
 
-- `server/` — Express API and analysis pipeline
-- `web/` — React + Vite website UI
+- `server/` — API, analysis pipeline, auth/watchlist routes
+- `web/` — dashboard, stock detail, portfolio UI
+- `docs/images/` — current screenshot assets used by docs
 
-## Setup
+## Quick start
 
-1. From project root:
-   ```bash
-   cd MarketPulse-AI
-   npm install
-   npm run install:all
-   ```
+1. Install dependencies
 
-2. Create env file for server:
-   ```bash
-   cp .env.example server/.env
-   ```
+```bash
+npm install
+npm run install:all
+```
 
-3. (Optional) Add API key in `server/.env`:
-   ```env
-   #for demonstrate
-   GEMINI_API_KEY=your_key_here
-   GEMINI_PROJECT_ID=projects/YOUR_PROJECT_NUMBER
-   ```
+2. Optional server env setup
 
-4. Run both backend and frontend:
-   ```bash
-   npm run dev
-   ```
+```bash
+cp .env.example server/.env
+```
 
-5. Open:
-   - Frontend: `http://localhost:5173`
-   - Backend health: `http://localhost:4000/api/health`
+3. Start backend + frontend
 
-## API endpoints
+```bash
+npm run dev
+```
+
+4. Open locally
+- Frontend: `http://localhost:5173`
+- Backend health: `http://localhost:4000/api/health`
+
+## Core API endpoints
 
 - `GET /api/health`
 - `GET /api/companies`
 - `GET /api/analyze`
 - `GET /api/analyze/:symbol`
 
-## Features & Screenshots
+## Documentation
 
-MarketPulse AI includes comprehensive technical analysis and visualization tools. See `USERGUIDE.md` for detailed walkthrough of all features:
-
-1. **Dashboard Overview** — 10 stock cards with live prices and trend indicators
-2. **Stock Detail Page** — Comprehensive analysis for individual stocks
-3. **Multi-Timeframe Predictions** — 1W, 1M, 3M, 6M, 1Y forecasts with confidence levels
-4. **Interactive Charts** — Candlestick charts with moving averages and indicators
-5. **Customizable Indicators** — Toggle individual technical indicators on/off
-6. **Pattern Detection** — Automatic identification of technical patterns and signals
-7. **Adjustable Markers** — Fine-tune chart marker density (API & UI controls)
-8. **Technical Dashboard** — RSI, MACD, Bollinger Bands, ADX, Stochastic, OBV, A/D, Aroon
-9. **AI Analysis** — Sentiment, risk factors, opportunities, financial summary
-10. **Real-Time News** — Latest news feed with sentiment indicators
-
-All screenshots are stored in `docs/images/` with descriptive filenames (01-dashboard-overview.png through 10-news-feed.png).
+- Product walkthrough: `USERGUIDE.md`
+- Screenshot index: `docs/images/README.md`
 
 ## Notes
 
-- If `API_Key` is missing, sentiment analysis automatically falls back to a keyword-based heuristic.
-- This project is for educational/demo usage and not financial advice.
+- Portfolio data is persisted in localStorage in a transaction model and derived into current holdings.
+- Existing legacy holdings data is migrated to transaction format automatically.
+- This project is for educational/demo use and not financial advice.

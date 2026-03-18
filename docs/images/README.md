@@ -16,6 +16,13 @@ All screenshots are numbered in order of appearance in the user guide:
 8. **08-technical-indicators.png** — Technical indicators dashboard panel
 9. **09-comprehensive-analysis.png** — AI-powered analysis with sentiment and insights
 10. **10-news-feed.png** — Real-time news feed with sentiment indicators
+11. **11-portfolio-overview.png** — Portfolio page overview with summary metrics
+12. **12-portfolio-add-transaction-form.png** — Buy/sell transaction entry form with date and price
+13. **13-portfolio-allocation-donut.png** — Portfolio allocation donut chart by holdings weight
+14. **14-portfolio-vs-market-comparison.png** — Portfolio return comparison vs major market indexes
+15. **15-dashboard-portfolio-sidebar.png** — Portfolio stocks section under dashboard watchlist
+16. **16-portfolio-transaction-history.png** — Transaction history table with buy/sell records
+17. **17-portfolio-derived-holdings.png** — Derived holdings table from transaction ledger
 
 ## Usage
 
@@ -25,7 +32,7 @@ These screenshots are referenced by:
 
 ## File Naming Convention
 
-Screenshots follow a numbered prefix system (01- through 10-) to maintain order and make updates easier. When replacing a screenshot:
+Screenshots follow a numbered prefix system (01- through 17-) to maintain order and make updates easier. When replacing a screenshot:
 
 1. Keep the same filename to avoid breaking documentation links
 2. Ensure the image shows the same feature/section
