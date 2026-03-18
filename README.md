@@ -2,6 +2,8 @@
 
 MarketPulse AI is a full-stack market intelligence and portfolio platform.
 
+Feel free to check it out here: [text](https://marketpulse-ai-rho.vercel.app/)
+
 It combines market overview data, commodities, top company tracking, watchlists, personal portfolio analytics, and deep single-stock analysis (charting, signals, prediction calculations, and AI summaries).
 
 ## What the Website Can Do
@@ -18,7 +20,7 @@ It combines market overview data, commodities, top company tracking, watchlists,
   - technical indicators
   - comprehensive AI-style analysis
 
-## Product Walkthrough (Image Order)
+## Product Walkthrough
 
 ### 1) Market Overview
 ![Market Overview](docs/images/1-market-overview.png)

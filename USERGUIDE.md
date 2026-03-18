@@ -1,12 +1,10 @@
 # MarketPulse AI User Guide
 
-This guide explains the current MarketPulse AI experience using your latest screenshot set in strict order (`1` through `14`).
-
 ## Table of Contents
 
 1. [Overview](#overview)
 2. [What You Can Do](#what-you-can-do)
-3. [Screen-by-Screen Walkthrough](#screen-by-screen-walkthrough)
+3. [Walkthrough](#screen-by-screen-walkthrough)
 4. [Run Locally](#run-locally)
 5. [Routes](#routes)
 6. [API Quick Reference](#api-quick-reference)
@@ -38,7 +36,7 @@ It helps you move from broad market context to detailed single-stock analysis:
   - technical indicator dashboard
   - comprehensive final analysis summary
 
-## Screen-by-Screen Walkthrough
+## Walkthrough
 
 ### 1) Market Overview
 ![Market Overview](docs/images/1-market-overview.png)
