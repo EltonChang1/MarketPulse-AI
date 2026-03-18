@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import SearchBar from "./SearchBar";
 import CommoditiesSection from "./CommoditiesSection";
 import axios from "axios";
+import { getPortfolioForUser } from "../context/portfolioStore";
 import "../styles/dashboard.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
@@ -33,6 +34,7 @@ export default function HomePage() {
   const [markerSettings, setMarkerSettings] = useState({ markers: 10, perIndicator: 3 });
   const [watchlist, setWatchlist] = useState(user?.watchlist || DEFAULT_WATCHLIST);
   const [showWatchlistDetails, setShowWatchlistDetails] = useState(true);
+  const [portfolioHoldings, setPortfolioHoldings] = useState(() => getPortfolioForUser(user));
 
   const watchlistData = useMemo(() => watchlistPayload?.data || [], [watchlistPayload]);
 
@@ -41,6 +43,10 @@ export default function HomePage() {
       setWatchlist(user.watchlist);
     }
   }, [user?.watchlist]);
+
+  useEffect(() => {
+    setPortfolioHoldings(getPortfolioForUser(user));
+  }, [user?.email]);
 
   // Auto-refresh watchlist data (authenticated users only)
   useEffect(() => {
@@ -180,6 +186,28 @@ export default function HomePage() {
                     }
                   }}
                 />
+              </div>
+
+              <div className="portfolio-mini-section">
+                <div className="portfolio-mini-header">
+                  <h4>💼 My Portfolio Stocks</h4>
+                  <button className="portfolio-mini-manage" onClick={() => navigate("/portfolio")}>Manage</button>
+                </div>
+                {portfolioHoldings.length ? (
+                  <div className="portfolio-mini-list">
+                    {portfolioHoldings.map((holding) => (
+                      <div key={holding.symbol} className="portfolio-mini-item">
+                        <div>
+                          <div className="portfolio-mini-symbol">{holding.symbol}</div>
+                          <div className="portfolio-mini-qty">Qty: {Number(holding.quantity || 0).toFixed(4).replace(/\.0000$/, "")}</div>
+                        </div>
+                        <button className="portfolio-mini-view" onClick={() => handleSelectStock(holding.symbol)}>View</button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="portfolio-mini-empty">No portfolio positions yet.</p>
+                )}
               </div>
             </div>
           )}

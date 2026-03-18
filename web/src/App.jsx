@@ -7,6 +7,7 @@ import StockDetailPage from "./components/StockDetailPage";
 import SignUpPage from "./components/SignUpPage";
 import SignInPage from "./components/SignInPage";
 import HomePage from "./components/HomePage";
+import PortfolioPage from "./components/PortfolioPage";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 const REFRESH_MS = 60_000;
@@ -414,6 +415,12 @@ function AppHeader() {
         {!loading && (
           isAuthenticated ? (
             <>
+              <button
+                className="header-btn header-btn-outline"
+                onClick={() => navigate("/portfolio")}
+              >
+                My Portfolio
+              </button>
               <div className="user-avatar" title={displayName}>{initials}</div>
               <span className="user-display-name">{displayName}</span>
               <button
@@ -456,6 +463,7 @@ export default function App() {
           <Route path="/signin" element={<RedirectIfAuth><SignInPage /></RedirectIfAuth>} />
           <Route path="/" element={<HomePage />} />
           <Route path="/stock/:symbol" element={<StockDetailPage />} />
+          <Route path="/portfolio" element={<PortfolioPage />} />
           <Route path="/classic" element={<ClassicApp />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
