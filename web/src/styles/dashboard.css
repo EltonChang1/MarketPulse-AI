@@ -846,6 +846,14 @@
   font-size: 14px;
 }
 
+.portfolio-form select {
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  padding: 9px 10px;
+  font-size: 14px;
+  background: #ffffff;
+}
+
 .portfolio-add-btn {
   grid-column: 1 / -1;
   border: none;
@@ -1026,6 +1034,30 @@
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
+}
+
+.portfolio-side-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.portfolio-side-pill.buy {
+  background: #ecfdf3;
+  color: #067647;
+  border: 1px solid #abefc6;
+}
+
+.portfolio-side-pill.sell {
+  background: #fef3f2;
+  color: #b42318;
+  border: 1px solid #fecdca;
 }
 
 .portfolio-empty {

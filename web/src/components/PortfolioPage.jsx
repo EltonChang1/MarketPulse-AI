@@ -2,7 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { getPortfolioForUser, savePortfolioForUser } from "../context/portfolioStore";
+import {
+  derivePortfolioHoldings,
+  getPortfolioModelForUser,
+  savePortfolioModelForUser,
+  sortPortfolioTransactions,
+} from "../context/portfolioStore";
 import "../styles/dashboard.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
@@ -28,8 +33,24 @@ function formatPercent(value) {
   return `${sign}${value.toFixed(2)}%`;
 }
 
+function formatDate(value) {
+  if (!value) return "-";
+  const date = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString();
+}
+
+function todayString() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function normalizeSymbol(raw) {
   return String(raw || "").trim().toUpperCase();
+}
+
+function dateToTs(date) {
+  const parsed = Date.parse(`${date}T00:00:00Z`);
+  return Number.isNaN(parsed) ? 0 : parsed;
 }
 
 function buildConicGradient(segments) {
@@ -46,73 +67,95 @@ function buildConicGradient(segments) {
   return `conic-gradient(${parts.join(", ")})`;
 }
 
-function dateToTs(date) {
-  const parsed = Date.parse(`${date}T00:00:00Z`);
-  return Number.isNaN(parsed) ? 0 : parsed;
-}
+function computeTimeAccuratePortfolioSeries(baseDates, transactions, pricesBySymbol) {
+  if (!baseDates.length) return { valueSeries: [], returnSeries: [] };
 
-function computeSeriesFromPrices(baseDates, pricesBySymbol, holdings) {
-  const weightedPrices = holdings.map((holding) => {
-    const points = pricesBySymbol[holding.symbol] || [];
-    const byDate = new Map(points.map((point) => [point.date, point.close]));
+  const txByDate = transactions.reduce((acc, tx) => {
+    if (!acc[tx.date]) acc[tx.date] = [];
+    acc[tx.date].push(tx);
+    return acc;
+  }, {});
 
-    return {
-      holding,
-      byDate,
-      latestKnown: null,
-    };
-  });
+  const latestPriceBySymbol = {};
+  const qtyBySymbol = {};
+  let netContributions = 0;
 
-  const series = [];
-  let baseline = null;
+  const valueSeries = [];
+  const returnSeries = [];
 
   for (const date of baseDates) {
-    let totalValue = 0;
+    const dayTransactions = txByDate[date] || [];
 
-    weightedPrices.forEach((item) => {
-      const exact = item.byDate.get(date);
-      if (typeof exact === "number") {
-        item.latestKnown = exact;
-      }
-      if (typeof item.latestKnown === "number") {
-        totalValue += item.latestKnown * item.holding.quantity;
+    dayTransactions.forEach((tx) => {
+      const currentQty = qtyBySymbol[tx.symbol] || 0;
+      if (tx.side === "buy") {
+        qtyBySymbol[tx.symbol] = currentQty + tx.quantity;
+        netContributions += tx.quantity * tx.price;
+      } else {
+        qtyBySymbol[tx.symbol] = Math.max(0, currentQty - tx.quantity);
+        netContributions -= tx.quantity * tx.price;
       }
     });
 
-    if (totalValue <= 0) continue;
-    if (baseline === null) baseline = totalValue;
+    Object.entries(pricesBySymbol).forEach(([symbol, points]) => {
+      const exact = points.byDate.get(date);
+      if (typeof exact === "number") {
+        latestPriceBySymbol[symbol] = exact;
+      }
+    });
 
-    series.push({
+    let portfolioValue = 0;
+    Object.keys(qtyBySymbol).forEach((symbol) => {
+      const qty = qtyBySymbol[symbol] || 0;
+      const px = latestPriceBySymbol[symbol];
+      if (qty > 0 && typeof px === "number") {
+        portfolioValue += qty * px;
+      }
+    });
+
+    if (portfolioValue <= 0 && netContributions <= 0) continue;
+
+    valueSeries.push({
       date,
-      value: ((totalValue - baseline) / baseline) * 100,
+      value: portfolioValue,
+      contributions: netContributions,
+    });
+
+    const denominator = Math.max(Math.abs(netContributions), 1);
+    returnSeries.push({
+      date,
+      value: ((portfolioValue - netContributions) / denominator) * 100,
     });
   }
 
-  return series;
+  return { valueSeries, returnSeries };
 }
 
-function computeBenchmarkSeries(baseDates, points) {
+function computeBenchmarkSeries(baseDates, points, startDate) {
   if (!Array.isArray(points) || points.length === 0) return [];
+
+  const filteredDates = baseDates.filter((date) => !startDate || date >= startDate);
+  if (!filteredDates.length) return [];
 
   const byDate = new Map(points.map((point) => [point.date, point.close]));
   let latestKnown = null;
   let baseline = null;
   const result = [];
 
-  for (const date of baseDates) {
+  filteredDates.forEach((date) => {
     const exact = byDate.get(date);
     if (typeof exact === "number") {
       latestKnown = exact;
     }
 
-    if (typeof latestKnown !== "number") continue;
+    if (typeof latestKnown !== "number") return;
     if (baseline === null) baseline = latestKnown;
 
     result.push({
       date,
       value: ((latestKnown - baseline) / baseline) * 100,
     });
-  }
+  });
 
   return result;
 }
@@ -131,8 +174,8 @@ function ComparisonChart({ portfolioSeries, benchmarkSeries }) {
     return <div className="portfolio-empty">Not enough historical data to render comparison.</div>;
   }
 
-  const min = Math.min(-5, Math.floor(Math.min(...allPoints) - 5));
-  const max = Math.max(5, Math.ceil(Math.max(...allPoints) + 5));
+  const min = Math.min(-10, Math.floor(Math.min(...allPoints) - 5));
+  const max = Math.max(10, Math.ceil(Math.max(...allPoints) + 5));
   const range = Math.max(1, max - min);
   const xCount = Math.max(1, portfolioSeries.length - 1);
 
@@ -144,12 +187,12 @@ function ComparisonChart({ portfolioSeries, benchmarkSeries }) {
       .map((point, idx) => `${idx === 0 ? "M" : "L"}${x(idx)},${y(point.value)}`)
       .join(" ");
 
-  const lastDate = portfolioSeries[portfolioSeries.length - 1]?.date;
   const firstDate = portfolioSeries[0]?.date;
+  const lastDate = portfolioSeries[portfolioSeries.length - 1]?.date;
 
   return (
     <div className="portfolio-chart-wrap">
-      <svg viewBox={`0 0 ${width} ${height}`} className="portfolio-line-chart" role="img" aria-label="Portfolio vs index comparison chart">
+      <svg viewBox={`0 0 ${width} ${height}`} className="portfolio-line-chart" role="img" aria-label="Portfolio return compared to indexes">
         {[0, 0.25, 0.5, 0.75, 1].map((step) => {
           const value = max - step * range;
           const yPos = y(value);
@@ -165,7 +208,7 @@ function ComparisonChart({ portfolioSeries, benchmarkSeries }) {
 
         <path d={pathFromSeries(portfolioSeries)} fill="none" stroke="#0ea5e9" strokeWidth="2.5" />
         {benchmarkSeries.map((item) => (
-          <path key={item.symbol} d={pathFromSeries(item.series)} fill="none" stroke={item.color} strokeWidth="2" opacity="0.9" />
+          <path key={item.symbol} d={pathFromSeries(item.series)} fill="none" stroke={item.color} strokeWidth="2" opacity="0.95" />
         ))}
 
         <text x={pad.left} y={height - 10} className="portfolio-axis-label">{firstDate || "-"}</text>
@@ -186,35 +229,45 @@ export default function PortfolioPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [holdings, setHoldings] = useState(() => getPortfolioForUser(user));
+  const [transactions, setTransactions] = useState(() => getPortfolioModelForUser(user).transactions || []);
   const [symbolInput, setSymbolInput] = useState("");
   const [quantityInput, setQuantityInput] = useState("");
-  const [purchaseInput, setPurchaseInput] = useState("");
+  const [priceInput, setPriceInput] = useState("");
+  const [dateInput, setDateInput] = useState(todayString());
+  const [sideInput, setSideInput] = useState("buy");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
   const [marketSnapshots, setMarketSnapshots] = useState({});
   const [comparisonSeries, setComparisonSeries] = useState({ portfolio: [], benchmarks: [] });
 
   useEffect(() => {
-    setHoldings(getPortfolioForUser(user));
+    setTransactions(getPortfolioModelForUser(user).transactions || []);
   }, [user?.email]);
 
   useEffect(() => {
-    savePortfolioForUser(user, holdings);
-  }, [holdings, user]);
+    savePortfolioModelForUser(user, {
+      transactions,
+      updatedAt: new Date().toISOString(),
+    });
+  }, [transactions, user]);
+
+  const holdings = useMemo(() => derivePortfolioHoldings(transactions), [transactions]);
 
   useEffect(() => {
     async function loadPortfolioData() {
-      if (!holdings.length) {
+      if (!transactions.length) {
         setMarketSnapshots({});
         setComparisonSeries({ portfolio: [], benchmarks: [] });
         return;
       }
 
       setLoading(true);
+      setError("");
       try {
-        const symbols = [...new Set(holdings.map((holding) => holding.symbol))];
-        const details = await Promise.all(
+        const symbols = [...new Set(transactions.map((tx) => tx.symbol))];
+
+        const detailEntries = await Promise.all(
           symbols.map(async (symbol) => {
             const { data } = await axios.get(`${API_BASE_URL}/api/analyze/${encodeURIComponent(symbol)}`, {
               params: { markers: 10, perIndicator: 3 },
@@ -223,7 +276,7 @@ export default function PortfolioPage() {
           })
         );
 
-        const detailMap = Object.fromEntries(details);
+        const detailMap = Object.fromEntries(detailEntries);
         setMarketSnapshots(detailMap);
 
         const benchmarkResponses = await Promise.all(
@@ -233,7 +286,7 @@ export default function PortfolioPage() {
             });
             return {
               ...benchmark,
-              candlestickData: (data.candlestickData || []).slice(-252).map((point) => ({
+              candlestickData: (data.candlestickData || []).slice(-520).map((point) => ({
                 date: point.date,
                 close: point.close,
               })),
@@ -241,35 +294,46 @@ export default function PortfolioPage() {
           })
         );
 
+        const priceSeriesBySymbol = Object.fromEntries(
+          symbols.map((symbol) => {
+            const points = (detailMap[symbol]?.candlestickData || []).slice(-520).map((point) => ({
+              date: point.date,
+              close: point.close,
+            }));
+            return [
+              symbol,
+              {
+                points,
+                byDate: new Map(points.map((point) => [point.date, point.close])),
+              },
+            ];
+          })
+        );
+
         const allDates = new Set();
         symbols.forEach((symbol) => {
-          const points = detailMap[symbol]?.candlestickData || [];
-          points.slice(-252).forEach((point) => {
+          (priceSeriesBySymbol[symbol]?.points || []).forEach((point) => {
             if (point.date) allDates.add(point.date);
           });
         });
 
-        const baseDates = [...allDates].sort((left, right) => dateToTs(left) - dateToTs(right));
-        const pricesBySymbol = Object.fromEntries(
-          symbols.map((symbol) => [
-            symbol,
-            (detailMap[symbol]?.candlestickData || []).slice(-252).map((point) => ({
-              date: point.date,
-              close: point.close,
-            })),
-          ])
-        );
+        transactions.forEach((tx) => {
+          if (tx.date) allDates.add(tx.date);
+        });
 
-        const portfolioSeries = computeSeriesFromPrices(baseDates, pricesBySymbol, holdings);
+        const baseDates = [...allDates].sort((left, right) => dateToTs(left) - dateToTs(right));
+        const { returnSeries } = computeTimeAccuratePortfolioSeries(baseDates, sortPortfolioTransactions(transactions), priceSeriesBySymbol);
+
+        const startDate = returnSeries[0]?.date;
         const benchmarkSeries = benchmarkResponses.map((benchmark) => ({
           symbol: benchmark.symbol,
           label: benchmark.label,
           color: benchmark.color,
-          series: computeBenchmarkSeries(baseDates, benchmark.candlestickData),
+          series: computeBenchmarkSeries(baseDates, benchmark.candlestickData, startDate),
         }));
 
         setComparisonSeries({
-          portfolio: portfolioSeries,
+          portfolio: returnSeries,
           benchmarks: benchmarkSeries,
         });
       } catch (loadError) {
@@ -280,9 +344,9 @@ export default function PortfolioPage() {
     }
 
     loadPortfolioData();
-  }, [holdings]);
+  }, [transactions]);
 
-  const rows = useMemo(() => {
+  const holdingRows = useMemo(() => {
     return holdings.map((holding) => {
       const market = marketSnapshots[holding.symbol] || {};
       const currentPrice = market.currentPrice;
@@ -303,18 +367,18 @@ export default function PortfolioPage() {
   }, [holdings, marketSnapshots]);
 
   const totals = useMemo(() => {
-    const cost = rows.reduce((acc, row) => acc + (row.costBasis || 0), 0);
-    const value = rows.reduce((acc, row) => acc + (row.marketValue || 0), 0);
+    const cost = holdingRows.reduce((acc, row) => acc + (row.costBasis || 0), 0);
+    const value = holdingRows.reduce((acc, row) => acc + (row.marketValue || 0), 0);
     const gain = value - cost;
     const gainPct = cost > 0 ? (gain / cost) * 100 : 0;
     return { cost, value, gain, gainPct };
-  }, [rows]);
+  }, [holdingRows]);
 
   const pieSegments = useMemo(() => {
     if (totals.value <= 0) return [];
 
     const palette = ["#2563eb", "#16a34a", "#ea580c", "#9333ea", "#0891b2", "#dc2626", "#475569", "#ca8a04"];
-    return rows
+    return holdingRows
       .filter((row) => typeof row.marketValue === "number" && row.marketValue > 0)
       .map((row, idx) => ({
         symbol: row.symbol,
@@ -322,21 +386,24 @@ export default function PortfolioPage() {
         percentage: (row.marketValue / totals.value) * 100,
         color: palette[idx % palette.length],
       }));
-  }, [rows, totals.value]);
+  }, [holdingRows, totals.value]);
 
   function clearInputs() {
     setSymbolInput("");
     setQuantityInput("");
-    setPurchaseInput("");
+    setPriceInput("");
+    setDateInput(todayString());
+    setSideInput("buy");
   }
 
-  async function handleAddHolding(event) {
+  async function handleAddTransaction(event) {
     event.preventDefault();
     setError("");
 
     const symbol = normalizeSymbol(symbolInput);
     const quantity = Number(quantityInput);
-    const manualBuyPrice = Number(purchaseInput);
+    const manualPrice = Number(priceInput);
+    const date = dateInput || todayString();
 
     if (!symbol) {
       setError("Enter a stock symbol.");
@@ -347,6 +414,12 @@ export default function PortfolioPage() {
       return;
     }
 
+    const currentHolding = holdings.find((row) => row.symbol === symbol);
+    if (sideInput === "sell" && (!currentHolding || currentHolding.quantity < quantity)) {
+      setError(`Cannot sell ${quantity} shares of ${symbol}. You currently hold ${currentHolding?.quantity || 0}.`);
+      return;
+    }
+
     try {
       setLoading(true);
       const { data } = await axios.get(`${API_BASE_URL}/api/analyze/${encodeURIComponent(symbol)}`, {
@@ -354,52 +427,34 @@ export default function PortfolioPage() {
       });
 
       const fallbackPrice = typeof data?.currentPrice === "number" ? data.currentPrice : 0;
-      const buyPrice = Number.isFinite(manualBuyPrice) && manualBuyPrice > 0 ? manualBuyPrice : fallbackPrice;
+      const tradePrice = Number.isFinite(manualPrice) && manualPrice > 0 ? manualPrice : fallbackPrice;
 
-      if (!buyPrice || buyPrice <= 0) {
-        setError(`Unable to determine buy price for ${symbol}. Enter buy price manually.`);
+      if (!tradePrice || tradePrice <= 0) {
+        setError(`Unable to determine trade price for ${symbol}. Enter a price manually.`);
         return;
       }
 
-      setHoldings((prev) => {
-        const existing = prev.find((item) => item.symbol === symbol);
-        if (!existing) {
-          return [
-            ...prev,
-            {
-              symbol,
-              quantity,
-              buyPrice,
-              createdAt: new Date().toISOString(),
-            },
-          ];
-        }
+      const tx = {
+        id: `${Date.now()}_${Math.random().toString(16).slice(2)}`,
+        side: sideInput,
+        symbol,
+        quantity,
+        price: tradePrice,
+        date,
+        createdAt: new Date().toISOString(),
+      };
 
-        const combinedQty = existing.quantity + quantity;
-        const weightedBuyPrice = (existing.quantity * existing.buyPrice + quantity * buyPrice) / combinedQty;
-
-        return prev.map((item) =>
-          item.symbol === symbol
-            ? {
-                ...item,
-                quantity: combinedQty,
-                buyPrice: weightedBuyPrice,
-                createdAt: item.createdAt || new Date().toISOString(),
-              }
-            : item
-        );
-      });
-
+      setTransactions((prev) => sortPortfolioTransactions([...prev, tx]));
       clearInputs();
     } catch (addError) {
-      setError(addError?.response?.data?.message || addError.message || `Unable to add ${symbol}`);
+      setError(addError?.response?.data?.message || addError.message || `Unable to add transaction for ${symbol}`);
     } finally {
       setLoading(false);
     }
   }
 
-  function handleDeleteHolding(symbol) {
-    setHoldings((prev) => prev.filter((item) => item.symbol !== symbol));
+  function handleDeleteTransaction(id) {
+    setTransactions((prev) => prev.filter((tx) => tx.id !== id));
   }
 
   const chartBackground = buildConicGradient(pieSegments);
@@ -409,17 +464,24 @@ export default function PortfolioPage() {
       <div className="portfolio-header">
         <div>
           <h1>My Portfolio</h1>
-          <p>Track holdings, allocation, and performance against major market indexes.</p>
+          <p>Track holdings, allocation, transactions, and performance against major market indexes.</p>
         </div>
         <button className="portfolio-back-btn" onClick={() => navigate("/")}>← Back to Dashboard</button>
       </div>
 
       <section className="portfolio-grid-top">
         <div className="portfolio-card">
-          <h3>Add Position</h3>
-          <form className="portfolio-form" onSubmit={handleAddHolding}>
+          <h3>Add Transaction</h3>
+          <form className="portfolio-form" onSubmit={handleAddTransaction}>
             <label>
-              Stock Symbol
+              Side
+              <select value={sideInput} onChange={(event) => setSideInput(event.target.value)}>
+                <option value="buy">Buy</option>
+                <option value="sell">Sell</option>
+              </select>
+            </label>
+            <label>
+              Symbol
               <input
                 type="text"
                 value={symbolInput}
@@ -440,17 +502,25 @@ export default function PortfolioPage() {
               />
             </label>
             <label>
-              Buy Price (optional)
+              Trade Price (optional)
               <input
                 type="number"
                 min="0"
                 step="0.01"
-                value={purchaseInput}
-                onChange={(event) => setPurchaseInput(event.target.value)}
+                value={priceInput}
+                onChange={(event) => setPriceInput(event.target.value)}
                 placeholder="Auto-uses live price"
               />
             </label>
-            <button type="submit" className="portfolio-add-btn" disabled={loading}>{loading ? "Adding..." : "Add to Portfolio"}</button>
+            <label>
+              Trade Date
+              <input
+                type="date"
+                value={dateInput}
+                onChange={(event) => setDateInput(event.target.value)}
+              />
+            </label>
+            <button type="submit" className="portfolio-add-btn" disabled={loading}>{loading ? "Saving..." : "Add Transaction"}</button>
           </form>
           {error ? <div className="portfolio-error">⚠️ {error}</div> : null}
         </div>
@@ -500,7 +570,7 @@ export default function PortfolioPage() {
               </div>
             </>
           ) : (
-            <div className="portfolio-empty">Add holdings to view allocation chart.</div>
+            <div className="portfolio-empty">Add transactions to view allocation chart.</div>
           )}
         </div>
 
@@ -515,7 +585,7 @@ export default function PortfolioPage() {
 
       <section className="portfolio-card">
         <h3>Holdings</h3>
-        {rows.length ? (
+        {holdingRows.length ? (
           <div className="portfolio-table-wrap">
             <table className="portfolio-table">
               <thead>
@@ -527,11 +597,10 @@ export default function PortfolioPage() {
                   <th>Market Value</th>
                   <th>Gain/Loss</th>
                   <th>Return</th>
-                  <th />
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
+                {holdingRows.map((row) => (
                   <tr key={row.symbol}>
                     <td>{row.symbol}</td>
                     <td>{row.quantity.toFixed(4).replace(/\.0000$/, "")}</td>
@@ -540,16 +609,58 @@ export default function PortfolioPage() {
                     <td>{formatCurrency(row.marketValue)}</td>
                     <td className={row.gain >= 0 ? "positive" : "negative"}>{formatCurrency(row.gain)}</td>
                     <td className={row.gainPct >= 0 ? "positive" : "negative"}>{formatPercent(row.gainPct)}</td>
-                    <td>
-                      <button className="portfolio-row-remove" onClick={() => handleDeleteHolding(row.symbol)}>Remove</button>
-                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         ) : (
-          <div className="portfolio-empty">No holdings yet. Add your first stock above.</div>
+          <div className="portfolio-empty">No active holdings yet.</div>
+        )}
+      </section>
+
+      <section className="portfolio-card">
+        <h3>Transaction History</h3>
+        {transactions.length ? (
+          <div className="portfolio-table-wrap">
+            <table className="portfolio-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Side</th>
+                  <th>Symbol</th>
+                  <th>Quantity</th>
+                  <th>Price</th>
+                  <th>Total</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {sortPortfolioTransactions(transactions)
+                  .slice()
+                  .reverse()
+                  .map((tx) => (
+                    <tr key={tx.id}>
+                      <td>{formatDate(tx.date)}</td>
+                      <td>
+                        <span className={`portfolio-side-pill ${tx.side === "buy" ? "buy" : "sell"}`}>
+                          {tx.side.toUpperCase()}
+                        </span>
+                      </td>
+                      <td>{tx.symbol}</td>
+                      <td>{tx.quantity.toFixed(4).replace(/\.0000$/, "")}</td>
+                      <td>{formatCurrency(tx.price)}</td>
+                      <td>{formatCurrency(tx.quantity * tx.price)}</td>
+                      <td>
+                        <button className="portfolio-row-remove" onClick={() => handleDeleteTransaction(tx.id)}>Delete</button>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="portfolio-empty">No transactions yet. Add your first buy above.</div>
         )}
       </section>
     </div>
