@@ -93,6 +93,11 @@ export default function StockDetailView({
   const analysis = stock.comprehensiveAnalysis || {};
   const rm = stock.technicalForecast?.reversalMetrics || {};
   const pb = stock.technicalForecast?.predictionBasis || {};
+  const newsItems = [...(stock.news || [])].sort((left, right) => {
+    const l = left?.pubDate ? Date.parse(left.pubDate) : 0;
+    const r = right?.pubDate ? Date.parse(right.pubDate) : 0;
+    return r - l;
+  });
   const normalizedSymbol = String(stock.symbol || "").toUpperCase();
   const useYahooChart = normalizedSymbol.startsWith("^") || MARKET_INDICATOR_SYMBOLS.has(normalizedSymbol);
 
@@ -594,14 +599,14 @@ export default function StockDetailView({
       <div className="news-section">
         <h3>Latest News</h3>
         <div className="news-list">
-          {(stock.news || []).map((item, idx) => (
+          {newsItems.length > 0 ? newsItems.map((item, idx) => (
             <div key={`${item.link}-${idx}`} className="news-item">
               <a href={item.link} target="_blank" rel="noreferrer">
                 {item.title}
               </a>
               <span className="news-date">{item.pubDate ? new Date(item.pubDate).toLocaleString() : ""}</span>
             </div>
-          ))}
+          )) : <div className="news-item">No recent news available right now. Please try again shortly.</div>}
         </div>
       </div>
     </div>

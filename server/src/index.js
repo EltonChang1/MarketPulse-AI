@@ -43,6 +43,7 @@ const MARKET_TZ = "America/New_York";
 const MARKET_OPEN_MINUTE = 9 * 60 + 30; // 9:30 ET
 const MARKET_CLOSE_MINUTE = 16 * 60; // 16:00 ET
 const OPEN_CACHE_TTL_MS = 2 * 60 * 1000;
+const ANALYZE_CACHE_TTL_MS = 5 * 60 * 1000;
 
 const aggregateCache = new Map();
 const symbolCache = new Map();
@@ -121,6 +122,7 @@ async function withCache({
   key,
   cache,
   compute,
+  ttlMs,
   includeStaleOnError = true,
 }) {
   const now = Date.now();
@@ -138,10 +140,10 @@ async function withCache({
 
   const requestPromise = (async () => {
     const payload = await compute();
-    const ttlMs = getCacheTtlMs();
+    const effectiveTtlMs = Number.isFinite(ttlMs) && ttlMs > 0 ? ttlMs : getCacheTtlMs();
     cache.set(key, {
       payload,
-      expiresAt: Date.now() + ttlMs,
+      expiresAt: Date.now() + effectiveTtlMs,
     });
     return payload;
   })();
@@ -291,6 +293,7 @@ app.get("/api/commodities-etfs", async (req, res) => {
     const { payload, cacheStatus, marketState } = await withCache({
       key: cacheKey,
       cache: aggregateCache,
+      ttlMs: ANALYZE_CACHE_TTL_MS,
       compute: async () => {
         const loadScreenerSafe = async (scrId, count = 5) => {
           try {
@@ -576,6 +579,7 @@ app.get("/api/analyze/:symbol", async (req, res) => {
     const { payload, cacheStatus, marketState } = await withCache({
       key: cacheKey,
       cache: symbolCache,
+      ttlMs: ANALYZE_CACHE_TTL_MS,
       compute: async () => analyzeCompany(company.symbol, company.companyName, technicalOptions),
     });
 

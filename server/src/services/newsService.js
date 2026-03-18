@@ -4,7 +4,82 @@ const parser = new Parser();
 const ARTICLE_FETCH_TIMEOUT_MS = 8000;
 const MAX_ARTICLE_CHARS = 6000;
 const articleCache = new Map();
-const NON_TEXT_EXTENSIONS = /\.(png|jpe?g|gif|webp|svg|ico|bmp|tiff?|avif|mp4|mov|m4v|webm|mp3|wav|pdf|zip)(\?|$)/i;
+const NON_TEXT_EXTENSIONS = /\.(png|jpe?g|gif|webp|svg|ico|bmp|tiff?|avif|mp4|mov|m4v|webm|mp3|wav|pdf|zip|js|css|map|json|xml)(\?|$)/i;
+const BLOCKED_HOST_PATTERNS = [
+  /google-analytics\.com$/i,
+  /fonts\.googleapis\.com$/i,
+  /fonts\.gstatic\.com$/i,
+  /googletagmanager\.com$/i,
+  /doubleclick\.net$/i,
+  /googleadservices\.com$/i,
+  /adsystem\.com$/i,
+  /facebook\.com$/i,
+  /fbcdn\.net$/i,
+];
+
+async function fetchYahooNews(symbol, maxItems = 6) {
+  try {
+    const endpoint = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(symbol)}&quotesCount=1&newsCount=${Math.max(1, maxItems)}`;
+    const response = await fetch(endpoint, {
+      method: "GET",
+      signal: AbortSignal.timeout(ARTICLE_FETCH_TIMEOUT_MS),
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        Accept: "application/json,text/plain,*/*",
+      },
+    });
+
+    if (!response.ok) return [];
+
+    const payload = await response.json();
+    const rows = Array.isArray(payload?.news) ? payload.news : [];
+
+    return rows.slice(0, maxItems).map((item) => {
+      const link =
+        item?.link ||
+        item?.clickThroughUrl?.url ||
+        item?.canonicalUrl?.url ||
+        "";
+      return {
+        title: item?.title || "Untitled",
+        contentSnippet: item?.summary || "",
+        description: item?.summary || "",
+        link,
+        pubDate: item?.providerPublishTime ? new Date(item.providerPublishTime * 1000).toISOString() : null,
+        source: item?.publisher || "Yahoo Finance",
+        articleUrl: link,
+        articleContent: "",
+        extractionStatus: "fallback",
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+function isLikelyArticleUrl(candidate = "") {
+  try {
+    const url = new URL(candidate);
+    const protocol = String(url.protocol || "").toLowerCase();
+    if (protocol !== "http:" && protocol !== "https:") return false;
+
+    const host = String(url.hostname || "").toLowerCase();
+    if (BLOCKED_HOST_PATTERNS.some((pattern) => pattern.test(host))) return false;
+    if (
+      host.includes("googleusercontent.com") ||
+      host.includes("gstatic.com") ||
+      host.startsWith("lh3.google")
+    ) {
+      return false;
+    }
+
+    if (NON_TEXT_EXTENSIONS.test(url.pathname || "")) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function hasBinarySignature(text = "") {
   const sample = String(text || "").slice(0, 200);
@@ -152,15 +227,10 @@ async function fetchUrl(url) {
 function findExternalUrlInGoogleNewsHtml(html = "") {
   const candidates = html.match(/https?:\/\/[^\s"'<>]+/g) || [];
   return candidates.find((candidate) => {
+    if (!isLikelyArticleUrl(candidate)) return false;
     try {
       const url = new URL(candidate);
-      if (url.hostname.includes("google.com") || url.hostname.includes("gstatic.com")) {
-        return false;
-      }
-      if (NON_TEXT_EXTENSIONS.test(url.pathname)) {
-        return false;
-      }
-      return true;
+      return !url.hostname.includes("google.com");
     } catch {
       return false;
     }
@@ -199,8 +269,9 @@ async function resolveAndExtractArticle(link = "") {
     }
 
     const articleContent = truncateText(chooseBestArticleText(html));
+    const safeArticleUrl = articleContent.length > 0 && isLikelyArticleUrl(resolvedUrl) ? resolvedUrl : link;
     const result = {
-      articleUrl: resolvedUrl,
+      articleUrl: safeArticleUrl,
       articleContent,
       extractionStatus: articleContent.length > 200 ? "ok" : "limited",
     };
@@ -217,15 +288,24 @@ export async function fetchLatestNews(companyName, symbol, maxItems = 6) {
   const query = encodeURIComponent(`${companyName} ${symbol} stock`);
   const rssUrl = `https://news.google.com/rss/search?q=${query}&hl=en-US&gl=US&ceid=US:en`;
 
-  const feed = await parser.parseURL(rssUrl);
-  const baseItems = (feed.items || []).slice(0, maxItems).map((item) => ({
-    title: item.title || "Untitled",
-    contentSnippet: item.contentSnippet || item.content || item.summary || "",
-    description: item.contentSnippet || item.content || item.summary || "",
-    link: item.link || "",
-    pubDate: item.pubDate || null,
-    source: item.source || feed.title || "Google News",
-  }));
+  let baseItems = [];
+  try {
+    const feed = await parser.parseURL(rssUrl);
+    baseItems = (feed.items || []).slice(0, maxItems).map((item) => ({
+      title: item.title || "Untitled",
+      contentSnippet: item.contentSnippet || item.content || item.summary || "",
+      description: item.contentSnippet || item.content || item.summary || "",
+      link: item.link || "",
+      pubDate: item.pubDate || null,
+      source: item.source || feed.title || "Google News",
+    }));
+  } catch {
+    baseItems = [];
+  }
+
+  if (!baseItems.length) {
+    return fetchYahooNews(symbol, maxItems);
+  }
 
   const enriched = await Promise.all(
     baseItems.map(async (item, index) => {
@@ -248,5 +328,13 @@ export async function fetchLatestNews(companyName, symbol, maxItems = 6) {
     })
   );
 
-  return enriched;
+  return enriched.map((item) => {
+    const preferredLink = isLikelyArticleUrl(item.articleUrl) ? item.articleUrl : item.link;
+    return {
+      ...item,
+      rawLink: item.link,
+      link: preferredLink,
+      articleUrl: preferredLink,
+    };
+  });
 }
