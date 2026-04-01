@@ -23,6 +23,9 @@
     "rss-parser": "^3.13.0",
     "simple-statistics": "^7.8.8",
     "technicalindicators": "^3.1.0",
-    "zod": "^4.3.6"
+    "zod": "^3.25.0"
+  },
+  "overrides": {
+    "zod": "^3.25.0"
   }
 }
