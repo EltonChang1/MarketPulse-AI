@@ -5,10 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch src/index.js",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "mcp": "node src/mcp/mcpServer.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@modelcontextprotocol/sdk": "^1.12.1",
     "axios": "^1.8.4",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
@@ -16,9 +18,11 @@
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.3.0",
+    "node-cron": "^3.0.3",
     "openai": "^4.86.1",
     "rss-parser": "^3.13.0",
     "simple-statistics": "^7.8.8",
-    "technicalindicators": "^3.1.0"
+    "technicalindicators": "^3.1.0",
+    "zod": "^4.3.6"
   }
 }

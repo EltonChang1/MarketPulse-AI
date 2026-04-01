@@ -1,0 +1,189 @@
+.ask-mp-fab {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 1000;
+  padding: 12px 18px;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(135deg, #2e90fa, #1570ef);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(21, 112, 239, 0.35);
+}
+
+.ask-mp-fab:hover {
+  filter: brightness(1.05);
+}
+
+.ask-mp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1001;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 16px;
+  pointer-events: none;
+}
+
+.ask-mp-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  border: none;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.ask-mp-panel {
+  position: relative;
+  width: min(420px, 100%);
+  max-height: min(560px, 80vh);
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+  overflow: hidden;
+}
+
+.ask-mp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #eaecf0;
+}
+
+.ask-mp-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.ask-mp-close {
+  border: none;
+  background: transparent;
+  font-size: 1.25rem;
+  cursor: pointer;
+  line-height: 1;
+  color: #475467;
+}
+
+.ask-mp-context {
+  margin: 0;
+  padding: 8px 16px;
+  font-size: 0.8rem;
+  color: #667085;
+  background: #f9fafb;
+}
+
+.ask-mp-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ask-mp-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #667085;
+  line-height: 1.45;
+}
+
+.ask-mp-msg {
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.ask-mp-msg-user {
+  align-self: flex-end;
+  max-width: 92%;
+  padding: 10px 12px;
+  background: #eff8ff;
+  border-radius: 12px 12px 4px 12px;
+}
+
+.ask-mp-msg-assistant {
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 10px 0;
+}
+
+.ask-mp-msg-body {
+  white-space: pre-wrap;
+  margin-top: 4px;
+}
+
+.ask-mp-tools {
+  margin: 6px 0 0;
+  padding: 8px;
+  font-size: 0.72rem;
+  background: #f2f4f7;
+  border-radius: 8px;
+  overflow-x: auto;
+  max-height: 120px;
+}
+
+.ask-mp-error {
+  padding: 0 16px 8px;
+  font-size: 0.85rem;
+  color: #b42318;
+}
+
+.ask-mp-input-row {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid #eaecf0;
+}
+
+.ask-mp-input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+
+.ask-mp-send {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  background: #1570ef;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ask-mp-send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ask-mp-disclaimer {
+  margin: 0;
+  padding: 0 16px 12px;
+  font-size: 0.7rem;
+  color: #98a2b3;
+}
+
+@media (max-width: 520px) {
+  .ask-mp-overlay {
+    padding: 0;
+    align-items: stretch;
+    justify-content: stretch;
+  }
+
+  .ask-mp-panel {
+    width: 100%;
+    max-height: 100%;
+    border-radius: 16px 16px 0 0;
+  }
+}

@@ -117,6 +117,14 @@ export async function signInUser({ email, password }) {
   return { user: publicUser, token: signToken(publicUser) };
 }
 
+export async function listAllUserIds() {
+  if (hasMongoConfigured) {
+    const users = await User.find({}).select("_id").lean();
+    return users.map((u) => String(u._id));
+  }
+  return [...memoryUsersById.keys()];
+}
+
 export async function getUserById(userId) {
   if (hasMongoConfigured) {
     const user = await User.findById(userId).select("-password");

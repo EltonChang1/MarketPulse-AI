@@ -8,6 +8,8 @@ import SignUpPage from "./components/SignUpPage";
 import SignInPage from "./components/SignInPage";
 import HomePage from "./components/HomePage";
 import PortfolioPage from "./components/PortfolioPage";
+import BriefingsPage from "./components/BriefingsPage";
+import AskMarketPulse from "./components/AskMarketPulse";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 const REFRESH_MS = 60_000;
@@ -421,6 +423,12 @@ function AppHeader() {
               >
                 My Portfolio
               </button>
+              <button
+                className="header-btn header-btn-outline"
+                onClick={() => navigate("/briefings")}
+              >
+                Briefings
+              </button>
               <div className="user-avatar" title={displayName}>{initials}</div>
               <span className="user-display-name">{displayName}</span>
               <button
@@ -464,9 +472,11 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/stock/:symbol" element={<StockDetailPage />} />
           <Route path="/portfolio" element={<PortfolioPage />} />
+          <Route path="/briefings" element={<BriefingsPage />} />
           <Route path="/classic" element={<ClassicApp />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <AskMarketPulse />
       </AuthProvider>
     </Router>
   );
