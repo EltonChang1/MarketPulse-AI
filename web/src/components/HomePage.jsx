@@ -1,19 +1,10 @@
 import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  ArrowLeftRight,
-  CreditCard,
-  Landmark,
-  ShieldCheck,
-  Target,
-  TrendingUp,
-  Users,
-} from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import SearchBar from "./SearchBar";
 import CommoditiesSection from "./CommoditiesSection";
-import { FinancialDashboard } from "./ui/financial-dashboard";
 import { FinancialTable } from "./ui/financial-markets-table";
+import { MarketSummaryStrip } from "./ui/market-summary-strip";
 import axios from "axios";
 import { getPortfolioForUser } from "../context/portfolioStore";
 import "../styles/dashboard.css";
@@ -48,40 +39,29 @@ export default function HomePage() {
   const [portfolioHoldings, setPortfolioHoldings] = useState(() => getPortfolioForUser(user));
 
   const watchlistData = useMemo(() => watchlistPayload?.data || [], [watchlistPayload]);
-  const recentActivity = useMemo(
-    () =>
-      watchlistData.slice(0, 4).map((stock) => ({
-        icon: TrendingUp,
-        title: `${stock.symbol} price update`,
-        time: "Live",
-        amount: Number(stock.dayChange || 0),
-      })),
-    [watchlistData]
-  );
+  const summaryItems = useMemo(() => {
+    const normalized = watchlistData
+      .filter((stock) => Number.isFinite(Number(stock.currentPrice)))
+      .slice(0, 6)
+      .map((stock) => ({
+        id: stock.symbol,
+        label: "Watchlist",
+        symbol: stock.symbol,
+        price: Number(stock.currentPrice || 0),
+        changePercent: Number(stock.dayChangePct || stock.changePercent || 0),
+        volume: Number(stock.volume || 0),
+        onClick: () => navigate(`/stock/${encodeURIComponent(stock.symbol)}`),
+      }));
 
-  const quickActions = useMemo(
-    () => [
-      {
-        icon: ArrowLeftRight,
-        title: "Watchlist",
-        description: "Manage symbols",
-        onClick: () => document.getElementById("watchlist")?.scrollIntoView({ behavior: "smooth" }),
-      },
-      { icon: Landmark, title: "Briefings", description: "Market summaries", onClick: () => navigate("/briefings") },
-      { icon: TrendingUp, title: "Portfolio", description: "Track returns", onClick: () => navigate("/portfolio") },
-      { icon: CreditCard, title: "Classic", description: "Legacy analytics", onClick: () => navigate("/classic") },
-    ],
-    [navigate]
-  );
+    if (normalized.length > 0) return normalized;
 
-  const financialServices = useMemo(
-    () => [
-      { icon: ShieldCheck, title: "Risk alerts", description: "Signal confidence and trend risk", isPremium: true },
-      { icon: Target, title: "Price targets", description: "Multi-timeframe prediction guidance", hasAction: true },
-      { icon: Users, title: "Watchlist sync", description: "Personalized symbols across sessions" },
-    ],
-    []
-  );
+    return [
+      { id: "spx", label: "US Index", symbol: "SPX", price: NaN, changePercent: 0, volume: 0 },
+      { id: "ndx", label: "US Index", symbol: "NDX", price: NaN, changePercent: 0, volume: 0 },
+      { id: "dxy", label: "Macro", symbol: "DXY", price: NaN, changePercent: 0, volume: 0 },
+      { id: "gc1", label: "Commodities", symbol: "GC1!", price: NaN, changePercent: 0, volume: 0 },
+    ];
+  }, [watchlistData, navigate]);
 
   const tableIndices = useMemo(
     () =>
@@ -175,18 +155,17 @@ export default function HomePage() {
       <div className="dashboard-layout">
         {/* Main Content */}
         <main className="dashboard-main">
-          <FinancialDashboard
-            quickActions={quickActions}
-            recentActivity={recentActivity}
-            financialServices={financialServices}
-          />
+          <section className="dashboard-intro">
+            <h1>Market overview</h1>
+            <p>Search symbols, scan your screener, and move directly into analysis.</p>
+          </section>
 
-          {/* Search Bar */}
           <SearchBar onSelect={handleSelectStock} />
+          <MarketSummaryStrip items={summaryItems} />
 
           {tableIndices.length > 0 ? (
             <FinancialTable
-              title="Tracked markets"
+              title="Watchlist screener"
               indices={tableIndices}
               onIndexSelect={(id) => {
                 const match = tableIndices.find((row) => row.id === id);

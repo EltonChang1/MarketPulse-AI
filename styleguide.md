@@ -1,18 +1,20 @@
-# MarketPulse AI — 21st-style UI integration style guide
+# MarketPulse AI — UI style guide (TradingView-inspired IA)
 
-This guide defines how to apply a complete UI refresh inspired by **21st.dev-style interactive financial components** while preserving all current product behavior (APIs, auth, routing, data logic).
+This guide defines how to evolve MarketPulse AI toward a **classy, market-terminal aesthetic** inspired by [TradingView](https://www.tradingview.com/)—**information density, chart credibility, and restrained chrome**—while preserving product behavior (APIs, auth, routing, data logic). It extends the earlier **21st.dev / shadcn-style** integration (Tailwind, `components/ui`, semantic tokens).
+
+**Product direction:** see [`docs/PRD-tradingview-style-experience.md`](docs/PRD-tradingview-style-experience.md) for phased goals, functional requirements, and acceptance criteria.
 
 ---
 
 ## 1) Objective
 
-Build a **new visual layer** for MarketPulse AI that is:
+Build a visual layer that is:
 
-- interactive (motion, hover/focus feedback, responsive controls),
-- classy and elegant (clear hierarchy, refined spacing, premium components),
-- production-friendly (tokenized, accessible, maintainable).
+- **Market-native** — home and key surfaces read like a **terminal lite** (summary context + scannable lists + search), not a marketing dashboard of tiles.
+- **Elegant** — clear hierarchy, refined spacing, professional typography (tabular numbers for prices).
+- **Token-driven** — semantic colors, dark mode first-class; chart APIs use `web/src/lib/themeTokens.js` where raw hex is not appropriate.
 
-All functional workflows must remain unchanged.
+All functional workflows must remain unchanged unless a PRD explicitly migrates them.
 
 ---
 
@@ -27,7 +29,7 @@ The codebase should support:
 ### Current repo status (`web/`)
 
 - **Tailwind CSS:** enabled
-- **shadcn-compatible paths:** enabled via alias (`@/*`) and `src/components/ui`
+- **shadcn-compatible paths:** enabled via alias (`@/`) and `src/components/ui`
 - **TypeScript:** not yet migrated app-wide (current app is JSX)
 
 ### If TypeScript is not enabled
@@ -36,7 +38,7 @@ Use this migration path (incremental):
 
 1. Install `typescript`, `@types/react`, `@types/react-dom`
 2. Add `tsconfig.json`
-3. Rename files progressively (`.jsx` -> `.tsx`)
+3. Rename files progressively (`.jsx` → `.tsx`)
 4. Start with UI primitives in `src/components/ui`
 
 Do not block UI refresh on full TS migration; migrate safely in slices.
@@ -51,6 +53,7 @@ Use these paths as canonical:
 - UI primitives: `web/src/components/ui`
 - Feature screens: `web/src/components`
 - Tokens and theme: `web/src/index.css`
+- Chart/theme helpers: `web/src/lib/themeTokens.js`
 - Utility helper (`cn`): `web/src/lib/utils.js` (or `.ts` after TS migration)
 
 ### Why `/components/ui` is important
@@ -65,11 +68,13 @@ If default path is not `/components/ui`, create it. This keeps:
 
 ## 4) Component integration blueprint
 
-The style language follows these three anchor components:
+Anchor components for the **TradingView-like** direction:
 
-1. **Market table** (`financial-markets-table`)
-2. **Score cards** (`financial-score-cards` + liquid dependencies)
-3. **Dashboard shell** (`financial-dashboard`)
+1. **Market table** (`financial-markets-table`) — primary home grid when watchlist data exists; dense columns, row → symbol detail.
+2. **Shared primitives** — `button`, `badge`, `card` for surfaces that still need cards (sidebar, modals, settings).
+3. **Global shell** — header/nav carries **Portfolio, Briefings, Classic** (and auth); home does **not** duplicate quick-action marketing tiles.
+
+**Deprecated on home:** the former `financial-dashboard` shell (quick actions, “recent activity,” “financial services” list) has been **removed** from the product; do not reintroduce equivalent blocks without PRD review.
 
 ### 4.1 Installation dependencies
 
@@ -79,21 +84,18 @@ Install in `web/`:
 npm install framer-motion lucide-react clsx tailwind-merge class-variance-authority @radix-ui/react-slot
 ```
 
-If using Next.js `next-themes`, replace with local theme provider in Vite (already done in this repo with `ThemeContext` + `dark` class on `<html>`).
+If using Next.js `next-themes`, replace with local theme provider in Vite (this repo uses `ThemeContext` + `dark` class on `<html>`).
 
-### 4.2 Files to place in `src/components/ui`
+### 4.2 Files in `src/components/ui` (current direction)
 
-- `financial-markets-table.tsx` (or `.jsx` in current repo)
-- `financial-score-cards.tsx`
-- `financial-dashboard.tsx`
-- `liquid-glass-button.tsx`
-- `liquid-glass-card.tsx`
-- `badge.tsx`
-- `button.tsx`
+- `financial-markets-table.jsx` — screener-style table + sparklines
+- `badge.jsx`, `button.jsx`, `card.jsx` — shared chrome
+
+Optional future additions (PRD Phase 1+): **market summary strip** component, denser table variant, tabbed macro section.
 
 ### 4.3 Demo placement
 
-Place demos in route-level components (or `src/pages`) for visual QA only.  
+Place demos in route-level components for visual QA only.  
 Do not duplicate production data logic in demos.
 
 ---
@@ -114,7 +116,7 @@ For each component integration:
 
 ### Integration steps
 
-0. Copy component into `src/components/ui`
+0. Copy or create component in `src/components/ui`
 1. Install external dependencies
 2. Map to real app data (do not hardcode production values)
 3. Preserve existing routes and actions
@@ -129,19 +131,17 @@ For each component integration:
 
 - Keep semantic tokens in `index.css`
 - Keep theme toggle with persistent `dark` class
-- Ensure all new UI uses semantic classes (`bg-*`, `text-*`, `border-*`)
+- Ensure new UI uses semantic classes (`bg-*`, `text-*`, `border-*`)
 
-### Phase B — Primary surfaces
+### Phase B — Primary surfaces (TradingView-like)
 
-- Home/dashboard adopts:
-  - financial dashboard shell pattern,
-  - market table pattern,
-  - refined cards/list surfaces.
-- Existing search/watchlist/portfolio behavior remains unchanged.
+- **Home:** omnibar search → **market-oriented** content (table, future summary strip, commodities/macro). **No** marketing dashboard card above search.
+- **Sidebar:** watchlist + portfolio mini; align padding, borders, and type to main column.
+- **Detail / Portfolio / Briefings:** shared `Button` / `Badge` / `Card`; chart-first layout on detail (see PRD Phase 2).
 
 ### Phase C — Detail and portfolio screens
 
-- Refactor detail panels and controls to match shared card/button/input patterns
+- Refactor detail panels and controls to match shared patterns
 - Keep charting engines and analysis logic unchanged
 
 ### Phase D — QA and consistency
@@ -155,13 +155,12 @@ For each component integration:
 
 ## 7) Interaction and elegance rules
 
-Use these rules across all pages:
-
 - Motion is meaningful: orient, reveal, confirm
 - Hover/active states are subtle, not noisy
-- Information density is high but breathable
-- One primary CTA per section
-- Numeric data has stable alignment and clear emphasis
+- **Information density is high** but breathable (TradingView benchmark)
+- One primary CTA per **section**; global nav owns cross-page navigation
+- Numeric data uses **tabular figures** and stable alignment
+- Positive/negative deltas: consistent semantic colors only (no decorative rainbow)
 
 ---
 
@@ -169,7 +168,7 @@ Use these rules across all pages:
 
 ### Market table standard
 
-- Horizontal scroll container for dense columns
+- Horizontal scroll container for dense columns on small viewports
 - Stable grid columns across header and rows
 - Selection state + hover state
 - Performance chips for percentages
@@ -178,15 +177,13 @@ Use these rules across all pages:
 ### Card standard
 
 - Unified card rhythm (`rounded`, `border`, `shadow`, padding scale)
-- Optional liquid glass cards for premium sections only
-- Badge and button variants from shared primitives
+- Use cards **where content is grouped** (sidebar blocks, settings), not as the default home hero
 
-### Dashboard standard
+### Home / “terminal lite” standard (north star)
 
-- Command-style search strip
-- Quick actions grid
-- Recent activity list
-- Financial services list with optional premium/action affordances
+- **No** competing hero grids of “features” above real data
+- Optional **market summary strip** (indices, key instruments) when data is available
+- **Search** remains visually primary for discovery
 
 ---
 
@@ -197,6 +194,7 @@ This guide **does not lock** the product to a fixed palette.
 - Use semantic tokens for all new UI.
 - Keep positive/negative semantics consistent for market data.
 - Brand palette can evolve without rewriting components.
+- Chart-related JS must prefer `themeTokens` over hard-coded hex where APIs require RGB/hex strings.
 
 ---
 
@@ -218,8 +216,9 @@ Before merge:
 - Tailwind + semantic token layer
 - Theme toggle with persisted dark mode
 - `@` alias and `components/ui` structure
-- Interactive dashboard and market table patterns integrated into Home while keeping existing functionality
+- **Home:** search, optional `FinancialTable` from watchlist data, commodities section, sidebar watchlist/portfolio — **without** the former `FinancialDashboard` block
+- Stock detail, portfolio, and briefings refactors toward shared UI primitives (ongoing per PRD phases)
 
 ---
 
-This style guide is the source of truth for implementing and scaling the 21st-style MarketPulse UI refresh across the entire website without changing business logic.
+This style guide is the source of truth for implementing MarketPulse’s **TradingView-inspired** UI direction. For scope, milestones, and acceptance criteria, use the PRD linked at the top.

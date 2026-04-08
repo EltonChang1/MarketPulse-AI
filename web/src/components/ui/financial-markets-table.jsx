@@ -42,6 +42,16 @@ function formatPercentage(value) {
   return `${sign}${Number(value || 0).toFixed(2)}%`;
 }
 
+function formatCompact(value) {
+  const amount = Number(value || 0);
+  if (!Number.isFinite(amount) || amount <= 0) return "-";
+  if (amount >= 1_000_000_000_000) return `${(amount / 1_000_000_000_000).toFixed(2)}T`;
+  if (amount >= 1_000_000_000) return `${(amount / 1_000_000_000).toFixed(2)}B`;
+  if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(2)}M`;
+  if (amount >= 1_000) return `${(amount / 1_000).toFixed(2)}K`;
+  return amount.toFixed(2);
+}
+
 function CountryPill({ code }) {
   return (
     <div className="w-8 h-8 rounded-full overflow-hidden border border-border/30 flex items-center justify-center bg-muted text-[10px] font-semibold">
@@ -124,98 +134,88 @@ export function FinancialTable({ title = "Index", indices = [], onIndexSelect, c
   };
 
   return (
-    <div className={`w-full max-w-7xl mx-auto ${className}`}>
+    <div className={`w-full ${className}`}>
       <div className="bg-card border border-border/50 rounded-2xl overflow-hidden shadow-card">
-        <div className="overflow-x-auto">
-          <div className="min-w-[1000px]">
+        <div
+          className="overflow-x-auto"
+          style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorX: "contain" }}
+        >
+          <div className="min-w-[760px] md:min-w-[880px]">
             <div
-              className="px-8 py-3 text-xs font-medium text-muted-foreground/70 uppercase tracking-wide bg-muted/20 border-b border-border/20 text-left"
+              className="px-6 py-2 text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wide bg-muted/20 border-b border-border/20 text-left"
               style={{
                 display: "grid",
-                gridTemplateColumns:
-                  "250px 100px minmax(60px, 1fr) minmax(60px, 1fr) minmax(60px, 1fr) minmax(60px, 1fr) minmax(80px, 1fr) minmax(60px, 1fr) minmax(100px, 1fr)",
+                gridTemplateColumns: "minmax(200px, 2.1fr) minmax(90px, 1fr) minmax(90px, 1fr) minmax(90px, 1fr) minmax(110px, 1fr) minmax(110px, 1fr) minmax(90px, 1fr)",
                 columnGap: "6px",
               }}
             >
-              <div>{title}</div>
-              <div>YTD Return</div>
-              <div>P/LTM EPS</div>
-              <div>Div yield</div>
-              <div>Mkt cap</div>
-              <div>Volume</div>
-              <div>2-day chart</div>
-              <div>Price</div>
-              <div className="pr-4">Daily performance</div>
+              <div className="sticky left-0 z-20 bg-muted/90 backdrop-blur-sm">{title}</div>
+              <div className="text-right">Last</div>
+              <div className="text-right">Chg</div>
+              <div className="text-right">Chg %</div>
+              <div className="text-right">Vol</div>
+              <div className="text-right">Mkt Cap</div>
+              <div className="pr-4 text-right">Spark</div>
             </div>
 
             <motion.div variants={containerVariants} initial="hidden" animate="visible">
               {indices.map((index, idx) => {
-                const ytdColor = getPerformanceColor(index.ytdReturn, isDark, mounted);
                 const dayColor = getPerformanceColor(index.dailyChangePercent, isDark, mounted);
                 return (
                   <motion.div key={index.id} variants={rowVariants}>
                     <div
-                      className={`px-8 py-3 cursor-pointer group relative transition-all duration-200 ${
+                      className={`px-6 py-2.5 cursor-pointer group relative transition-all duration-200 text-[13px] ${
                         selectedIndex === index.id ? "bg-muted/50 border-b border-border/30" : "hover:bg-muted/30"
                       } ${idx < indices.length - 1 && selectedIndex !== index.id ? "border-b border-border/20" : ""}`}
                       style={{
                         display: "grid",
                         gridTemplateColumns:
-                          "250px 100px minmax(60px, 1fr) minmax(60px, 1fr) minmax(60px, 1fr) minmax(60px, 1fr) minmax(80px, 1fr) minmax(60px, 1fr) minmax(100px, 1fr)",
+                          "minmax(200px, 2.1fr) minmax(90px, 1fr) minmax(90px, 1fr) minmax(90px, 1fr) minmax(110px, 1fr) minmax(110px, 1fr) minmax(90px, 1fr)",
                         columnGap: "6px",
                       }}
                       onClick={() => handleIndexSelect(index.id)}
                     >
-                      <div className="flex items-center gap-4">
+                      <div
+                        className={`sticky left-0 z-10 flex items-center gap-3 pr-2 ${
+                          selectedIndex === index.id ? "bg-muted/50" : "bg-card group-hover:bg-muted/30"
+                        }`}
+                      >
                         <CountryPill code={index.countryCode} />
                         <div className="min-w-0">
-                          <div className="font-medium text-foreground/90 truncate">{index.name}</div>
-                          <div className="text-xs text-muted-foreground/70">{index.country}</div>
+                          <div className="font-semibold text-foreground/90 truncate">{index.symbol || index.name}</div>
+                          <div className="text-[11px] text-muted-foreground/70 truncate">
+                            {index.name?.split("·")?.[1]?.trim() || index.country}
+                          </div>
                         </div>
                       </div>
 
-                      <div className="flex items-center">
-                        <div className={`px-2 py-1 rounded-lg text-xs font-medium border ${ytdColor.bgColor} ${ytdColor.borderColor} ${ytdColor.textColor}`}>
-                          {formatPercentage(index.ytdReturn)}
-                        </div>
+                      <div className="flex items-center justify-end">
+                        <span className="font-semibold text-foreground/90 tabular-nums">{formatCurrency(index.price)}</span>
                       </div>
 
-                      <div className="flex items-center">
-                        <span className="font-semibold text-foreground/90">{index.pltmEps ? index.pltmEps.toFixed(2) : "N/A"}</span>
-                      </div>
-
-                      <div className="flex items-center">
-                        <span className="font-semibold text-amber-600 dark:text-amber-400">{formatPercentage(index.divYield)}</span>
-                      </div>
-
-                      <div className="flex items-center">
-                        <span className="font-semibold text-foreground/90">{formatLargeNumber(index.marketCap, "B")}</span>
-                      </div>
-
-                      <div className="flex items-center">
-                        <span className="font-semibold text-foreground/90">
-                          {index.volume >= 1 ? formatLargeNumber(index.volume, "M") : `${(index.volume * 1000).toFixed(1)}k`}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center">
-                        <div className="px-6">
-                          <Sparkline data={index.chartData} shouldReduceMotion={shouldReduceMotion} />
-                        </div>
-                      </div>
-
-                      <div className="flex items-center">
-                        <span className="font-semibold text-foreground/90">{formatCurrency(index.price)}</span>
-                      </div>
-
-                      <div className="flex items-center gap-2 pr-4">
-                        <span className={`font-semibold ${index.dailyChange >= 0 ? "text-positive" : "text-negative"}`}>
+                      <div className="flex items-center justify-end">
+                        <span className={`font-semibold tabular-nums ${index.dailyChange >= 0 ? "text-positive" : "text-negative"}`}>
                           {index.dailyChange >= 0 ? "+" : ""}
                           {Number(index.dailyChange || 0).toFixed(2)}
                         </span>
-                        <div className={`px-2 py-1 rounded-lg text-xs font-medium border ${dayColor.bgColor} ${dayColor.borderColor} ${dayColor.textColor}`}>
+                      </div>
+
+                      <div className="flex items-center justify-end">
+                        <div className={`px-2 py-1 rounded-lg text-xs font-medium border tabular-nums ${dayColor.bgColor} ${dayColor.borderColor} ${dayColor.textColor}`}>
                           {formatPercentage(index.dailyChangePercent)}
                         </div>
+                      </div>
+
+                      <div className="flex items-center justify-end">
+                        <span className="font-semibold text-foreground/90 tabular-nums">{formatCompact(Number(index.volume || 0) * 1_000_000)}</span>
+                      </div>
+
+                      <div className="flex items-center justify-end">
+                        <span className="font-semibold text-foreground/90 tabular-nums">{formatCompact(Number(index.marketCap || 0) * 1_000_000_000)}</span>
+                      </div>
+
+                      <div className="flex items-center justify-end pr-4">
+                        <Sparkline data={index.chartData} shouldReduceMotion={shouldReduceMotion} />
                       </div>
                     </div>
                   </motion.div>
