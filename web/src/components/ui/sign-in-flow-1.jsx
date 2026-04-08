@@ -13,14 +13,20 @@ import { cn } from "@/lib/utils";
  */
 
 function AnimatedNavLink({ to, children }) {
+  const a11yLabel = typeof children === "string" ? children : undefined;
   return (
     <Link
       to={to}
-      className="group relative inline-flex h-5 items-center overflow-hidden rounded-sm text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+      aria-label={a11yLabel}
+      className="group relative inline-flex h-5 shrink-0 overflow-hidden rounded-sm text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
     >
-      <span className="flex flex-col transition-transform duration-300 ease-out group-hover:-translate-y-1/2">
-        <span className="text-zinc-400">{children}</span>
-        <span className="text-white">{children}</span>
+      {/* Two fixed-height rows + exact translate so only one label shows in h-5 viewport (avoids “Home Home” overlap). */}
+      <span
+        aria-hidden={a11yLabel ? true : undefined}
+        className="flex h-10 flex-col transition-transform duration-300 ease-out group-hover:-translate-y-5 motion-reduce:transition-none motion-reduce:group-hover:translate-y-0"
+      >
+        <span className="flex h-5 shrink-0 items-center whitespace-nowrap text-zinc-400">{children}</span>
+        <span className="flex h-5 shrink-0 items-center whitespace-nowrap text-white">{children}</span>
       </span>
     </Link>
   );
