@@ -4,6 +4,8 @@ import CandlestickChart from "./CandlestickChart";
 import SignalCharts from "./SignalCharts";
 import PatternOverlay from "./PatternOverlay";
 import { useAuth } from "../context/AuthContext";
+import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
 
 const MARKET_INDICATOR_SYMBOLS = new Set([
   "^DJI",
@@ -81,7 +83,7 @@ export default function StockDetailView({
       <div className="detail-view">
         <div style={{ padding: "40px", textAlign: "center" }}>
           <p className="text-muted-foreground text-base">No stock data available</p>
-          {onBack && <button onClick={onBack} className="back-button" style={{ marginTop: "16px" }}>← Back</button>}
+          {onBack && <Button onClick={onBack} variant="outline" className="back-button" style={{ marginTop: "16px" }}>← Back</Button>}
         </div>
       </div>
     );
@@ -163,9 +165,9 @@ export default function StockDetailView({
     <div className="detail-view">
       <div className="detail-header">
         {onBack ? (
-          <button onClick={onBack} className="back-button">
+          <Button onClick={onBack} variant="outline" className="back-button">
             ← Back to Overview
-          </button>
+          </Button>
         ) : null}
         <div>
           <h1>
@@ -180,21 +182,27 @@ export default function StockDetailView({
           </p>
           <div className="detail-header-actions">
             {isInWatchlist ? (
-              <button
+              <Button
+                variant="destructive"
+                size="sm"
                 className="watchlist-quick-remove-btn"
+                type="button"
                 onClick={handleRemoveFromWatchlist}
                 disabled={removingWatchlist}
               >
                 {removingWatchlist ? "Removing..." : "✕ Remove from My Watchlist"}
-              </button>
+              </Button>
             ) : (
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 className="watchlist-quick-add-btn"
+                type="button"
                 onClick={handleAddToMyWatchlist}
                 disabled={addingWatchlist}
               >
                 {addingWatchlist ? "Adding..." : "+ Add to My Watchlist"}
-              </button>
+              </Button>
             )}
             {watchlistStatus ? <span className="watchlist-quick-status">{watchlistStatus}</span> : null}
           </div>
@@ -205,7 +213,10 @@ export default function StockDetailView({
         <h3>Select Prediction Period:</h3>
         <div className="prediction-buttons">
           {predictionButtons.map((btn) => (
-            <button
+            <Button
+              variant={effectiveSelectedPrediction === btn.key ? "default" : "outline"}
+              size="sm"
+              type="button"
               key={btn.key}
               className={`prediction-btn ${effectiveSelectedPrediction === btn.key ? "active" : ""}`}
               onClick={() => handlePredictionChange(btn.key)}
@@ -219,7 +230,7 @@ export default function StockDetailView({
                   </div>
                 </>
               )}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -271,18 +282,24 @@ export default function StockDetailView({
         )}
         
         <div className="chart-controls-row">
-          <button 
+          <Button
+            variant="outline"
+            size="sm"
+            type="button"
             className={`chart-control-btn ${showSignals ? "active" : ""}`}
             onClick={() => setShowSignals(!showSignals)}
           >
             {showSignals ? "▼" : "►"} Signal Charts
-          </button>
-          <button 
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            type="button"
             className={`chart-control-btn ${showPatterns ? "active" : ""}`}
             onClick={() => setShowPatterns(!showPatterns)}
           >
             {showPatterns ? "▼" : "►"} Pattern Matches
-          </button>
+          </Button>
         </div>
 
         {showSignals && <SignalCharts stock={stock} />}
@@ -470,9 +487,9 @@ export default function StockDetailView({
 
       {/* ── Prediction Basis ── */}
       <div className="prediction-basis-section">
-        <button className="basis-toggle" onClick={() => setShowBasis((v) => !v)}>
+        <Button variant="ghost" className="basis-toggle" onClick={() => setShowBasis((v) => !v)}>
           {showBasis ? "▼" : "►"} How is this prediction calculated?
-        </button>
+        </Button>
         {showBasis && (
           <div className="basis-content">
             <p className="basis-summary">{pb.summary || "Multi-factor technical model."}</p>
@@ -570,7 +587,10 @@ export default function StockDetailView({
             <h4>📰 News Analysis</h4>
             <p>{analysis.newsSummary || "No recent news analysis available."}</p>
             <div className="sentiment-badge">
-              Sentiment: <span className={`badge ${stock.sentiment?.impact}`}>{stock.sentiment?.impact || "neutral"}</span>
+              Sentiment:{" "}
+              <Badge className={`badge ${stock.sentiment?.impact}`} variant="outline">
+                {stock.sentiment?.impact || "neutral"}
+              </Badge>
               ({Math.round((stock.sentiment?.confidence || 0) * 100)}% confidence)
             </div>
           </div>

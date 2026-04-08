@@ -1,160 +1,225 @@
-# MarketPulse AI — UI style guide
+# MarketPulse AI — 21st-style UI integration style guide
 
-This document defines the **visual language** for MarketPulse AI: **black, white, and silver** chrome with semantic tokens, plus **restrained** green/red only where finance UX requires clear up/down or risk cues. Patterns follow **financial markets table**, **glass-style cards**, and **dashboard shell** references from the design brief. **Product behavior is unchanged**; this guide governs **look, tokens, spacing, and motion**.
-
----
-
-## 0. Implementation status (`web/`)
-
-| Item | Status |
-|------|--------|
-| Tailwind CSS | **Enabled** — `tailwind.config.js`, `postcss.config.js`, `src/index.css` |
-| Design tokens | **`:root` HSL variables** in `src/index.css` (light + `.dark` optional) |
-| Legacy CSS | `styles.css`, `styles/dashboard.css`, `auth.css`, `briefings.css`, `ask-marketpulse.css` consume `hsl(var(--…))` |
-| Path alias `@/*` | `vite.config.js` + `jsconfig.json` → `src/*` |
-| `cn()` helper | `src/lib/utils.js` (`clsx` + `tailwind-merge`) for new Tailwind-heavy UI |
-| shadcn primitives | Optional — add under `src/components/ui/` when you introduce registry components |
-
-Entry CSS order: `main.jsx` imports `index.css` then `styles.css`.
+This guide defines how to apply a complete UI refresh inspired by **21st.dev-style interactive financial components** while preserving all current product behavior (APIs, auth, routing, data logic).
 
 ---
 
-## 1. Brand palette — monochrome chrome
+## 1) Objective
 
-**Primary experience:** near-black headers and CTAs, white/off-white surfaces, zinc/silver borders and secondary text.
+Build a **new visual layer** for MarketPulse AI that is:
 
-- **Do not** use purple/blue gradients for brand chrome (legacy removed).
-- **Silver** is expressed as `muted`, `border`, `accent`, and `ring` — not metallic effects unless a specific component (e.g. liquid glass) calls for it.
-- **Green / red** are **secondary**: reserved for performance, risk, and candle/support/resistance semantics so numbers stay scannable.
+- interactive (motion, hover/focus feedback, responsive controls),
+- classy and elegant (clear hierarchy, refined spacing, premium components),
+- production-friendly (tokenized, accessible, maintainable).
 
-### 1.1 CSS variables (source of truth)
-
-Defined in `src/index.css` (`:root` and `.dark`):
-
-| Token | Role |
-|-------|------|
-| `--background` | Page wash (cool gray-white) |
-| `--foreground` | Primary text (near black) |
-| `--card` / `--card-foreground` | Raised panels |
-| `--primary` / `--primary-foreground` | Primary buttons, inverse text on dark fills |
-| `--primary-hover` | Darken slightly for hovers / gradient end |
-| `--secondary` / `--secondary-foreground` | Subtle fills (silver-gray) |
-| `--muted` / `--muted-foreground` | Table headers, hints, disabled tone |
-| `--accent` / `--accent-foreground` | Hover highlights, silver emphasis |
-| `--border` / `--input` | Hairlines and fields |
-| `--ring` | Focus rings (graphite/silver, not blue) |
-| `--destructive` / `--destructive-foreground` | Errors and strong danger text |
-| `--chrome` / `--chrome-foreground` / `--chrome-muted` | Top bar / marketing hero (near-black → graphite gradient) |
-| `--positive` / `--negative` | Market direction (desaturated green/red) |
-
-Tailwind maps these in `tailwind.config.js` (e.g. `bg-background`, `text-muted-foreground`, `border-border`).
+All functional workflows must remain unchanged.
 
 ---
 
-## 2. Default paths
+## 2) Required stack check
 
-| Asset | Path |
-|-------|------|
-| App source | `web/src/` |
-| UI primitives (shadcn-style) | **`web/src/components/ui/`** |
-| Feature screens | `web/src/components/` |
-| Tokens | `web/src/index.css` |
-| Utilities | `web/src/lib/utils.js` |
+The codebase should support:
 
-### Why `components/ui/`
+- shadcn-style project structure
+- Tailwind CSS
+- TypeScript-ready architecture
 
-Keeps shadcn CLI output predictable, separates **primitives** from **routes/features**, and avoids one-off styling drift.
+### Current repo status (`web/`)
 
----
+- **Tailwind CSS:** enabled
+- **shadcn-compatible paths:** enabled via alias (`@/*`) and `src/components/ui`
+- **TypeScript:** not yet migrated app-wide (current app is JSX)
 
-## 3. Using tokens in CSS and JSX
+### If TypeScript is not enabled
 
-### 3.1 Legacy CSS
+Use this migration path (incremental):
 
-Use **`hsl(var(--token))`** or modern alpha: **`hsl(var(--destructive) / 0.12)`** (no comma in `hsl()`).
+1. Install `typescript`, `@types/react`, `@types/react-dom`
+2. Add `tsconfig.json`
+3. Rename files progressively (`.jsx` -> `.tsx`)
+4. Start with UI primitives in `src/components/ui`
 
-### 3.2 Tailwind (new or refactored JSX)
-
-Prefer utilities: `bg-card`, `text-foreground`, `rounded-2xl`, `border border-border/50`, `shadow-card`, `text-muted-foreground`, `text-positive`, etc.
-
-### 3.3 Performance and money
-
-- **Up / positive:** `text-positive`, pills `bg` with `hsl(var(--positive) / 0.12)` and border `hsl(var(--positive) / 0.35)`.
-- **Down / risk:** `text-negative` or `destructive` family for strong warnings.
-- Avoid rainbow **chart** palettes; use **grayscale series** (`#18181b` → `#a1a1aa`) and only green/red for support/resistance or bullish/bearish markers where necessary.
-
-### 3.4 Focus and inputs
-
-`border-input`, `focus-visible:ring-2 ring-ring`, `ring-offset-background`. **No** default blue focus halo.
+Do not block UI refresh on full TS migration; migrate safely in slices.
 
 ---
 
-## 4. Pattern A — Market table
+## 3) Default paths
 
-- Outer: `max-w-7xl`, inner card `bg-card border border-border/50 rounded-2xl overflow-hidden`.
-- Horizontal scroll: `overflow-x-auto`, inner `min-w-[1000px]`.
-- Header row: uppercase, `text-muted-foreground`, `bg-muted/15`, `border-b border-border/20`.
-- Rows: `hover:bg-muted/30`, selected `bg-muted/50`.
-- Metric pills: bordered, token-based positive/negative (§3.3).
+Use these paths as canonical:
 
----
+- App source: `web/src`
+- UI primitives: `web/src/components/ui`
+- Feature screens: `web/src/components`
+- Tokens and theme: `web/src/index.css`
+- Utility helper (`cn`): `web/src/lib/utils.js` (or `.ts` after TS migration)
 
-## 5. Pattern B — Cards (incl. glass)
+### Why `/components/ui` is important
 
-- Default cards: `rounded-xl` or `rounded-2xl`, `border`, `shadow-card` / `shadow-card-lg`.
-- Glass variants: keep displacement filter ids unique per view; shadows use neutral blacks/whites, not violet glow.
+If default path is not `/components/ui`, create it. This keeps:
 
----
-
-## 6. Pattern C — Dashboard shell
-
-- Shell: `bg-card rounded-2xl border shadow-sm`, generous padding `p-4 md:p-6`.
-- Search: icon + input + optional `kbd` for shortcuts; `bg-background`, silver border.
-- Quick actions: grid, circular icon wells `bg-muted`, `group-hover:bg-background`.
-- Lists: mono amounts; positive/negative pills (§3.3).
+- predictable imports (`@/components/ui/...`),
+- compatibility with shadcn/21st snippets,
+- strict separation between primitives and business features.
 
 ---
 
-## 7. Global chrome
+## 4) Component integration blueprint
 
-- **App header** (`styles.css` `.app-header`): graphite gradient using `--chrome` and zinc stops, **light bottom border**, white/light text via `--chrome-foreground`.
-- **Dashboard hero** (`.dashboard-header`): same chrome language as app header.
-- **Auth** (`.auth-container`): **light** silver gradient — `background` → `muted` → soft zinc highlight (no purple).
+The style language follows these three anchor components:
+
+1. **Market table** (`financial-markets-table`)
+2. **Score cards** (`financial-score-cards` + liquid dependencies)
+3. **Dashboard shell** (`financial-dashboard`)
+
+### 4.1 Installation dependencies
+
+Install in `web/`:
+
+```bash
+npm install framer-motion lucide-react clsx tailwind-merge class-variance-authority @radix-ui/react-slot
+```
+
+If using Next.js `next-themes`, replace with local theme provider in Vite (already done in this repo with `ThemeContext` + `dark` class on `<html>`).
+
+### 4.2 Files to place in `src/components/ui`
+
+- `financial-markets-table.tsx` (or `.jsx` in current repo)
+- `financial-score-cards.tsx`
+- `financial-dashboard.tsx`
+- `liquid-glass-button.tsx`
+- `liquid-glass-card.tsx`
+- `badge.tsx`
+- `button.tsx`
+
+### 4.3 Demo placement
+
+Place demos in route-level components (or `src/pages`) for visual QA only.  
+Do not duplicate production data logic in demos.
 
 ---
 
-## 8. Motion and a11y
+## 5) Implementation guidelines
 
-| Tool | Use |
-|------|-----|
-| Framer Motion | Optional stagger; keep subtle |
-| `prefers-reduced-motion` | Shorten or disable nonessential motion |
+For each component integration:
+
+1. Analyze structure and required dependencies
+2. Review arguments/props and local state
+3. Identify context hooks/providers needed (theme, auth, motion settings)
+4. Ask:
+   - What data/props are passed?
+   - Any state management constraints?
+   - Required assets/icons?
+   - Expected responsive behavior?
+   - Best placement in current UX flow?
+
+### Integration steps
+
+0. Copy component into `src/components/ui`
+1. Install external dependencies
+2. Map to real app data (do not hardcode production values)
+3. Preserve existing routes and actions
+4. Replace old presentation layer progressively
+5. Validate dark mode + reduced motion
 
 ---
 
-## 9. Icons
+## 6) Website-wide adoption plan (non-breaking)
 
-Prefer **lucide-react** for new work; emoji may remain in legacy copy but prefer SVG/icons for new features.
+### Phase A — Foundation
+
+- Keep semantic tokens in `index.css`
+- Keep theme toggle with persistent `dark` class
+- Ensure all new UI uses semantic classes (`bg-*`, `text-*`, `border-*`)
+
+### Phase B — Primary surfaces
+
+- Home/dashboard adopts:
+  - financial dashboard shell pattern,
+  - market table pattern,
+  - refined cards/list surfaces.
+- Existing search/watchlist/portfolio behavior remains unchanged.
+
+### Phase C — Detail and portfolio screens
+
+- Refactor detail panels and controls to match shared card/button/input patterns
+- Keep charting engines and analysis logic unchanged
+
+### Phase D — QA and consistency
+
+- Focus states everywhere
+- Keyboard navigation intact
+- Motion reduced when preferred
+- Dark mode visual parity
 
 ---
 
-## 10. Dependencies (`web/package.json`)
+## 7) Interaction and elegance rules
 
-| Concern | Packages |
-|---------|----------|
-| Tailwind | `tailwindcss`, `postcss`, `autoprefixer` |
-| Class merge | `clsx`, `tailwind-merge` |
-| Future shadcn | `class-variance-authority`, `@radix-ui/react-slot`, etc. |
+Use these rules across all pages:
+
+- Motion is meaningful: orient, reveal, confirm
+- Hover/active states are subtle, not noisy
+- Information density is high but breathable
+- One primary CTA per section
+- Numeric data has stable alignment and clear emphasis
 
 ---
 
-## 11. Audit checklist
+## 8) Pattern standards
 
-- [ ] No purple/blue **brand** gradients on headers or auth.
-- [ ] Surfaces use **semantic** tokens, not raw hex in new code.
-- [ ] Tables/lists scroll horizontally on small viewports when dense.
-- [ ] Gains/losses use **shared** positive/negative rules.
-- [ ] Focus states visible and **graphite/silver**, not default browser blue.
-- [ ] Charts use **monochrome series** unless an exception is documented.
+### Market table standard
 
-This guide is the **single reference** for MarketPulse AI UI: **monochrome chrome**, **token-driven** styling, and **preserved product behavior**.
+- Horizontal scroll container for dense columns
+- Stable grid columns across header and rows
+- Selection state + hover state
+- Performance chips for percentages
+- Sparkline animations with reduced-motion fallback
+
+### Card standard
+
+- Unified card rhythm (`rounded`, `border`, `shadow`, padding scale)
+- Optional liquid glass cards for premium sections only
+- Badge and button variants from shared primitives
+
+### Dashboard standard
+
+- Command-style search strip
+- Quick actions grid
+- Recent activity list
+- Financial services list with optional premium/action affordances
+
+---
+
+## 9) Theme and color policy
+
+This guide **does not lock** the product to a fixed palette.
+
+- Use semantic tokens for all new UI.
+- Keep positive/negative semantics consistent for market data.
+- Brand palette can evolve without rewriting components.
+
+---
+
+## 10) Accessibility and quality gates
+
+Before merge:
+
+- [ ] keyboard-focus visible for all controls
+- [ ] color contrast passes AA for text
+- [ ] no interaction relies on color only
+- [ ] loading and error states visible and explicit
+- [ ] dark mode parity checked
+- [ ] reduced motion respected
+
+---
+
+## 11) What is already applied in this repo
+
+- Tailwind + semantic token layer
+- Theme toggle with persisted dark mode
+- `@` alias and `components/ui` structure
+- Interactive dashboard and market table patterns integrated into Home while keeping existing functionality
+
+---
+
+This style guide is the source of truth for implementing and scaling the 21st-style MarketPulse UI refresh across the entire website without changing business logic.

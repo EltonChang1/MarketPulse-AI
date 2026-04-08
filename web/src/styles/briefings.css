@@ -1,19 +1,22 @@
 .briefings-page {
-  max-width: 1100px;
+  max-width: 1180px;
   margin: 0 auto;
-  padding: 24px 20px 48px;
+  padding: 24px 20px 40px;
+  display: grid;
+  gap: 14px;
 }
 
 .briefings-header h1 {
-  margin: 12px 0 8px;
-  font-size: 1.5rem;
+  margin: 10px 0 8px;
+  font-size: 1.65rem;
+  letter-spacing: -0.015em;
 }
 
 .briefings-sub {
   margin: 0 0 16px;
   color: hsl(var(--muted-foreground));
-  font-size: 0.9rem;
-  line-height: 1.5;
+  font-size: 0.92rem;
+  line-height: 1.55;
 }
 
 .briefings-back {
@@ -26,27 +29,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-bottom: 16px;
-}
-
-.briefings-actions button {
-  padding: 10px 14px;
-  border-radius: 10px;
-  border: 1px solid hsl(var(--border));
-  background: hsl(var(--card));
-  cursor: pointer;
-  font-size: 0.88rem;
-}
-
-.briefings-actions button:first-of-type {
-  background: hsl(var(--ring));
-  color: hsl(var(--primary-foreground));
-  border-color: hsl(var(--ring));
-}
-
-.briefings-actions button:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
+  margin-bottom: 12px;
 }
 
 .briefings-error {
@@ -72,10 +55,6 @@
 }
 
 .briefings-list {
-  border: 1px solid hsl(var(--border));
-  border-radius: 12px;
-  background: hsl(var(--card));
-  padding: 12px;
   max-height: 520px;
   overflow-y: auto;
 }
@@ -103,6 +82,7 @@
 .briefings-list li button.active {
   border-color: hsl(var(--ring));
   background: hsl(var(--muted));
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.12);
 }
 
 .briefings-kind {
@@ -113,14 +93,19 @@
 }
 
 .briefings-title {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: hsl(var(--foreground));
+  line-height: 1.35;
 }
 
 .briefings-meta {
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   color: hsl(var(--muted-foreground));
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .briefings-empty {
@@ -129,10 +114,6 @@
 }
 
 .briefings-detail {
-  border: 1px solid hsl(var(--border));
-  border-radius: 12px;
-  background: hsl(var(--card));
-  padding: 20px;
   min-height: 320px;
 }
 

@@ -3,6 +3,9 @@ import { Link, Navigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import { getPortfolioForUser } from "../context/portfolioStore";
+import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
+import { Card, CardContent } from "./ui/card";
 import "../styles/briefings.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
@@ -103,22 +106,23 @@ export default function BriefingsPage() {
           Background reports are generated on the server and stored for your account. Refresh the list after a few seconds.
         </p>
         <div className="briefings-actions">
-          <button type="button" disabled={generating} onClick={() => triggerGenerate("watchlist_weekly")}>
+          <Button type="button" disabled={generating} onClick={() => triggerGenerate("watchlist_weekly")}>
             Generate watchlist brief
-          </button>
-          <button type="button" disabled={generating} onClick={() => triggerGenerate("portfolio_snapshot")}>
+          </Button>
+          <Button type="button" variant="secondary" disabled={generating} onClick={() => triggerGenerate("portfolio_snapshot")}>
             Generate portfolio note
-          </button>
-          <button type="button" className="briefings-refresh" disabled={loading} onClick={load}>
+          </Button>
+          <Button type="button" variant="outline" className="briefings-refresh" disabled={loading} onClick={load}>
             Refresh list
-          </button>
+          </Button>
         </div>
       </div>
 
       {error ? <div className="briefings-error">{error}</div> : null}
 
       <div className="briefings-layout">
-        <aside className="briefings-list">
+        <Card className="briefings-list">
+          <CardContent className="p-3">
           {loading ? <p>Loading…</p> : null}
           {!loading && reports.length === 0 ? <p className="briefings-empty">No reports yet. Generate one above.</p> : null}
           <ul>
@@ -132,27 +136,31 @@ export default function BriefingsPage() {
                   <span className="briefings-kind">{r.kind}</span>
                   <span className="briefings-title">{r.title || r._id}</span>
                   <span className="briefings-meta">
-                    {r.status} · {r.createdAt ? new Date(r.createdAt).toLocaleString() : ""}
+                    <Badge variant="secondary" className="mr-1">{r.status}</Badge>
+                    {r.createdAt ? new Date(r.createdAt).toLocaleString() : ""}
                   </span>
                 </button>
               </li>
             ))}
           </ul>
-        </aside>
-        <main className="briefings-detail">
+          </CardContent>
+        </Card>
+        <Card className="briefings-detail">
+          <CardContent className="p-5">
           {!selected ? (
             <p className="briefings-placeholder">Select a report</p>
           ) : (
             <>
               <h2>{selected.title}</h2>
               <p className="briefings-status">
-                Status: <strong>{selected.status}</strong>
+                Status: <Badge variant="outline">{selected.status}</Badge>
                 {selected.errorMessage ? ` — ${selected.errorMessage}` : ""}
               </p>
               <pre className="briefings-body">{selected.body || "(empty — may still be generating)"}</pre>
             </>
           )}
-        </main>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

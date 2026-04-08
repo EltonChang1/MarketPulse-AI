@@ -1,8 +1,19 @@
 import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  ArrowLeftRight,
+  CreditCard,
+  Landmark,
+  ShieldCheck,
+  Target,
+  TrendingUp,
+  Users,
+} from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import SearchBar from "./SearchBar";
 import CommoditiesSection from "./CommoditiesSection";
+import { FinancialDashboard } from "./ui/financial-dashboard";
+import { FinancialTable } from "./ui/financial-markets-table";
 import axios from "axios";
 import { getPortfolioForUser } from "../context/portfolioStore";
 import "../styles/dashboard.css";
@@ -37,6 +48,69 @@ export default function HomePage() {
   const [portfolioHoldings, setPortfolioHoldings] = useState(() => getPortfolioForUser(user));
 
   const watchlistData = useMemo(() => watchlistPayload?.data || [], [watchlistPayload]);
+  const recentActivity = useMemo(
+    () =>
+      watchlistData.slice(0, 4).map((stock) => ({
+        icon: TrendingUp,
+        title: `${stock.symbol} price update`,
+        time: "Live",
+        amount: Number(stock.dayChange || 0),
+      })),
+    [watchlistData]
+  );
+
+  const quickActions = useMemo(
+    () => [
+      {
+        icon: ArrowLeftRight,
+        title: "Watchlist",
+        description: "Manage symbols",
+        onClick: () => document.getElementById("watchlist")?.scrollIntoView({ behavior: "smooth" }),
+      },
+      { icon: Landmark, title: "Briefings", description: "Market summaries", onClick: () => navigate("/briefings") },
+      { icon: TrendingUp, title: "Portfolio", description: "Track returns", onClick: () => navigate("/portfolio") },
+      { icon: CreditCard, title: "Classic", description: "Legacy analytics", onClick: () => navigate("/classic") },
+    ],
+    [navigate]
+  );
+
+  const financialServices = useMemo(
+    () => [
+      { icon: ShieldCheck, title: "Risk alerts", description: "Signal confidence and trend risk", isPremium: true },
+      { icon: Target, title: "Price targets", description: "Multi-timeframe prediction guidance", hasAction: true },
+      { icon: Users, title: "Watchlist sync", description: "Personalized symbols across sessions" },
+    ],
+    []
+  );
+
+  const tableIndices = useMemo(
+    () =>
+      watchlistData.map((stock, idx) => {
+        const closes = (stock.candlestickData || []).slice(-10).map((c) => Number(c.close || c.c || 0)).filter(Boolean);
+        const fallbackBase = Number(stock.currentPrice || 100);
+        const chartData =
+          closes.length > 3
+            ? closes
+            : Array.from({ length: 10 }, (_, i) => fallbackBase + (i - 5) * 0.25 + (Math.random() - 0.5));
+        return {
+          id: String(idx + 1),
+          name: `${stock.symbol} · ${stock.companyName || "Market Index"}`,
+          country: "United States",
+          countryCode: "US",
+          ytdReturn: Number(stock.dayChangePct || 0),
+          pltmEps: Number.isFinite(stock?.fundamentals?.peRatio) ? Number(stock.fundamentals.peRatio) : null,
+          divYield: Number(stock?.fundamentals?.dividendYield || 0),
+          marketCap: Number(stock.marketCap || 0) / 1e9,
+          volume: Number(stock.volume || 0) / 1e6,
+          chartData,
+          price: Number(stock.currentPrice || 0),
+          dailyChange: Number(stock.dayChange || 0),
+          dailyChangePercent: Number(stock.dayChangePct || 0),
+          symbol: stock.symbol,
+        };
+      }),
+    [watchlistData]
+  );
 
   useEffect(() => {
     if (Array.isArray(user?.watchlist) && user.watchlist.length > 0) {
@@ -101,15 +175,32 @@ export default function HomePage() {
       <div className="dashboard-layout">
         {/* Main Content */}
         <main className="dashboard-main">
+          <FinancialDashboard
+            quickActions={quickActions}
+            recentActivity={recentActivity}
+            financialServices={financialServices}
+          />
+
           {/* Search Bar */}
           <SearchBar onSelect={handleSelectStock} />
+
+          {tableIndices.length > 0 ? (
+            <FinancialTable
+              title="Tracked markets"
+              indices={tableIndices}
+              onIndexSelect={(id) => {
+                const match = tableIndices.find((row) => row.id === id);
+                if (match?.symbol) handleSelectStock(match.symbol);
+              }}
+            />
+          ) : null}
 
           {/* Commodities & ETFs Section */}
           <CommoditiesSection onSelectStock={handleSelectStock} />
         </main>
 
         {/* Sidebar - Personal Watchlist */}
-        <aside className="dashboard-sidebar">
+        <aside className="dashboard-sidebar" id="watchlist">
           {!isAuthenticated ? (
             <div className="sidebar-guest-cta">
               <div className="sidebar-guest-icon">📈</div>

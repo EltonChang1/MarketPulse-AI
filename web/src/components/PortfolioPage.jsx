@@ -8,6 +8,9 @@ import {
   savePortfolioModelForUser,
   sortPortfolioTransactions,
 } from "../context/portfolioStore";
+import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
+import { Card, CardContent } from "./ui/card";
 import "../styles/dashboard.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
@@ -466,11 +469,12 @@ export default function PortfolioPage() {
           <h1>My Portfolio</h1>
           <p>Track holdings, allocation, transactions, and performance against major market indexes.</p>
         </div>
-        <button className="portfolio-back-btn" onClick={() => navigate("/")}>← Back to Dashboard</button>
+        <Button variant="outline" className="portfolio-back-btn" onClick={() => navigate("/")}>← Back to Dashboard</Button>
       </div>
 
       <section className="portfolio-grid-top">
-        <div className="portfolio-card">
+        <Card className="portfolio-card">
+          <CardContent className="p-5">
           <h3>Add Transaction</h3>
           <form className="portfolio-form" onSubmit={handleAddTransaction}>
             <label>
@@ -520,12 +524,14 @@ export default function PortfolioPage() {
                 onChange={(event) => setDateInput(event.target.value)}
               />
             </label>
-            <button type="submit" className="portfolio-add-btn" disabled={loading}>{loading ? "Saving..." : "Add Transaction"}</button>
+            <Button type="submit" className="portfolio-add-btn" disabled={loading}>{loading ? "Saving..." : "Add Transaction"}</Button>
           </form>
           {error ? <div className="portfolio-error">⚠️ {error}</div> : null}
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="portfolio-card">
+        <Card className="portfolio-card">
+          <CardContent className="p-5">
           <h3>Portfolio Performance</h3>
           <div className="portfolio-stats-grid">
             <div>
@@ -545,11 +551,13 @@ export default function PortfolioPage() {
               <strong className={totals.gainPct >= 0 ? "positive" : "negative"}>{formatPercent(totals.gainPct)}</strong>
             </div>
           </div>
-        </div>
+          </CardContent>
+        </Card>
       </section>
 
       <section className="portfolio-grid-middle">
-        <div className="portfolio-card">
+        <Card className="portfolio-card">
+          <CardContent className="p-5">
           <h3>Allocation</h3>
           {pieSegments.length ? (
             <>
@@ -572,18 +580,22 @@ export default function PortfolioPage() {
           ) : (
             <div className="portfolio-empty">Add transactions to view allocation chart.</div>
           )}
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="portfolio-card">
+        <Card className="portfolio-card">
+          <CardContent className="p-5">
           <h3>Portfolio vs Market Indexes</h3>
           <ComparisonChart
             portfolioSeries={comparisonSeries.portfolio}
             benchmarkSeries={comparisonSeries.benchmarks}
           />
-        </div>
+          </CardContent>
+        </Card>
       </section>
 
-      <section className="portfolio-card">
+      <Card className="portfolio-card">
+        <CardContent className="p-5">
         <h3>Holdings</h3>
         {holdingRows.length ? (
           <div className="portfolio-table-wrap">
@@ -617,9 +629,11 @@ export default function PortfolioPage() {
         ) : (
           <div className="portfolio-empty">No active holdings yet.</div>
         )}
-      </section>
+        </CardContent>
+      </Card>
 
-      <section className="portfolio-card">
+      <Card className="portfolio-card">
+        <CardContent className="p-5">
         <h3>Transaction History</h3>
         {transactions.length ? (
           <div className="portfolio-table-wrap">
@@ -643,16 +657,16 @@ export default function PortfolioPage() {
                     <tr key={tx.id}>
                       <td>{formatDate(tx.date)}</td>
                       <td>
-                        <span className={`portfolio-side-pill ${tx.side === "buy" ? "buy" : "sell"}`}>
+                        <Badge className={`portfolio-side-pill ${tx.side === "buy" ? "buy" : "sell"}`} variant="outline">
                           {tx.side.toUpperCase()}
-                        </span>
+                        </Badge>
                       </td>
                       <td>{tx.symbol}</td>
                       <td>{tx.quantity.toFixed(4).replace(/\.0000$/, "")}</td>
                       <td>{formatCurrency(tx.price)}</td>
                       <td>{formatCurrency(tx.quantity * tx.price)}</td>
                       <td>
-                        <button className="portfolio-row-remove" onClick={() => handleDeleteTransaction(tx.id)}>Delete</button>
+                        <Button variant="ghost" size="sm" className="portfolio-row-remove" onClick={() => handleDeleteTransaction(tx.id)}>Delete</Button>
                       </td>
                     </tr>
                   ))}
@@ -662,7 +676,8 @@ export default function PortfolioPage() {
         ) : (
           <div className="portfolio-empty">No transactions yet. Add your first buy above.</div>
         )}
-      </section>
+        </CardContent>
+      </Card>
     </div>
   );
 }
