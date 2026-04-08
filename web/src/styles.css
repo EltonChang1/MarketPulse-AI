@@ -1863,6 +1863,10 @@ footer {
   border-color: hsl(var(--muted));
 }
 
+.theme-toggle-btn {
+  min-width: 4.25rem;
+}
+
 /* Global app loading state */
 .app-page-loading {
   display: flex;

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { HashRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import StockDetailView from "./components/StockDetailView";
 import StockDetailPage from "./components/StockDetailPage";
 import SignUpPage from "./components/SignUpPage";
@@ -398,6 +399,7 @@ function RedirectIfAuth({ children }) {
 // Global header — shows Login/Sign Up when guest, user avatar + name when authenticated
 function AppHeader() {
   const { user, logout, isAuthenticated, loading } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   const initials = user
@@ -414,6 +416,16 @@ function AppHeader() {
         📊 <span>MarketPulse AI</span>
       </div>
       <div className="app-header-actions">
+        <button
+          type="button"
+          className="header-btn header-btn-outline theme-toggle-btn"
+          onClick={toggleTheme}
+          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          aria-pressed={theme === "dark"}
+          title={theme === "dark" ? "Light mode" : "Dark mode"}
+        >
+          {theme === "dark" ? "Light" : "Dark"}
+        </button>
         {!loading && (
           isAuthenticated ? (
             <>
@@ -464,6 +476,7 @@ function AppHeader() {
 export default function App() {
   return (
     <Router>
+      <ThemeProvider>
       <AuthProvider>
         <div className="min-h-screen bg-background">
         <AppHeader />
@@ -480,6 +493,7 @@ export default function App() {
         <AskMarketPulse />
         </div>
       </AuthProvider>
+      </ThemeProvider>
     </Router>
   );
 }
