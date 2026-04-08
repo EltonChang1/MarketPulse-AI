@@ -5,7 +5,11 @@ function Card({ className, ...props }) {
   return (
     <div
       data-slot="card"
-      className={cn("bg-card text-card-foreground flex flex-col gap-6 rounded-xl border shadow-card", className)}
+      className={cn(
+        "flex flex-col gap-6 rounded-xl border border-border bg-card text-card-foreground shadow-card",
+        "dark:border-[#333] dark:bg-[rgba(31,31,31,0.65)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.35)] dark:backdrop-blur-sm",
+        className
+      )}
       {...props}
     />
   );

@@ -166,7 +166,7 @@ export function FinancialTable({ title = "Index", indices = [], onIndexSelect, c
 
   return (
     <div className={`w-full ${className}`}>
-      <div className="bg-card border border-border/50 rounded-2xl overflow-hidden shadow-card">
+      <div className="rounded-2xl border border-border/50 bg-card shadow-card overflow-hidden dark:border-[#333] dark:bg-[rgba(31,31,31,0.65)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.35)] dark:backdrop-blur-sm">
         <div
           className="overflow-x-auto"
           style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorX: "contain" }}

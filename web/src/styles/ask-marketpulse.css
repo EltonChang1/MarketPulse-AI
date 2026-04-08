@@ -187,3 +187,52 @@
     border-radius: 16px 16px 0 0;
   }
 }
+
+/* Match signup / app shell (dark) */
+.dark .ask-mp-fab {
+  background: linear-gradient(to bottom right, #f4f4f5, #d4d4d8);
+  color: #0a0a0a;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+}
+
+.dark .ask-mp-backdrop {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.dark .ask-mp-panel {
+  background: rgba(31, 31, 31, 0.92);
+  border: 1px solid #333;
+  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(10px);
+}
+
+.dark .ask-mp-head {
+  border-bottom-color: #333;
+}
+
+.dark .ask-mp-head h2 {
+  color: #fafafa;
+}
+
+.dark .ask-mp-context {
+  background: rgba(0, 0, 0, 0.35);
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.dark .ask-mp-msg-user {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fafafa;
+}
+
+.dark .ask-mp-input {
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fafafa;
+}
+
+.dark .ask-mp-send {
+  border-radius: 9999px;
+  background: linear-gradient(to bottom right, #f4f4f5, #d4d4d8);
+  color: #0a0a0a;
+}

@@ -142,3 +142,29 @@
   margin: 40px 0;
   text-align: center;
 }
+
+.dark .briefings-page {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.dark .briefings-back {
+  color: #a1a1aa;
+}
+
+.dark .briefings-back:hover {
+  color: #fafafa;
+}
+
+.dark .briefings-list li button {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: transparent;
+}
+
+.dark .briefings-list li button:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.dark .briefings-list li button.active {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.1);
+}

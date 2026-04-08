@@ -1187,3 +1187,82 @@
   background: rgba(127, 29, 29, 0.28);
   color: #fecaca;
 }
+
+.dark .portfolio-page {
+  background: transparent;
+}
+
+.dark .movers-list-card {
+  background: rgba(31, 31, 31, 0.55);
+  border-color: #333;
+}
+
+.dark .market-card {
+  background: rgba(31, 31, 31, 0.45);
+  border-color: #333;
+}
+
+.dark .market-card:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45);
+}
+
+.dark .market-card-btn {
+  border-radius: 9999px;
+  background: linear-gradient(to bottom right, #f4f4f5, #d4d4d8);
+  color: #0a0a0a;
+}
+
+.dark .market-card-btn:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.dark .market-card-btn-secondary {
+  background: transparent;
+  color: #d4d4d8;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.dark .market-card-btn-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.dark .sidebar-header h3,
+.dark .portfolio-mini-header h4 {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.dark .sidebar-toggle {
+  border-color: #333;
+  background: rgba(31, 31, 31, 0.62);
+  color: #d4d4d8;
+}
+
+.dark .portfolio-mini-manage {
+  border-radius: 9999px;
+  border: 1px solid #333;
+  background: rgba(31, 31, 31, 0.62);
+  color: #d4d4d8;
+}
+
+.dark .portfolio-form input,
+.dark .portfolio-form select {
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: hsl(var(--foreground));
+}
+
+.dark .portfolio-form select {
+  background: rgba(31, 31, 31, 0.9);
+}
+
+.dark .portfolio-stats-grid > div {
+  border-color: #333;
+  background: rgba(31, 31, 31, 0.45);
+}
+
+.dark .section-loading {
+  color: rgba(255, 255, 255, 0.55);
+}
