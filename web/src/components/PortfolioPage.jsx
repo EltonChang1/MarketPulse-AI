@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "@/context/ThemeContext";
+import { tokenColor } from "@/lib/themeTokens";
 import {
   derivePortfolioHoldings,
   getPortfolioModelForUser,
@@ -14,12 +16,6 @@ import { Card, CardContent } from "./ui/card";
 import "../styles/dashboard.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
-const INDEX_BENCHMARKS = [
-  { symbol: "^DJI", label: "DJIA", color: "#18181b" },
-  { symbol: "^IXIC", label: "NASDAQ", color: "#52525b" },
-  { symbol: "^GSPC", label: "S&P 500", color: "#737373" },
-  { symbol: "^RUT", label: "Russell 2000", color: "#a1a1aa" },
-];
 
 function formatCurrency(value) {
   if (typeof value !== "number" || Number.isNaN(value)) return "-";
@@ -56,8 +52,8 @@ function dateToTs(date) {
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
-function buildConicGradient(segments) {
-  if (!segments.length) return "conic-gradient(#d4d4d8 0deg, #d4d4d8 360deg)";
+function buildConicGradient(segments, emptyColor) {
+  if (!segments.length) return `conic-gradient(${emptyColor} 0deg, ${emptyColor} 360deg)`;
 
   let running = 0;
   const parts = segments.map((segment) => {
@@ -163,7 +159,7 @@ function computeBenchmarkSeries(baseDates, points, startDate) {
   return result;
 }
 
-function ComparisonChart({ portfolioSeries, benchmarkSeries }) {
+function ComparisonChart({ portfolioSeries, benchmarkSeries, chartColors }) {
   const width = 920;
   const height = 300;
   const pad = { top: 16, right: 14, bottom: 34, left: 40 };
@@ -201,15 +197,15 @@ function ComparisonChart({ portfolioSeries, benchmarkSeries }) {
           const yPos = y(value);
           return (
             <g key={step}>
-              <line x1={pad.left} y1={yPos} x2={width - pad.right} y2={yPos} stroke="#e4e4e7" strokeWidth="1" />
+              <line x1={pad.left} y1={yPos} x2={width - pad.right} y2={yPos} stroke={chartColors.grid} strokeWidth="1" />
               <text x={6} y={yPos + 4} className="portfolio-axis-label">{value.toFixed(0)}%</text>
             </g>
           );
         })}
 
-        <line x1={pad.left} y1={y(0)} x2={width - pad.right} y2={y(0)} stroke="#a1a1aa" strokeDasharray="4 4" strokeWidth="1.2" />
+        <line x1={pad.left} y1={y(0)} x2={width - pad.right} y2={y(0)} stroke={chartColors.zeroLine} strokeDasharray="4 4" strokeWidth="1.2" />
 
-        <path d={pathFromSeries(portfolioSeries)} fill="none" stroke="#18181b" strokeWidth="2.5" />
+        <path d={pathFromSeries(portfolioSeries)} fill="none" stroke={chartColors.portfolio} strokeWidth="2.5" />
         {benchmarkSeries.map((item) => (
           <path key={item.symbol} d={pathFromSeries(item.series)} fill="none" stroke={item.color} strokeWidth="2" opacity="0.95" />
         ))}
@@ -219,7 +215,7 @@ function ComparisonChart({ portfolioSeries, benchmarkSeries }) {
       </svg>
 
       <div className="portfolio-line-legend">
-        <span><i style={{ background: "#18181b" }} /> Portfolio</span>
+        <span><i style={{ background: chartColors.portfolio }} /> Portfolio</span>
         {benchmarkSeries.map((item) => (
           <span key={item.symbol}><i style={{ background: item.color }} /> {item.label}</span>
         ))}
@@ -231,6 +227,29 @@ function ComparisonChart({ portfolioSeries, benchmarkSeries }) {
 export default function PortfolioPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { theme } = useTheme();
+  const chartColors = useMemo(
+    () => ({
+      primary: tokenColor("primary"),
+      foreground: tokenColor("foreground"),
+      mutedForeground: tokenColor("muted-foreground"),
+      border: tokenColor("border"),
+      portfolio: tokenColor("primary"),
+      grid: tokenColor("border"),
+      zeroLine: tokenColor("muted-foreground"),
+      conicEmpty: tokenColor("border"),
+    }),
+    [theme]
+  );
+  const indexBenchmarks = useMemo(
+    () => [
+      { symbol: "^DJI", label: "DJIA", color: chartColors.primary },
+      { symbol: "^IXIC", label: "NASDAQ", color: chartColors.foreground },
+      { symbol: "^GSPC", label: "S&P 500", color: chartColors.mutedForeground },
+      { symbol: "^RUT", label: "Russell 2000", color: chartColors.border },
+    ],
+    [chartColors]
+  );
 
   const [transactions, setTransactions] = useState(() => getPortfolioModelForUser(user).transactions || []);
   const [symbolInput, setSymbolInput] = useState("");
@@ -283,7 +302,7 @@ export default function PortfolioPage() {
         setMarketSnapshots(detailMap);
 
         const benchmarkResponses = await Promise.all(
-          INDEX_BENCHMARKS.map(async (benchmark) => {
+          indexBenchmarks.map(async (benchmark) => {
             const { data } = await axios.get(`${API_BASE_URL}/api/analyze/${encodeURIComponent(benchmark.symbol)}`, {
               params: { markers: 10, perIndicator: 3 },
             });
@@ -347,7 +366,7 @@ export default function PortfolioPage() {
     }
 
     loadPortfolioData();
-  }, [transactions]);
+  }, [transactions, indexBenchmarks]);
 
   const holdingRows = useMemo(() => {
     return holdings.map((holding) => {
@@ -380,7 +399,16 @@ export default function PortfolioPage() {
   const pieSegments = useMemo(() => {
     if (totals.value <= 0) return [];
 
-    const palette = ["#18181b", "#3f3f46", "#52525b", "#71717a", "#a1a1aa", "#d4d4d8", "#09090b", "#27272a"];
+    const palette = [
+      chartColors.primary,
+      chartColors.foreground,
+      chartColors.mutedForeground,
+      chartColors.border,
+      tokenColor("secondary"),
+      tokenColor("accent"),
+      tokenColor("card-foreground", chartColors.foreground),
+      tokenColor("primary-hover", chartColors.primary),
+    ];
     return holdingRows
       .filter((row) => typeof row.marketValue === "number" && row.marketValue > 0)
       .map((row, idx) => ({
@@ -389,7 +417,7 @@ export default function PortfolioPage() {
         percentage: (row.marketValue / totals.value) * 100,
         color: palette[idx % palette.length],
       }));
-  }, [holdingRows, totals.value]);
+  }, [holdingRows, totals.value, chartColors]);
 
   function clearInputs() {
     setSymbolInput("");
@@ -460,7 +488,7 @@ export default function PortfolioPage() {
     setTransactions((prev) => prev.filter((tx) => tx.id !== id));
   }
 
-  const chartBackground = buildConicGradient(pieSegments);
+  const chartBackground = buildConicGradient(pieSegments, chartColors.conicEmpty);
 
   return (
     <div className="portfolio-page">
@@ -589,6 +617,7 @@ export default function PortfolioPage() {
           <ComparisonChart
             portfolioSeries={comparisonSeries.portfolio}
             benchmarkSeries={comparisonSeries.benchmarks}
+            chartColors={chartColors}
           />
           </CardContent>
         </Card>

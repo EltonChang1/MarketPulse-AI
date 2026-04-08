@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTheme } from "@/context/ThemeContext";
+import { tokenColor } from "@/lib/themeTokens";
 
 function toTradingViewSymbol(symbol = "") {
   const normalized = String(symbol || "").toUpperCase().replace(/-/g, ".");
@@ -69,9 +71,11 @@ function loadTradingViewScript() {
 }
 
 export default function TradingViewChart({ symbol }) {
+  const { theme } = useTheme();
   const widgetContainerId = useRef(`tradingview_${Math.random().toString(36).slice(2)}`);
   const [showPatternTrend, setShowPatternTrend] = useState(true);
   const tvSymbol = useMemo(() => toTradingViewSymbol(symbol), [symbol]);
+  const trendColor = useMemo(() => tokenColor("foreground"), [theme]);
 
   useEffect(() => {
     let isDisposed = false;
@@ -91,7 +95,7 @@ export default function TradingViewChart({ symbol }) {
           symbol: tvSymbol,
           interval: "D",
           timezone: "Etc/UTC",
-          theme: "light",
+          theme: theme === "dark" ? "dark" : "light",
           style: "1",
           locale: "en",
           enable_publishing: false,
@@ -99,7 +103,7 @@ export default function TradingViewChart({ symbol }) {
           studies: showPatternTrend ? ["Linear Regression@tv-basicstudies"] : [],
           studies_overrides: showPatternTrend
             ? {
-                "linreg.plot.color": "#3f3f46",
+                "linreg.plot.color": trendColor,
                 "linreg.plot.linewidth": 2,
               }
             : {},
@@ -123,7 +127,7 @@ export default function TradingViewChart({ symbol }) {
       const container = document.getElementById(widgetContainerId.current);
       if (container) container.innerHTML = "";
     };
-  }, [tvSymbol, showPatternTrend]);
+  }, [tvSymbol, showPatternTrend, theme, trendColor]);
 
   return (
     <div className="tradingview-wrapper">

@@ -4,6 +4,8 @@ import CandlestickChart from "./CandlestickChart";
 import SignalCharts from "./SignalCharts";
 import PatternOverlay from "./PatternOverlay";
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "@/context/ThemeContext";
+import { tokenColor } from "@/lib/themeTokens";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 
@@ -38,27 +40,27 @@ function formatPercent(value) {
 }
 
 function bbPositionLabel(v) {
-  if (v <= 0.15) return { label: "Near Lower Band ↑ Potential Bounce", color: "#166534" };
-  if (v <= 0.35) return { label: "Lower Half — Mild Bullish Bias", color: "#3f3f46" };
-  if (v <= 0.65) return { label: "Mid Channel — Neutral", color: "#71717a" };
-  if (v <= 0.85) return { label: "Upper Half — Mild Bearish Bias", color: "#52525b" };
-  return { label: "Near Upper Band ↓ Potential Reversal", color: "#b91c1c" };
+  if (v <= 0.15) return { label: "Near Lower Band ↑ Potential Bounce", color: tokenColor("positive") };
+  if (v <= 0.35) return { label: "Lower Half — Mild Bullish Bias", color: tokenColor("foreground") };
+  if (v <= 0.65) return { label: "Mid Channel — Neutral", color: tokenColor("muted-foreground") };
+  if (v <= 0.85) return { label: "Upper Half — Mild Bearish Bias", color: tokenColor("foreground") };
+  return { label: "Near Upper Band ↓ Potential Reversal", color: tokenColor("destructive") };
 }
 
 function rsiZoneInfo(rsi) {
-  if (rsi < 30) return { label: `Oversold (${rsi.toFixed(1)}) — Watch for bullish reversal`, color: "#166534", bg: "#f4f4f5" };
-  if (rsi < 45) return { label: `Bearish zone (${rsi.toFixed(1)})`, color: "#52525b", bg: "#f4f4f5" };
-  if (rsi < 55) return { label: `Neutral (${rsi.toFixed(1)})`, color: "#71717a", bg: "#fafafa" };
-  if (rsi < 70) return { label: `Bullish zone (${rsi.toFixed(1)})`, color: "#3f3f46", bg: "#f4f4f5" };
-  return { label: `Overbought (${rsi.toFixed(1)}) — Watch for bearish reversal`, color: "#b91c1c", bg: "#f4f4f5" };
+  if (rsi < 30) return { label: `Oversold (${rsi.toFixed(1)}) — Watch for bullish reversal`, color: tokenColor("positive"), bg: tokenColor("muted") };
+  if (rsi < 45) return { label: `Bearish zone (${rsi.toFixed(1)})`, color: tokenColor("foreground"), bg: tokenColor("muted") };
+  if (rsi < 55) return { label: `Neutral (${rsi.toFixed(1)})`, color: tokenColor("muted-foreground"), bg: tokenColor("card") };
+  if (rsi < 70) return { label: `Bullish zone (${rsi.toFixed(1)})`, color: tokenColor("foreground"), bg: tokenColor("muted") };
+  return { label: `Overbought (${rsi.toFixed(1)}) — Watch for bearish reversal`, color: tokenColor("destructive"), bg: tokenColor("muted") };
 }
 
 function volumeLabel(ratio) {
-  if (ratio >= 3) return { label: `${ratio}× avg — Extreme spike! Strong signal`, color: "#18181b" };
-  if (ratio >= 2) return { label: `${ratio}× avg — Big spike`, color: "#b91c1c" };
-  if (ratio >= 1.5) return { label: `${ratio}× avg — Notable volume`, color: "#52525b" };
-  if (ratio >= 0.8) return { label: `${ratio}× avg — Normal`, color: "#3f3f46" };
-  return { label: `${ratio}× avg — Low volume (weak signal)`, color: "#a1a1aa" };
+  if (ratio >= 3) return { label: `${ratio}× avg — Extreme spike! Strong signal`, color: tokenColor("primary") };
+  if (ratio >= 2) return { label: `${ratio}× avg — Big spike`, color: tokenColor("destructive") };
+  if (ratio >= 1.5) return { label: `${ratio}× avg — Notable volume`, color: tokenColor("foreground") };
+  if (ratio >= 0.8) return { label: `${ratio}× avg — Normal`, color: tokenColor("foreground") };
+  return { label: `${ratio}× avg — Low volume (weak signal)`, color: tokenColor("muted-foreground") };
 }
 
 export default function StockDetailView({
@@ -67,6 +69,7 @@ export default function StockDetailView({
   selectedPrediction,
   onSelectedPredictionChange,
 }) {
+  useTheme();
   const { isAuthenticated, user, addToWatchlist, removeFromWatchlist } = useAuth();
   const [internalSelectedPrediction, setInternalSelectedPrediction] = useState("week");
   const [showBasis, setShowBasis] = useState(false);
@@ -459,7 +462,7 @@ export default function StockDetailView({
               <div className="rev-card-title">⚡ RSI vs Stochastic Divergence</div>
               {rm.divergence.hasRsiStochDivergence ? (
                 <>
-                  <div className="rev-signal" style={{ color: "#3f3f46" }}>
+                  <div className="rev-signal" style={{ color: tokenColor("foreground") }}>
                     DIVERGENCE DETECTED — Possible trend reversal ahead
                   </div>
                   <div className="rev-detail">
@@ -470,7 +473,7 @@ export default function StockDetailView({
                 </>
               ) : (
                 <>
-                  <div className="rev-signal" style={{ color: "#166534" }}>
+                  <div className="rev-signal" style={{ color: tokenColor("positive") }}>
                     Aligned — RSI & Stochastic agree on direction
                   </div>
                   <div className="rev-detail">

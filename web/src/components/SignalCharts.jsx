@@ -1,17 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from "chart.js";
+import { useTheme } from "@/context/ThemeContext";
+import { tokenColor, tokenColorAlpha } from "@/lib/themeTokens";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-const SIGNAL_COLORS = {
-  RSI: "#18181b",
-  MACD: "#52525b",
-  Stochastic: "#737373",
-  ADX: "#a1a1aa",
-  OBV: "#3f3f46",
-};
-
 export default function SignalCharts({ stock }) {
+  const { theme } = useTheme();
   const [activeSignals, setActiveSignals] = useState({
     RSI: true,
     MACD: false,
@@ -19,12 +14,30 @@ export default function SignalCharts({ stock }) {
     ADX: false,
     OBV: false,
   });
-  
+
   const chartRefs = useRef({});
   const chartInstances = useRef({});
-  
   const indicatorSeries = stock?.technicalForecast?.indicatorSeries || {};
   const history = stock?.candlestickData || [];
+
+  const palette = {
+    primary: tokenColor("primary"),
+    foreground: tokenColor("foreground"),
+    mutedForeground: tokenColor("muted-foreground"),
+    positive: tokenColor("positive"),
+    destructive: tokenColor("destructive"),
+    foregroundSoft: tokenColorAlpha("foreground", 0.08, "rgba(17,24,39,0.08)"),
+    foregroundLineSoft: tokenColorAlpha("foreground", 0.3, "rgba(17,24,39,0.3)"),
+    primaryForeground: tokenColor("primary-foreground", "rgb(250 250 250)"),
+  };
+
+  const signalColors = {
+    RSI: palette.primary,
+    MACD: palette.foreground,
+    Stochastic: palette.mutedForeground,
+    ADX: palette.foregroundLineSoft,
+    OBV: palette.foreground,
+  };
 
   const toggleSignal = (signal) => {
     setActiveSignals((prev) => ({ ...prev, [signal]: !prev[signal] }));
@@ -32,80 +45,80 @@ export default function SignalCharts({ stock }) {
 
   useEffect(() => {
     if (!history.length || !indicatorSeries) return;
-
     const labels = history.slice(-100).map((h) => h.date);
 
-    // RSI Chart
     if (activeSignals.RSI && chartRefs.current.RSI) {
       const rsiData = indicatorSeries.rsi14?.slice(-100) || [];
       if (rsiData.length > 0) {
-        renderChart("RSI", labels, rsiData, "#18181b", [
-          { value: 70, label: "Overbought", color: "#b91c1c" },
-          { value: 30, label: "Oversold", color: "#166534" },
+        renderChart("RSI", labels, rsiData, palette.primary, [
+          { value: 70, label: "Overbought", color: palette.destructive },
+          { value: 30, label: "Oversold", color: palette.positive },
         ]);
       }
     }
 
-    // MACD Chart
     if (activeSignals.MACD && chartRefs.current.MACD) {
       const macdLine = indicatorSeries.macd?.slice(-100) || [];
       const signalLine = indicatorSeries.macdSignal?.slice(-100) || [];
       if (macdLine.length > 0 || signalLine.length > 0) {
-        renderChartMulti("MACD", labels, [
-          { label: "MACD", data: macdLine, color: "#18181b" },
-          { label: "Signal", data: signalLine, color: "#737373" },
-        ], [{ value: 0, label: "Zero", color: "#a1a1aa" }]);
+        renderChartMulti(
+          "MACD",
+          labels,
+          [
+            { label: "MACD", data: macdLine, color: palette.primary },
+            { label: "Signal", data: signalLine, color: palette.mutedForeground },
+          ],
+          [{ value: 0, label: "Zero", color: palette.foregroundLineSoft }]
+        );
       }
     }
 
-    // Stochastic Chart
     if (activeSignals.Stochastic && chartRefs.current.Stochastic) {
       const kLine = indicatorSeries.stochK?.slice(-100) || [];
       const dLine = indicatorSeries.stochD?.slice(-100) || [];
       if (kLine.length > 0 || dLine.length > 0) {
-        renderChartMulti("Stochastic", labels, [
-          { label: "%K", data: kLine, color: "#3f3f46" },
-          { label: "%D", data: dLine, color: "#a1a1aa" },
-        ], [
-          { value: 80, label: "Overbought", color: "#b91c1c" },
-          { value: 20, label: "Oversold", color: "#166534" },
-        ]);
+        renderChartMulti(
+          "Stochastic",
+          labels,
+          [
+            { label: "%K", data: kLine, color: palette.foreground },
+            { label: "%D", data: dLine, color: palette.foregroundLineSoft },
+          ],
+          [
+            { value: 80, label: "Overbought", color: palette.destructive },
+            { value: 20, label: "Oversold", color: palette.positive },
+          ]
+        );
       }
     }
 
-    // ADX Chart
     if (activeSignals.ADX && chartRefs.current.ADX) {
       const adxData = indicatorSeries.adx?.slice(-100) || [];
       if (adxData.length > 0) {
-        renderChart("ADX", labels, adxData, "#52525b", [
-          { value: 25, label: "Strong Trend", color: "#18181b" },
+        renderChart("ADX", labels, adxData, palette.foreground, [
+          { value: 25, label: "Strong Trend", color: palette.primary },
         ]);
       }
     }
 
-    // OBV Chart
     if (activeSignals.OBV && chartRefs.current.OBV) {
       const obvData = indicatorSeries.obv?.slice(-100) || [];
       if (obvData.length > 0) {
-        renderChart("OBV", labels, obvData, "#71717a", []);
+        renderChart("OBV", labels, obvData, palette.mutedForeground, []);
       }
     }
 
     return () => {
-      Object.values(chartInstances.current).forEach((chart) => {
-        if (chart) chart.destroy();
-      });
+      Object.values(chartInstances.current).forEach((chart) => chart && chart.destroy());
       chartInstances.current = {};
     };
-  }, [activeSignals, indicatorSeries, history]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSignals, indicatorSeries, history, theme]);
 
   function renderChart(signal, labels, data, color, refLines = []) {
     const canvasRef = chartRefs.current[signal];
     if (!canvasRef || !data.length) return;
-
-    if (chartInstances.current[signal]) {
-      chartInstances.current[signal].destroy();
-    }
+    if (chartInstances.current[signal]) chartInstances.current[signal].destroy();
 
     const ctx = canvasRef.getContext("2d");
     const datasets = [
@@ -113,7 +126,7 @@ export default function SignalCharts({ stock }) {
         label: signal,
         data,
         borderColor: color,
-        backgroundColor: `${color}15`,
+        backgroundColor: palette.foregroundSoft,
         fill: true,
         tension: 0.3,
         pointRadius: 0,
@@ -152,10 +165,7 @@ export default function SignalCharts({ stock }) {
   function renderChartMulti(signal, labels, lineData, refLines = []) {
     const canvasRef = chartRefs.current[signal];
     if (!canvasRef || !lineData.length) return;
-
-    if (chartInstances.current[signal]) {
-      chartInstances.current[signal].destroy();
-    }
+    if (chartInstances.current[signal]) chartInstances.current[signal].destroy();
 
     const ctx = canvasRef.getContext("2d");
     const datasets = [
@@ -163,7 +173,7 @@ export default function SignalCharts({ stock }) {
         label: line.label,
         data: line.data,
         borderColor: line.color,
-        backgroundColor: `${line.color}15`,
+        backgroundColor: palette.foregroundSoft,
         fill: false,
         tension: 0.3,
         pointRadius: 0,
@@ -202,7 +212,6 @@ export default function SignalCharts({ stock }) {
   return (
     <div className="signal-charts-section">
       <h3>📊 Technical Signal Charts</h3>
-      
       <div className="signal-toggles">
         {Object.keys(activeSignals).map((signal) => (
           <button
@@ -210,9 +219,9 @@ export default function SignalCharts({ stock }) {
             className={`signal-toggle ${activeSignals[signal] ? "active" : ""}`}
             onClick={() => toggleSignal(signal)}
             style={{
-              borderColor: SIGNAL_COLORS[signal],
-              color: activeSignals[signal] ? "#fafafa" : SIGNAL_COLORS[signal],
-              backgroundColor: activeSignals[signal] ? SIGNAL_COLORS[signal] : "transparent",
+              borderColor: signalColors[signal],
+              color: activeSignals[signal] ? palette.primaryForeground : signalColors[signal],
+              backgroundColor: activeSignals[signal] ? signalColors[signal] : "transparent",
             }}
           >
             {signal}
@@ -221,31 +230,11 @@ export default function SignalCharts({ stock }) {
       </div>
 
       <div className="signal-charts-grid">
-        {activeSignals.RSI && (
-          <div className="signal-chart-wrap">
-            <canvas ref={(ref) => (chartRefs.current.RSI = ref)} />
-          </div>
-        )}
-        {activeSignals.MACD && (
-          <div className="signal-chart-wrap">
-            <canvas ref={(ref) => (chartRefs.current.MACD = ref)} />
-          </div>
-        )}
-        {activeSignals.Stochastic && (
-          <div className="signal-chart-wrap">
-            <canvas ref={(ref) => (chartRefs.current.Stochastic = ref)} />
-          </div>
-        )}
-        {activeSignals.ADX && (
-          <div className="signal-chart-wrap">
-            <canvas ref={(ref) => (chartRefs.current.ADX = ref)} />
-          </div>
-        )}
-        {activeSignals.OBV && (
-          <div className="signal-chart-wrap">
-            <canvas ref={(ref) => (chartRefs.current.OBV = ref)} />
-          </div>
-        )}
+        {activeSignals.RSI && <div className="signal-chart-wrap"><canvas ref={(ref) => (chartRefs.current.RSI = ref)} /></div>}
+        {activeSignals.MACD && <div className="signal-chart-wrap"><canvas ref={(ref) => (chartRefs.current.MACD = ref)} /></div>}
+        {activeSignals.Stochastic && <div className="signal-chart-wrap"><canvas ref={(ref) => (chartRefs.current.Stochastic = ref)} /></div>}
+        {activeSignals.ADX && <div className="signal-chart-wrap"><canvas ref={(ref) => (chartRefs.current.ADX = ref)} /></div>}
+        {activeSignals.OBV && <div className="signal-chart-wrap"><canvas ref={(ref) => (chartRefs.current.OBV = ref)} /></div>}
       </div>
     </div>
   );

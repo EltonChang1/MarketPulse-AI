@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { tokenColor } from "@/lib/themeTokens";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 const FALLBACK_SYMBOLS = ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA", "AVGO", "JPM", "BRK-B"];
@@ -44,7 +45,7 @@ function MiniCandles({ candles = [] }) {
         const top = Math.min(openY, closeY);
         const bodyHeight = Math.max(1, Math.abs(closeY - openY));
         const up = candle.close >= candle.open;
-        const color = up ? "#166534" : "#b91c1c";
+        const color = up ? tokenColor("positive") : tokenColor("destructive");
 
         return (
           <g key={`${candle.time || idx}-${idx}`}>
