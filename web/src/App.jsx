@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { HashRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
@@ -403,12 +403,20 @@ function AppHeader() {
   const navigate = useNavigate();
 
   const initials = user
-    ? (user.firstName ? user.firstName[0] : user.email[0]).toUpperCase()
+    ? (
+        user.username?.trim()
+          ? user.username.trim()[0]
+          : user.firstName
+            ? user.firstName[0]
+            : user.email[0]
+      ).toUpperCase()
     : "";
 
-  const displayName = user?.firstName
-    ? `${user.firstName}${user.lastName ? " " + user.lastName : ""}`
-    : user?.email || "";
+  const displayName = user?.username?.trim()
+    ? user.username.trim()
+    : user?.firstName
+      ? `${user.firstName}${user.lastName ? " " + user.lastName : ""}`
+      : user?.email || "";
 
   return (
     <header className="app-header">
@@ -441,6 +449,13 @@ function AppHeader() {
               >
                 Briefings
               </button>
+              <button
+                type="button"
+                className="header-btn header-btn-outline"
+                onClick={() => navigate("/classic")}
+              >
+                Classic
+              </button>
               <div className="user-avatar" title={displayName}>{initials}</div>
               <span className="user-display-name">{displayName}</span>
               <button
@@ -464,6 +479,13 @@ function AppHeader() {
               >
                 Sign Up
               </button>
+              <button
+                type="button"
+                className="header-btn header-btn-outline"
+                onClick={() => navigate("/classic")}
+              >
+                Classic
+              </button>
             </>
           )
         )}
@@ -472,27 +494,36 @@ function AppHeader() {
   );
 }
 
+function AppRoutes() {
+  const { pathname } = useLocation();
+  const authSurface = pathname === "/signup" || pathname === "/signin";
+
+  return (
+    <div className="min-h-screen bg-background">
+      {!authSurface ? <AppHeader /> : null}
+      <Routes>
+        <Route path="/signup" element={<RedirectIfAuth><SignUpPage /></RedirectIfAuth>} />
+        <Route path="/signin" element={<RedirectIfAuth><SignInPage /></RedirectIfAuth>} />
+        <Route path="/" element={<HomePage />} />
+        <Route path="/stock/:symbol" element={<StockDetailPage />} />
+        <Route path="/portfolio" element={<PortfolioPage />} />
+        <Route path="/briefings" element={<BriefingsPage />} />
+        <Route path="/classic" element={<ClassicApp />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      {!authSurface ? <AskMarketPulse /> : null}
+    </div>
+  );
+}
+
 // Main App Router
 export default function App() {
   return (
     <Router>
       <ThemeProvider>
-      <AuthProvider>
-        <div className="min-h-screen bg-background">
-        <AppHeader />
-        <Routes>
-          <Route path="/signup" element={<RedirectIfAuth><SignUpPage /></RedirectIfAuth>} />
-          <Route path="/signin" element={<RedirectIfAuth><SignInPage /></RedirectIfAuth>} />
-          <Route path="/" element={<HomePage />} />
-          <Route path="/stock/:symbol" element={<StockDetailPage />} />
-          <Route path="/portfolio" element={<PortfolioPage />} />
-          <Route path="/briefings" element={<BriefingsPage />} />
-          <Route path="/classic" element={<ClassicApp />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        <AskMarketPulse />
-        </div>
-      </AuthProvider>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
       </ThemeProvider>
     </Router>
   );

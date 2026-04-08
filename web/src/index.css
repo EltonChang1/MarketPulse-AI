@@ -107,3 +107,27 @@
       sans-serif;
   }
 }
+
+/* 21st.dev-inspired auth backdrop (sign-in-flow-1 port) — CSS dot field */
+@keyframes auth-flow-dots-pulse {
+  0%,
+  100% {
+    opacity: 0.42;
+  }
+  50% {
+    opacity: 0.62;
+  }
+}
+
+.auth-flow-dot-layer {
+  background-color: #000;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px);
+  background-size: 22px 22px;
+  animation: auth-flow-dots-pulse 7s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-flow-dot-layer {
+    animation: none;
+  }
+}

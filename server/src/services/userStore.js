@@ -7,12 +7,14 @@ const hasMongoConfigured = Boolean(process.env.MONGODB_URI);
 
 const memoryUsersById = new Map();
 const memoryEmailToId = new Map();
+const memoryUsernameLowerToId = new Map();
 let nextUserId = 1;
 
 function toPublicUser(user) {
   return {
     id: user.id,
     email: user.email,
+    username: user.username || "",
     firstName: user.firstName || "",
     lastName: user.lastName || "",
     watchlist: Array.isArray(user.watchlist) ? user.watchlist : [],
@@ -25,11 +27,18 @@ function signToken(user) {
   });
 }
 
-async function memoryCreateUser({ email, password, firstName = "", lastName = "" }) {
+async function memoryCreateUser({ email, password, username = "", firstName = "", lastName = "" }) {
   const normalizedEmail = email.toLowerCase();
   if (memoryEmailToId.has(normalizedEmail)) {
     const error = new Error("Email already in use");
     error.code = "DUPLICATE_EMAIL";
+    throw error;
+  }
+
+  const usernameLower = String(username || "").trim().toLowerCase();
+  if (usernameLower && memoryUsernameLowerToId.has(usernameLower)) {
+    const error = new Error("Username already taken");
+    error.code = "DUPLICATE_USERNAME";
     throw error;
   }
 
@@ -38,6 +47,7 @@ async function memoryCreateUser({ email, password, firstName = "", lastName = ""
   const user = {
     id,
     email: normalizedEmail,
+    username: String(username || "").trim(),
     passwordHash,
     firstName,
     lastName,
@@ -46,6 +56,7 @@ async function memoryCreateUser({ email, password, firstName = "", lastName = ""
 
   memoryUsersById.set(id, user);
   memoryEmailToId.set(normalizedEmail, id);
+  if (usernameLower) memoryUsernameLowerToId.set(usernameLower, id);
 
   return user;
 }
@@ -61,11 +72,13 @@ async function memoryFindById(id) {
   return memoryUsersById.get(String(id)) || null;
 }
 
-export async function createUser({ email, password, firstName = "", lastName = "" }) {
+export async function createUser({ email, password, username = "", firstName = "", lastName = "" }) {
   if (hasMongoConfigured) {
+    const trimmedUsername = String(username || "").trim();
     const user = new User({
       email: email.toLowerCase(),
       password,
+      username: trimmedUsername,
       firstName,
       lastName,
       watchlist: [],
@@ -75,6 +88,7 @@ export async function createUser({ email, password, firstName = "", lastName = "
       user: {
         id: String(user._id),
         email: user.email,
+        username: user.username || "",
         firstName: user.firstName,
         lastName: user.lastName,
         watchlist: user.watchlist,
@@ -83,7 +97,7 @@ export async function createUser({ email, password, firstName = "", lastName = "
     };
   }
 
-  const memUser = await memoryCreateUser({ email, password, firstName, lastName });
+  const memUser = await memoryCreateUser({ email, password, username, firstName, lastName });
   const publicUser = toPublicUser(memUser);
   return { user: publicUser, token: signToken(publicUser) };
 }
@@ -99,6 +113,7 @@ export async function signInUser({ email, password }) {
       user: {
         id: String(user._id),
         email: user.email,
+        username: user.username || "",
         firstName: user.firstName,
         lastName: user.lastName,
         watchlist: user.watchlist,
@@ -132,6 +147,7 @@ export async function getUserById(userId) {
     return {
       id: String(user._id),
       email: user.email,
+      username: user.username || "",
       firstName: user.firstName,
       lastName: user.lastName,
       watchlist: user.watchlist,
@@ -149,6 +165,7 @@ export async function updateUserProfile(userId, { firstName = "", lastName = "" 
     return {
       id: String(user._id),
       email: user.email,
+      username: user.username || "",
       firstName: user.firstName,
       lastName: user.lastName,
       watchlist: user.watchlist,

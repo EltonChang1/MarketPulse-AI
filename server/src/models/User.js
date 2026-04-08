@@ -16,6 +16,16 @@ const userSchema = new mongoose.Schema(
       required: true,
       minlength: 6,
     },
+    username: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    usernameLower: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     firstName: {
       type: String,
       default: "",
@@ -31,6 +41,14 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+userSchema.pre("save", function setUsernameLower(next) {
+  if (this.isModified("username")) {
+    const u = String(this.username || "").trim();
+    this.usernameLower = u ? u.toLowerCase() : "";
+  }
+  next();
+});
 
 // Hash password before saving
 userSchema.pre("save", async function (next) {
@@ -57,5 +75,13 @@ userSchema.methods.getToken = function () {
     expiresIn: "7d",
   });
 };
+
+userSchema.index(
+  { usernameLower: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { usernameLower: { $type: "string", $gt: "" } },
+  }
+);
 
 export default mongoose.model("User", userSchema);

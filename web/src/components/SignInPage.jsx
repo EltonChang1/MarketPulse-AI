@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
-import "../styles/auth.css";
+import { useNavigate, Link } from "react-router-dom";
+import { SignUpAuthShell } from "./ui/sign-in-flow-1";
 
 export default function SignInPage() {
   const { signin } = useAuth();
@@ -33,50 +33,59 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <div className="auth-header">
-          <h1>Welcome Back</h1>
-          <p>Sign in to MarketPulse AI Dashboard</p>
+    <SignUpAuthShell title="Welcome back" subtitle="Sign in to MarketPulse AI">
+      <form onSubmit={handleSubmit} className="space-y-4 text-left">
+        <div>
+          <label htmlFor="si-email" className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-white/50">
+            Email
+          </label>
+          <input
+            id="si-email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@email.com"
+            required
+            className="w-full rounded-full border border-white/10 bg-white/[0.06] px-4 py-3 text-center text-sm text-white placeholder:text-white/35 backdrop-blur-[1px] focus:border-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/35"
+          />
         </div>
 
-        <form onSubmit={handleSubmit} className="auth-form">
-          <div className="form-group">
-            <label>Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="your@email.com"
-              required
-            />
-          </div>
+        <div>
+          <label htmlFor="si-password" className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-white/50">
+            Password
+          </label>
+          <input
+            id="si-password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter your password"
+            required
+            className="w-full rounded-full border border-white/10 bg-white/[0.06] px-4 py-3 text-center text-sm text-white placeholder:text-white/35 backdrop-blur-[1px] focus:border-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/35"
+          />
+        </div>
 
-          <div className="form-group">
-            <label>Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
-              required
-            />
-          </div>
+        {error ? (
+          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-center text-sm text-red-200">{error}</div>
+        ) : null}
 
-          {error && <div className="error-message">{error}</div>}
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full rounded-full bg-white py-3 text-sm font-semibold text-black transition-colors hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {loading ? "Signing in…" : "Sign in"}
+        </button>
+      </form>
 
-          <button type="submit" className="auth-button" disabled={loading}>
-            {loading ? "Signing In..." : "Sign In"}
-          </button>
-        </form>
-
-        <p className="auth-footer">
-          Don't have an account?{" "}
-          <a href="/signup" onClick={() => navigate("/signup")}>
-            Sign Up
-          </a>
-        </p>
-      </div>
-    </div>
+      <p className="text-center text-sm text-white/45">
+        Don&apos;t have an account?{" "}
+        <Link to="/signup" className="font-medium text-white/70 underline decoration-white/25 underline-offset-2 transition-colors hover:text-white">
+          Sign up
+        </Link>
+      </p>
+    </SignUpAuthShell>
   );
 }

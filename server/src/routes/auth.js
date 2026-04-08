@@ -4,13 +4,22 @@ import { createUser, getUserById, signInUser, updateUserProfile } from "../servi
 
 const router = express.Router();
 
+const USERNAME_RE = /^[a-zA-Z0-9_]{2,24}$/;
+
 // Sign Up
 router.post("/signup", async (req, res) => {
   try {
-    const { email, password, firstName, lastName } = req.body;
+    const { email, password, username } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ message: "Email and password required" });
+    if (!email || !password || username === undefined || username === null || String(username).trim() === "") {
+      return res.status(400).json({ message: "Email, password, and username are required" });
+    }
+
+    const trimmedUser = String(username).trim();
+    if (!USERNAME_RE.test(trimmedUser)) {
+      return res.status(400).json({
+        message: "Username must be 2–24 characters and use only letters, numbers, or underscore",
+      });
     }
 
     if (password.length < 6) {
@@ -20,8 +29,9 @@ router.post("/signup", async (req, res) => {
     const { user, token } = await createUser({
       email,
       password,
-      firstName: firstName || "",
-      lastName: lastName || "",
+      username: trimmedUser,
+      firstName: "",
+      lastName: "",
     });
 
     res.status(201).json({
@@ -33,6 +43,17 @@ router.post("/signup", async (req, res) => {
   } catch (error) {
     if (error?.code === "DUPLICATE_EMAIL") {
       return res.status(400).json({ message: "Email already in use" });
+    }
+    if (error?.code === "DUPLICATE_USERNAME") {
+      return res.status(400).json({ message: "Username already taken" });
+    }
+    if (error?.code === 11000 && error?.keyPattern) {
+      if (error.keyPattern.email) {
+        return res.status(400).json({ message: "Email already in use" });
+      }
+      if (error.keyPattern.usernameLower) {
+        return res.status(400).json({ message: "Username already taken" });
+      }
     }
     console.error("Signup error:", error);
     res.status(500).json({ message: "Signup failed", error: error.message });

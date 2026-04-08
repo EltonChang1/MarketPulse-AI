@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { useTheme } from "@/context/ThemeContext";
 
@@ -72,6 +72,21 @@ function Sparkline({ data, shouldReduceMotion }) {
     })
     .join(" ");
 
+  if (shouldReduceMotion) {
+    return (
+      <div className="w-16 h-6">
+        <svg width="60" height="20" viewBox="0 0 60 20" className="overflow-visible" aria-hidden>
+          <polyline
+            points={points}
+            fill="none"
+            stroke="hsl(var(--foreground))"
+            strokeWidth="1.5"
+          />
+        </svg>
+      </div>
+    );
+  }
+
   return (
     <div className="w-16 h-6">
       <motion.svg
@@ -85,7 +100,7 @@ function Sparkline({ data, shouldReduceMotion }) {
           type: "spring",
           stiffness: 380,
           damping: 24,
-          duration: shouldReduceMotion ? 0.2 : 0.5,
+          duration: 0.5,
         }}
       >
         <motion.polyline
@@ -95,7 +110,7 @@ function Sparkline({ data, shouldReduceMotion }) {
           strokeWidth="1.5"
           initial={{ pathLength: 0 }}
           animate={{ pathLength: 1 }}
-          transition={{ duration: shouldReduceMotion ? 0.3 : 0.8, ease: "easeOut", delay: 0.1 }}
+          transition={{ duration: 0.8, ease: "easeOut", delay: 0.1 }}
         />
       </motion.svg>
     </div>
@@ -113,20 +128,36 @@ export function FinancialTable({ title = "Index", indices = [], onIndexSelect, c
     setMounted(true);
   }, []);
 
-  const containerVariants = {
-    visible: { transition: { staggerChildren: 0.04, delayChildren: 0.08 } },
-  };
+  const containerVariants = useMemo(
+    () => ({
+      visible: {
+        transition: shouldReduceMotion
+          ? {}
+          : { staggerChildren: 0.04, delayChildren: 0.08 },
+      },
+    }),
+    [shouldReduceMotion]
+  );
 
-  const rowVariants = {
-    hidden: { opacity: 0, y: 16, scale: 0.99, filter: "blur(2px)" },
-    visible: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      filter: "blur(0px)",
-      transition: { type: "spring", stiffness: 380, damping: 24, mass: 0.7 },
-    },
-  };
+  const rowVariants = useMemo(
+    () =>
+      shouldReduceMotion
+        ? {
+            hidden: { opacity: 1, y: 0, scale: 1, filter: "none" },
+            visible: { opacity: 1, y: 0, scale: 1, filter: "none", transition: { duration: 0 } },
+          }
+        : {
+            hidden: { opacity: 0, y: 16, scale: 0.99, filter: "blur(2px)" },
+            visible: {
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              filter: "blur(0px)",
+              transition: { type: "spring", stiffness: 380, damping: 24, mass: 0.7 },
+            },
+          },
+    [shouldReduceMotion]
+  );
 
   const handleIndexSelect = (indexId) => {
     setSelectedIndex(indexId);

@@ -90,6 +90,8 @@ If using Next.js `next-themes`, replace with local theme provider in Vite (this 
 
 - `financial-markets-table.jsx` — screener-style table + sparklines
 - `badge.jsx`, `button.jsx`, `card.jsx` — shared chrome
+- `sign-in-flow-1.jsx` — 21st.dev-inspired auth shell (`SignUpAuthShell`) for `/signup` and `/signin`
+- `sidebar-row.jsx` — compact screener-style sidebar rows
 
 Optional future additions (PRD Phase 1+): **market summary strip** component, denser table variant, tabbed macro section.
 
@@ -97,6 +99,49 @@ Optional future additions (PRD Phase 1+): **market summary strip** component, de
 
 Place demos in route-level components for visual QA only.  
 Do not duplicate production data logic in demos.
+
+### 4.4 Auth surfaces — 21st.dev “Sign In Flow 1” (Vite port)
+
+**Reference:** [Sign In Flow | 21st.dev](https://21st.dev/community/components/erikx/sign-in-flow-1/default)
+
+**Goal:** Match that component’s **layout, motion, and dark chrome** on `/signup` and `/signin` without requiring Next.js.
+
+**Stack expectations from the upstream snippet**
+
+- shadcn-style paths (`components/ui`, `cn` from `@/lib/utils`)
+- Tailwind CSS
+- TypeScript in the upstream paste — **this repo’s app is still JSX**; port as `.jsx` until TS migration
+
+**Vite / React Router adaptations (required here)**
+
+| Upstream (Next) | MarketPulse (`web/`) |
+|-----------------|----------------------|
+| `next/link` `Link` + `href` | `react-router-dom` `Link` + `to` |
+| `import from "@/components/ui/sign-in-flow-1"` | Same alias via Vite (`@` → `src`) |
+| Full-screen layout inside `App` + global header | **Hide** `AppHeader` and `AskMarketPulse` on `/signup` and `/signin` so the auth shell is full-bleed (see `App.jsx` + `useLocation`) |
+
+**Canonical file**
+
+- `web/src/components/ui/sign-in-flow-1.jsx` — exports `SignUpAuthShell`, `AuthFlowBackdrop`, `AuthFlowNavbar` (motion + Tailwind; **CSS dot-field backdrop** instead of `@react-three/fiber` + `three` to keep bundle size and WebGL failure modes small). If you need pixel-parity WebGL later, add:
+
+  ```bash
+  cd web && npm install three @react-three/fiber
+  ```
+
+  and replace `AuthFlowBackdrop` internals only (keep the same exports so `SignUpPage` / `SignInPage` stay stable).
+
+**Signup product rules**
+
+- **Username** replaces first/last name on signup; **required**; **2–24 chars**, `a-zA-Z0-9_`; stored server-side and shown in the **top-right** (`AppHeader`) when present (fallback: legacy `firstName` / `email`).
+- API: `POST /api/auth/signup` body includes `{ email, password, username }`.
+
+**Integration checklist (from 21st workflow)**
+
+1. Confirm `web/src/components/ui` exists and Tailwind scans it.
+2. Copy/adapt the visual shell into `sign-in-flow-1.jsx` (already done for this repo).
+3. Wire **real** auth + validation in `SignUpPage.jsx` / `AuthContext.jsx` (not demo-only state).
+4. Prefer **lucide-react** for any new icons if you extend the shell.
+5. Validate keyboard focus, contrast on black, and mobile nav on the floating header.
 
 ---
 
@@ -216,7 +261,11 @@ Before merge:
 - Tailwind + semantic token layer
 - Theme toggle with persisted dark mode
 - `@` alias and `components/ui` structure
+- **Global nav:** **Classic** link in the main header and in the auth shell nav (guest + signed-in)
+- **Reduced motion:** `prefers-reduced-motion` disables auth dot animation (`index.css`); `FinancialTable` row stagger/blur and sparkline draw respect `useReducedMotion`
+- **Auth a11y:** Lucide menu icons on the auth shell; `focus-visible` rings on shell nav links, form fields, and primary buttons
 - **Home:** search, optional `FinancialTable` from watchlist data, commodities section, sidebar watchlist/portfolio — **without** the former `FinancialDashboard` block
+- **Auth:** `/signup` and `/signin` use `sign-in-flow-1.jsx` full-bleed shell (global header hidden on those routes); signup requires **username** (API + Mongo/memory store)
 - Stock detail, portfolio, and briefings refactors toward shared UI primitives (ongoing per PRD phases)
 
 ---

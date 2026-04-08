@@ -38,13 +38,12 @@ export function AuthProvider({ children }) {
     }
   }
 
-  async function signup(email, password, firstName, lastName) {
+  async function signup(email, password, username) {
     try {
       const { data } = await axios.post(`${API_BASE_URL}/api/auth/signup`, {
         email,
         password,
-        firstName,
-        lastName,
+        username,
       });
       setUser(data.user);
       setToken(data.token);
