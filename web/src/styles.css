@@ -324,7 +324,19 @@ footer {
 .prediction-btn.active {
   border-color: hsl(var(--ring));
   background: hsl(var(--muted));
+  color: hsl(var(--foreground));
   box-shadow: 0 0 0 3px hsl(var(--ring) / 0.15);
+}
+
+.prediction-btn.active:hover {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  border-color: hsl(var(--ring));
+}
+
+.prediction-btn.active .btn-label,
+.prediction-btn.active .btn-price {
+  color: hsl(var(--foreground));
 }
 
 .btn-label {
@@ -1280,10 +1292,30 @@ footer {
 .rev-gauge {
   position: relative;
   height: 12px;
-  background: linear-gradient(to right, hsl(var(--positive)), hsl(var(--accent-foreground)), hsl(var(--negative)));
+  background: hsl(var(--border));
   border-radius: 6px;
   overflow: visible;
   margin-bottom: 4px;
+}
+
+/* Bollinger channel track: cool (lower) → mid → warm (upper), typical heat-style strip */
+.rev-gauge-bb {
+  background: linear-gradient(
+    to right,
+    hsl(217 85% 52% / 0.35),
+    hsl(45 93% 48% / 0.4),
+    hsl(0 72% 55% / 0.38)
+  );
+}
+
+.rev-gauge-fill-bb {
+  background: linear-gradient(
+    90deg,
+    hsl(217 90% 48% / 0.85),
+    hsl(43 96% 52% / 0.85),
+    hsl(0 75% 52% / 0.85)
+  );
+  min-width: 2px;
 }
 
 .rev-gauge.rsi-gauge {
@@ -1297,9 +1329,21 @@ footer {
   height: 100%;
 }
 
-.zone-oversold { flex: 30; background: hsl(var(--positive)); }
-.zone-neutral  { flex: 40; background: hsl(var(--accent-foreground)); }
-.zone-overbought { flex: 30; background: hsl(var(--negative)); }
+/* RSI zones: oversold (bounce watch) green tint, mid neutral slate, overbought warm red */
+.zone-oversold {
+  flex: 30;
+  background: linear-gradient(180deg, hsl(152 55% 42% / 0.55), hsl(152 45% 36% / 0.45));
+}
+
+.zone-neutral {
+  flex: 40;
+  background: linear-gradient(180deg, hsl(220 14% 46% / 0.45), hsl(220 12% 38% / 0.35));
+}
+
+.zone-overbought {
+  flex: 30;
+  background: linear-gradient(180deg, hsl(25 95% 48% / 0.55), hsl(0 72% 50% / 0.5));
+}
 
 .rev-gauge-fill {
   height: 100%;
@@ -1312,10 +1356,16 @@ footer {
   top: -3px;
   width: 4px;
   height: 18px;
-  background: hsl(var(--foreground));
+  background: hsl(var(--primary));
   border-radius: 2px;
   transform: translateX(-50%);
-  box-shadow: 0 0 0 2px hsl(var(--card));
+  box-shadow:
+    0 0 0 2px hsl(var(--card)),
+    0 1px 3px hsl(var(--foreground) / 0.25);
+}
+
+.rev-card-rsi {
+  background: hsl(var(--muted));
 }
 
 .rev-gauge-labels {

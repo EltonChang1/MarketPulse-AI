@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useTheme } from "@/context/ThemeContext";
-import { tokenColor } from "@/lib/themeTokens";
 
 function toTradingViewSymbol(symbol = "") {
   const normalized = String(symbol || "").toUpperCase().replace(/-/g, ".");
@@ -73,9 +72,7 @@ function loadTradingViewScript() {
 export default function TradingViewChart({ symbol }) {
   const { theme } = useTheme();
   const widgetContainerId = useRef(`tradingview_${Math.random().toString(36).slice(2)}`);
-  const [showPatternTrend, setShowPatternTrend] = useState(true);
   const tvSymbol = useMemo(() => toTradingViewSymbol(symbol), [symbol]);
-  const trendColor = useMemo(() => tokenColor("foreground"), [theme]);
 
   useEffect(() => {
     let isDisposed = false;
@@ -100,13 +97,7 @@ export default function TradingViewChart({ symbol }) {
           locale: "en",
           enable_publishing: false,
           allow_symbol_change: true,
-          studies: showPatternTrend ? ["Linear Regression@tv-basicstudies"] : [],
-          studies_overrides: showPatternTrend
-            ? {
-                "linreg.plot.color": trendColor,
-                "linreg.plot.linewidth": 2,
-              }
-            : {},
+          studies: [],
           withdateranges: true,
           hide_side_toolbar: false,
           details: false,
@@ -127,16 +118,10 @@ export default function TradingViewChart({ symbol }) {
       const container = document.getElementById(widgetContainerId.current);
       if (container) container.innerHTML = "";
     };
-  }, [tvSymbol, showPatternTrend, theme, trendColor]);
+  }, [tvSymbol, theme]);
 
   return (
     <div className="tradingview-wrapper">
-      <div className="tradingview-header tv-trend-toggle-row">
-        <label className="indicator-toggle-item tv-trend-toggle">
-          <input type="checkbox" checked={showPatternTrend} onChange={() => setShowPatternTrend((v) => !v)} />
-          <span>Pattern trend line</span>
-        </label>
-      </div>
       <div className="tradingview-widget-shell">
         <div id={widgetContainerId.current} className="tradingview-widget-container" />
       </div>

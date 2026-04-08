@@ -1,8 +1,6 @@
 import { useState } from "react";
 import TradingViewChart from "./TradingViewChart";
 import CandlestickChart from "./CandlestickChart";
-import SignalCharts from "./SignalCharts";
-import PatternOverlay from "./PatternOverlay";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { tokenColor } from "@/lib/themeTokens";
@@ -48,11 +46,11 @@ function bbPositionLabel(v) {
 }
 
 function rsiZoneInfo(rsi) {
-  if (rsi < 30) return { label: `Oversold (${rsi.toFixed(1)}) — Watch for bullish reversal`, color: tokenColor("positive"), bg: tokenColor("muted") };
-  if (rsi < 45) return { label: `Bearish zone (${rsi.toFixed(1)})`, color: tokenColor("foreground"), bg: tokenColor("muted") };
-  if (rsi < 55) return { label: `Neutral (${rsi.toFixed(1)})`, color: tokenColor("muted-foreground"), bg: tokenColor("card") };
-  if (rsi < 70) return { label: `Bullish zone (${rsi.toFixed(1)})`, color: tokenColor("foreground"), bg: tokenColor("muted") };
-  return { label: `Overbought (${rsi.toFixed(1)}) — Watch for bearish reversal`, color: tokenColor("destructive"), bg: tokenColor("muted") };
+  if (rsi < 30) return { label: `Oversold (${rsi.toFixed(1)}) — Watch for bullish reversal`, color: tokenColor("positive") };
+  if (rsi < 45) return { label: `Bearish zone (${rsi.toFixed(1)})`, color: tokenColor("foreground") };
+  if (rsi < 55) return { label: `Neutral (${rsi.toFixed(1)})`, color: tokenColor("muted-foreground") };
+  if (rsi < 70) return { label: `Bullish zone (${rsi.toFixed(1)})`, color: tokenColor("foreground") };
+  return { label: `Overbought (${rsi.toFixed(1)}) — Watch for bearish reversal`, color: tokenColor("destructive") };
 }
 
 function volumeLabel(ratio) {
@@ -73,8 +71,6 @@ export default function StockDetailView({
   const { isAuthenticated, user, addToWatchlist, removeFromWatchlist } = useAuth();
   const [internalSelectedPrediction, setInternalSelectedPrediction] = useState("week");
   const [showBasis, setShowBasis] = useState(false);
-  const [showSignals, setShowSignals] = useState(false);
-  const [showPatterns, setShowPatterns] = useState(false);
   const [watchlistStatus, setWatchlistStatus] = useState("");
   const [addingWatchlist, setAddingWatchlist] = useState(false);
   const [removingWatchlist, setRemovingWatchlist] = useState(false);
@@ -217,7 +213,7 @@ export default function StockDetailView({
         <div className="prediction-buttons">
           {predictionButtons.map((btn) => (
             <Button
-              variant={effectiveSelectedPrediction === btn.key ? "default" : "outline"}
+              variant="outline"
               size="sm"
               type="button"
               key={btn.key}
@@ -283,30 +279,6 @@ export default function StockDetailView({
         ) : (
           <TradingViewChart symbol={stock.symbol} />
         )}
-        
-        <div className="chart-controls-row">
-          <Button
-            variant="outline"
-            size="sm"
-            type="button"
-            className={`chart-control-btn ${showSignals ? "active" : ""}`}
-            onClick={() => setShowSignals(!showSignals)}
-          >
-            {showSignals ? "▼" : "►"} Signal Charts
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            type="button"
-            className={`chart-control-btn ${showPatterns ? "active" : ""}`}
-            onClick={() => setShowPatterns(!showPatterns)}
-          >
-            {showPatterns ? "▼" : "►"} Pattern Matches
-          </Button>
-        </div>
-
-        {showSignals && <SignalCharts stock={stock} />}
-        {showPatterns && <PatternOverlay stock={stock} visible={true} />}
       </div>
 
       {/* ── Reversal Intelligence ── */}
@@ -324,8 +296,11 @@ export default function StockDetailView({
               <div className="rev-card">
                 <div className="rev-card-title">📊 Channel Position (Bollinger Bands)</div>
                 <div className="rev-gauge-wrap">
-                  <div className="rev-gauge">
-                    <div className="rev-gauge-fill" style={{ width: `${Math.min(100, Math.max(0, pct))}%`, background: bb.color }} />
+                  <div className="rev-gauge rev-gauge-bb">
+                    <div
+                      className="rev-gauge-fill rev-gauge-fill-bb"
+                      style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
+                    />
                     <div className="rev-gauge-marker" style={{ left: `${Math.min(100, Math.max(0, pct))}%` }} />
                   </div>
                   <div className="rev-gauge-labels"><span>Lower Band</span><span>Upper Band</span></div>
@@ -341,7 +316,7 @@ export default function StockDetailView({
             const rsi = rsiZoneInfo(indicators.rsi14);
             const pct = Math.min(100, Math.max(0, indicators.rsi14));
             return (
-              <div className="rev-card" style={{ background: rsi.bg }}>
+              <div className="rev-card rev-card-rsi">
                 <div className="rev-card-title">📈 RSI (14) Zone</div>
                 <div className="rev-gauge-wrap">
                   <div className="rev-gauge rsi-gauge">

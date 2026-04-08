@@ -4,7 +4,6 @@ import { useAuth } from "../context/AuthContext";
 import SearchBar from "./SearchBar";
 import CommoditiesSection from "./CommoditiesSection";
 import { FinancialTable } from "./ui/financial-markets-table";
-import { MarketSummaryStrip } from "./ui/market-summary-strip";
 import { SidebarRow } from "./ui/sidebar-row";
 import axios from "axios";
 import { getPortfolioForUser } from "../context/portfolioStore";
@@ -40,29 +39,6 @@ export default function HomePage() {
   const [portfolioHoldings, setPortfolioHoldings] = useState(() => getPortfolioForUser(user));
 
   const watchlistData = useMemo(() => watchlistPayload?.data || [], [watchlistPayload]);
-  const summaryItems = useMemo(() => {
-    const normalized = watchlistData
-      .filter((stock) => Number.isFinite(Number(stock.currentPrice)))
-      .slice(0, 6)
-      .map((stock) => ({
-        id: stock.symbol,
-        label: "Watchlist",
-        symbol: stock.symbol,
-        price: Number(stock.currentPrice || 0),
-        changePercent: Number(stock.dayChangePct || stock.changePercent || 0),
-        volume: Number(stock.volume || 0),
-        onClick: () => navigate(`/stock/${encodeURIComponent(stock.symbol)}`),
-      }));
-
-    if (normalized.length > 0) return normalized;
-
-    return [
-      { id: "spx", label: "US Index", symbol: "SPX", price: NaN, changePercent: 0, volume: 0 },
-      { id: "ndx", label: "US Index", symbol: "NDX", price: NaN, changePercent: 0, volume: 0 },
-      { id: "dxy", label: "Macro", symbol: "DXY", price: NaN, changePercent: 0, volume: 0 },
-      { id: "gc1", label: "Commodities", symbol: "GC1!", price: NaN, changePercent: 0, volume: 0 },
-    ];
-  }, [watchlistData, navigate]);
 
   const tableIndices = useMemo(
     () =>
@@ -156,13 +132,7 @@ export default function HomePage() {
       <div className="dashboard-layout">
         {/* Main Content */}
         <main className="dashboard-main">
-          <section className="dashboard-intro">
-            <h1>Market overview</h1>
-            <p>Search symbols, scan your screener, and move directly into analysis.</p>
-          </section>
-
           <SearchBar onSelect={handleSelectStock} />
-          <MarketSummaryStrip items={summaryItems} />
 
           {tableIndices.length > 0 ? (
             <FinancialTable
