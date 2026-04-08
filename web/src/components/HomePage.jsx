@@ -5,6 +5,7 @@ import SearchBar from "./SearchBar";
 import CommoditiesSection from "./CommoditiesSection";
 import { FinancialTable } from "./ui/financial-markets-table";
 import { MarketSummaryStrip } from "./ui/market-summary-strip";
+import { SidebarRow } from "./ui/sidebar-row";
 import axios from "axios";
 import { getPortfolioForUser } from "../context/portfolioStore";
 import "../styles/dashboard.css";
@@ -205,35 +206,23 @@ export default function HomePage() {
               {watchlistData.length > 0 ? (
                 <div className="watchlist-items">
                   {watchlistData.map((stock) => (
-                    <div key={stock.symbol} className="watchlist-item">
-                      <div className="watchlist-item-header">
-                        <div className="watchlist-symbol">{stock.symbol}</div>
-                        <button
-                          className="watchlist-remove-btn"
-                          onClick={() => handleRemoveFromWatchlist(stock.symbol)}
-                          title="Remove from watchlist"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                      <div className="watchlist-name">{stock.companyName}</div>
-                      <div className="watchlist-price">
-                        {formatCurrency(stock.currentPrice)}
-                      </div>
-                      <div
-                        className={`watchlist-change ${
-                          (stock.changePercent ?? stock.dayChangePct ?? 0) >= 0 ? "positive" : "negative"
-                        }`}
-                      >
-                        {formatPercent(stock.changePercent ?? stock.dayChangePct)}
-                      </div>
-                      <button
-                        className="watchlist-view-btn"
-                        onClick={() => handleSelectStock(stock.symbol)}
-                      >
-                        View Analysis
-                      </button>
-                    </div>
+                    <SidebarRow
+                      key={stock.symbol}
+                      primaryText={stock.symbol}
+                      secondaryText={stock.companyName}
+                      rightPrimaryText={formatCurrency(stock.currentPrice)}
+                      rightSecondaryText={formatPercent(stock.changePercent ?? stock.dayChangePct)}
+                      rightSecondaryClassName={
+                        (stock.changePercent ?? stock.dayChangePct ?? 0) >= 0 ? "positive" : "negative"
+                      }
+                      onRowClick={() => handleSelectStock(stock.symbol)}
+                      rowTitle={`Open ${stock.symbol} analysis`}
+                      actionLabel="✕"
+                      actionTitle="Remove from watchlist"
+                      actionAriaLabel={`Remove ${stock.symbol} from watchlist`}
+                      onActionClick={() => handleRemoveFromWatchlist(stock.symbol)}
+                      actionVariant="danger"
+                    />
                   ))}
                 </div>
               ) : (
@@ -266,13 +255,19 @@ export default function HomePage() {
                 {portfolioHoldings.length ? (
                   <div className="portfolio-mini-list">
                     {portfolioHoldings.map((holding) => (
-                      <div key={holding.symbol} className="portfolio-mini-item">
-                        <div>
-                          <div className="portfolio-mini-symbol">{holding.symbol}</div>
-                          <div className="portfolio-mini-qty">Qty: {Number(holding.quantity || 0).toFixed(4).replace(/\.0000$/, "")}</div>
-                        </div>
-                        <button className="portfolio-mini-view" onClick={() => handleSelectStock(holding.symbol)}>View</button>
-                      </div>
+                      <SidebarRow
+                        key={holding.symbol}
+                        primaryText={holding.symbol}
+                        secondaryText={`Qty: ${Number(holding.quantity || 0).toFixed(4).replace(/\.0000$/, "")}`}
+                        rightPrimaryText="View"
+                        onRowClick={() => handleSelectStock(holding.symbol)}
+                        rowTitle={`Open ${holding.symbol} analysis`}
+                        actionLabel="→"
+                        actionTitle="Manage portfolio"
+                        actionAriaLabel="Open portfolio manager"
+                        onActionClick={() => navigate("/portfolio")}
+                        actionVariant="neutral"
+                      />
                     ))}
                   </div>
                 ) : (
