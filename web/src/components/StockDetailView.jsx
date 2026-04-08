@@ -36,27 +36,27 @@ function formatPercent(value) {
 }
 
 function bbPositionLabel(v) {
-  if (v <= 0.15) return { label: "Near Lower Band ↑ Potential Bounce", color: "#16a34a" };
-  if (v <= 0.35) return { label: "Lower Half — Mild Bullish Bias", color: "#65a30d" };
-  if (v <= 0.65) return { label: "Mid Channel — Neutral", color: "#d97706" };
-  if (v <= 0.85) return { label: "Upper Half — Mild Bearish Bias", color: "#ea580c" };
-  return { label: "Near Upper Band ↓ Potential Reversal", color: "#dc2626" };
+  if (v <= 0.15) return { label: "Near Lower Band ↑ Potential Bounce", color: "#166534" };
+  if (v <= 0.35) return { label: "Lower Half — Mild Bullish Bias", color: "#3f3f46" };
+  if (v <= 0.65) return { label: "Mid Channel — Neutral", color: "#71717a" };
+  if (v <= 0.85) return { label: "Upper Half — Mild Bearish Bias", color: "#52525b" };
+  return { label: "Near Upper Band ↓ Potential Reversal", color: "#b91c1c" };
 }
 
 function rsiZoneInfo(rsi) {
-  if (rsi < 30) return { label: `Oversold (${rsi.toFixed(1)}) — Watch for bullish reversal`, color: "#16a34a", bg: "#f0fdf4" };
-  if (rsi < 45) return { label: `Bearish zone (${rsi.toFixed(1)})`, color: "#d97706", bg: "#fffbeb" };
-  if (rsi < 55) return { label: `Neutral (${rsi.toFixed(1)})`, color: "#6b7280", bg: "#f9fafb" };
-  if (rsi < 70) return { label: `Bullish zone (${rsi.toFixed(1)})`, color: "#2563eb", bg: "#eff6ff" };
-  return { label: `Overbought (${rsi.toFixed(1)}) — Watch for bearish reversal`, color: "#dc2626", bg: "#fef2f2" };
+  if (rsi < 30) return { label: `Oversold (${rsi.toFixed(1)}) — Watch for bullish reversal`, color: "#166534", bg: "#f4f4f5" };
+  if (rsi < 45) return { label: `Bearish zone (${rsi.toFixed(1)})`, color: "#52525b", bg: "#f4f4f5" };
+  if (rsi < 55) return { label: `Neutral (${rsi.toFixed(1)})`, color: "#71717a", bg: "#fafafa" };
+  if (rsi < 70) return { label: `Bullish zone (${rsi.toFixed(1)})`, color: "#3f3f46", bg: "#f4f4f5" };
+  return { label: `Overbought (${rsi.toFixed(1)}) — Watch for bearish reversal`, color: "#b91c1c", bg: "#f4f4f5" };
 }
 
 function volumeLabel(ratio) {
-  if (ratio >= 3) return { label: `${ratio}× avg — Extreme spike! Strong signal`, color: "#7c3aed" };
-  if (ratio >= 2) return { label: `${ratio}× avg — Big spike`, color: "#dc2626" };
-  if (ratio >= 1.5) return { label: `${ratio}× avg — Notable volume`, color: "#ea580c" };
-  if (ratio >= 0.8) return { label: `${ratio}× avg — Normal`, color: "#16a34a" };
-  return { label: `${ratio}× avg — Low volume (weak signal)`, color: "#9ca3af" };
+  if (ratio >= 3) return { label: `${ratio}× avg — Extreme spike! Strong signal`, color: "#18181b" };
+  if (ratio >= 2) return { label: `${ratio}× avg — Big spike`, color: "#b91c1c" };
+  if (ratio >= 1.5) return { label: `${ratio}× avg — Notable volume`, color: "#52525b" };
+  if (ratio >= 0.8) return { label: `${ratio}× avg — Normal`, color: "#3f3f46" };
+  return { label: `${ratio}× avg — Low volume (weak signal)`, color: "#a1a1aa" };
 }
 
 export default function StockDetailView({
@@ -80,7 +80,7 @@ export default function StockDetailView({
     return (
       <div className="detail-view">
         <div style={{ padding: "40px", textAlign: "center" }}>
-          <p style={{ color: "#667085", fontSize: "1rem" }}>No stock data available</p>
+          <p className="text-muted-foreground text-base">No stock data available</p>
           {onBack && <button onClick={onBack} className="back-button" style={{ marginTop: "16px" }}>← Back</button>}
         </div>
       </div>
@@ -442,7 +442,7 @@ export default function StockDetailView({
               <div className="rev-card-title">⚡ RSI vs Stochastic Divergence</div>
               {rm.divergence.hasRsiStochDivergence ? (
                 <>
-                  <div className="rev-signal" style={{ color: "#7c3aed" }}>
+                  <div className="rev-signal" style={{ color: "#3f3f46" }}>
                     DIVERGENCE DETECTED — Possible trend reversal ahead
                   </div>
                   <div className="rev-detail">
@@ -453,7 +453,7 @@ export default function StockDetailView({
                 </>
               ) : (
                 <>
-                  <div className="rev-signal" style={{ color: "#16a34a" }}>
+                  <div className="rev-signal" style={{ color: "#166534" }}>
                     Aligned — RSI & Stochastic agree on direction
                   </div>
                   <div className="rev-detail">

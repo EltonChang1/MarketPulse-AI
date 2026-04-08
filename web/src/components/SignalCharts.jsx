@@ -4,11 +4,11 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 const SIGNAL_COLORS = {
-  RSI: "#f59e0b",
-  MACD: "#3b82f6",
-  Stochastic: "#8b5cf6",
-  ADX: "#06b6d4",
-  OBV: "#10b981",
+  RSI: "#18181b",
+  MACD: "#52525b",
+  Stochastic: "#737373",
+  ADX: "#a1a1aa",
+  OBV: "#3f3f46",
 };
 
 export default function SignalCharts({ stock }) {
@@ -39,9 +39,9 @@ export default function SignalCharts({ stock }) {
     if (activeSignals.RSI && chartRefs.current.RSI) {
       const rsiData = indicatorSeries.rsi14?.slice(-100) || [];
       if (rsiData.length > 0) {
-        renderChart("RSI", labels, rsiData, "#f59e0b", [
-          { value: 70, label: "Overbought", color: "#dc2626" },
-          { value: 30, label: "Oversold", color: "#16a34a" },
+        renderChart("RSI", labels, rsiData, "#18181b", [
+          { value: 70, label: "Overbought", color: "#b91c1c" },
+          { value: 30, label: "Oversold", color: "#166534" },
         ]);
       }
     }
@@ -52,9 +52,9 @@ export default function SignalCharts({ stock }) {
       const signalLine = indicatorSeries.macdSignal?.slice(-100) || [];
       if (macdLine.length > 0 || signalLine.length > 0) {
         renderChartMulti("MACD", labels, [
-          { label: "MACD", data: macdLine, color: "#3b82f6" },
-          { label: "Signal", data: signalLine, color: "#ef4444" },
-        ], [{ value: 0, label: "Zero", color: "#6b7280" }]);
+          { label: "MACD", data: macdLine, color: "#18181b" },
+          { label: "Signal", data: signalLine, color: "#737373" },
+        ], [{ value: 0, label: "Zero", color: "#a1a1aa" }]);
       }
     }
 
@@ -64,11 +64,11 @@ export default function SignalCharts({ stock }) {
       const dLine = indicatorSeries.stochD?.slice(-100) || [];
       if (kLine.length > 0 || dLine.length > 0) {
         renderChartMulti("Stochastic", labels, [
-          { label: "%K", data: kLine, color: "#8b5cf6" },
-          { label: "%D", data: dLine, color: "#06b6d4" },
+          { label: "%K", data: kLine, color: "#3f3f46" },
+          { label: "%D", data: dLine, color: "#a1a1aa" },
         ], [
-          { value: 80, label: "Overbought", color: "#dc2626" },
-          { value: 20, label: "Oversold", color: "#16a34a" },
+          { value: 80, label: "Overbought", color: "#b91c1c" },
+          { value: 20, label: "Oversold", color: "#166534" },
         ]);
       }
     }
@@ -77,8 +77,8 @@ export default function SignalCharts({ stock }) {
     if (activeSignals.ADX && chartRefs.current.ADX) {
       const adxData = indicatorSeries.adx?.slice(-100) || [];
       if (adxData.length > 0) {
-        renderChart("ADX", labels, adxData, "#06b6d4", [
-          { value: 25, label: "Strong Trend", color: "#2563eb" },
+        renderChart("ADX", labels, adxData, "#52525b", [
+          { value: 25, label: "Strong Trend", color: "#18181b" },
         ]);
       }
     }
@@ -87,7 +87,7 @@ export default function SignalCharts({ stock }) {
     if (activeSignals.OBV && chartRefs.current.OBV) {
       const obvData = indicatorSeries.obv?.slice(-100) || [];
       if (obvData.length > 0) {
-        renderChart("OBV", labels, obvData, "#10b981", []);
+        renderChart("OBV", labels, obvData, "#71717a", []);
       }
     }
 
@@ -211,7 +211,7 @@ export default function SignalCharts({ stock }) {
             onClick={() => toggleSignal(signal)}
             style={{
               borderColor: SIGNAL_COLORS[signal],
-              color: activeSignals[signal] ? "#fff" : SIGNAL_COLORS[signal],
+              color: activeSignals[signal] ? "#fafafa" : SIGNAL_COLORS[signal],
               backgroundColor: activeSignals[signal] ? SIGNAL_COLORS[signal] : "transparent",
             }}
           >

@@ -99,7 +99,7 @@ export default function TradingViewChart({ symbol }) {
           studies: showPatternTrend ? ["Linear Regression@tv-basicstudies"] : [],
           studies_overrides: showPatternTrend
             ? {
-                "linreg.plot.color": "#175CD3",
+                "linreg.plot.color": "#3f3f46",
                 "linreg.plot.linewidth": 2,
               }
             : {},

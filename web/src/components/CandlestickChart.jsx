@@ -100,7 +100,7 @@ export default function CandlestickChart({
     
     if (!visibleData || visibleData.length === 0) {
       // Show placeholder when no data
-      chartContainerRef.current.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 500px; background: #f9fafb; color: #667085; font-size: 1rem;">No chart data available for this symbol</div>';
+      chartContainerRef.current.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 500px; background: #fafafa; color: #71717a; font-size: 1rem;">No chart data available for this symbol</div>';
       return;
     }
 
@@ -121,12 +121,12 @@ export default function CandlestickChart({
         height: 500,
         layout: {
           background: { color: "#ffffff" },
-          textColor: "#333",
+          textColor: "#27272a",
           attributionLogo: false,
         },
         grid: {
-          vertLines: { color: "#f0f0f0" },
-          horzLines: { color: "#f0f0f0" },
+          vertLines: { color: "#f4f4f5" },
+          horzLines: { color: "#f4f4f5" },
         },
         crosshair: {
           mode: 1,
@@ -143,10 +143,10 @@ export default function CandlestickChart({
           pinch: true,
         },
         rightPriceScale: {
-          borderColor: "#d1d4dc",
+          borderColor: "#e4e4e7",
         },
         timeScale: {
-          borderColor: "#d1d4dc",
+          borderColor: "#e4e4e7",
           timeVisible: true,
         },
       });
@@ -154,15 +154,15 @@ export default function CandlestickChart({
       chartRef.current = chart;
 
       candlestickSeries = addCandleSeries(chart, {
-        upColor: "#26a69a",
-        downColor: "#ef5350",
+        upColor: "#18181b",
+        downColor: "#a1a1aa",
         borderVisible: false,
-        wickUpColor: "#26a69a",
-        wickDownColor: "#ef5350",
+        wickUpColor: "#18181b",
+        wickDownColor: "#a1a1aa",
       });
     } catch (error) {
       console.error("Failed to initialize candlestick chart:", error);
-      chartContainerRef.current.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 500px; background: #f9fafb; color: #b42318; font-size: 0.95rem;">Unable to render chart for this symbol right now</div>';
+      chartContainerRef.current.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 500px; background: #fafafa; color: #b91c1c; font-size: 0.95rem;">Unable to render chart for this symbol right now</div>';
       return;
     }
 
@@ -185,7 +185,7 @@ export default function CandlestickChart({
     // Add SMA lines based on selected indicators
     const sma5Series = indicatorVisibility.sma5
       ? addLineSeries(chart, {
-          color: "#2962FF",
+          color: "#18181b",
           lineWidth: 2,
           title: "SMA 5",
         })
@@ -193,7 +193,7 @@ export default function CandlestickChart({
 
     const sma20Series = indicatorVisibility.sma20
       ? addLineSeries(chart, {
-          color: "#FF6D00",
+          color: "#71717a",
           lineWidth: 2,
           title: "SMA 20",
         })
@@ -201,7 +201,7 @@ export default function CandlestickChart({
 
     const sma50Series = indicatorVisibility.sma50
       ? addLineSeries(chart, {
-          color: "#00897B",
+          color: "#a1a1aa",
           lineWidth: 2,
           title: "SMA 50",
         })
@@ -210,7 +210,7 @@ export default function CandlestickChart({
     // Obvious overlay lines across the full chart for trend/pattern guidance
     const trendLineSeries = indicatorVisibility.trendLine
       ? addLineSeries(chart, {
-          color: "#7a5af8",
+          color: "#52525b",
           lineWidth: 3,
           lineStyle: 2,
           title: "Trend Line",
@@ -219,7 +219,7 @@ export default function CandlestickChart({
 
     const supportLineSeries = indicatorVisibility.supportLine
       ? addLineSeries(chart, {
-          color: "#12b76a",
+          color: "#166534",
           lineWidth: 2,
           lineStyle: 2,
           title: "Support",
@@ -228,7 +228,7 @@ export default function CandlestickChart({
 
     const resistanceLineSeries = indicatorVisibility.resistanceLine
       ? addLineSeries(chart, {
-          color: "#f04438",
+          color: "#b91c1c",
           lineWidth: 2,
           lineStyle: 2,
           title: "Resistance",
@@ -294,7 +294,7 @@ export default function CandlestickChart({
         markers.push({
           time: lastDate,
           position: prediction > currentPrice ? "aboveBar" : "belowBar",
-          color: prediction > currentPrice ? "#26a69a" : "#ef5350",
+          color: prediction > currentPrice ? "#166534" : "#b91c1c",
           shape: prediction > currentPrice ? "arrowUp" : "arrowDown",
           text: `${selectedPeriod.period}: ${prediction > currentPrice ? "Bullish" : "Bearish"} ($${prediction})`,
         });
@@ -308,7 +308,7 @@ export default function CandlestickChart({
         .map((match) => ({
         time: match.time,
         position: match.direction === "down" ? "aboveBar" : "belowBar",
-        color: match.direction === "down" ? "#f04438" : "#12b76a",
+        color: match.direction === "down" ? "#b91c1c" : "#166534",
         shape: "circle",
         text: `${match.indicator}`,
       }));

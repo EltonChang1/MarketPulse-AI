@@ -1,0 +1,109 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * MarketPulse — monochrome chrome (black / white / silver).
+ * Semantic tokens align with styleguide.md; use hsl(var(--token)) in legacy CSS.
+ */
+@layer base {
+  :root {
+    --background: 240 5% 96%;
+    --foreground: 240 10% 6%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 6%;
+
+    --primary: 240 6% 10%;
+    --primary-foreground: 0 0% 98%;
+    --primary-hover: 240 5% 18%;
+
+    --secondary: 240 5% 91%;
+    --secondary-foreground: 240 6% 12%;
+
+    --muted: 240 5% 93%;
+    --muted-foreground: 240 4% 42%;
+
+    /* Silver accent for hovers, dividers, secondary chrome */
+    --accent: 240 5% 78%;
+    --accent-foreground: 240 6% 12%;
+
+    --destructive: 0 72% 48%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 6% 86%;
+    --input: 240 6% 86%;
+    --ring: 240 5% 38%;
+
+    --radius: 0.875rem;
+
+    /* Top bar / hero chrome — near-black with subtle silver depth */
+    --chrome: 240 4% 9%;
+    --chrome-foreground: 0 0% 98%;
+    --chrome-muted: 240 5% 55%;
+
+    /* Market direction — kept readable; desaturated vs rainbow UI */
+    --positive: 142 64% 28%;
+    --negative: 0 70% 42%;
+
+    --chart-up: 142 64% 32%;
+    --chart-down: 0 70% 45%;
+  }
+
+  .dark {
+    --background: 240 6% 6%;
+    --foreground: 0 0% 96%;
+
+    --card: 240 5% 9%;
+    --card-foreground: 0 0% 96%;
+
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 6% 8%;
+    --primary-hover: 240 5% 90%;
+
+    --secondary: 240 4% 16%;
+    --secondary-foreground: 0 0% 96%;
+
+    --muted: 240 4% 15%;
+    --muted-foreground: 240 5% 60%;
+
+    --accent: 240 4% 22%;
+    --accent-foreground: 0 0% 96%;
+
+    --destructive: 0 62% 48%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 4% 18%;
+    --input: 240 4% 18%;
+    --ring: 240 5% 55%;
+
+    --chrome: 240 5% 5%;
+    --chrome-foreground: 0 0% 96%;
+    --chrome-muted: 240 5% 55%;
+
+    --positive: 142 50% 48%;
+    --negative: 0 65% 55%;
+
+    --chrome: 240 5% 4%;
+    --chrome-foreground: 0 0% 96%;
+    --chrome-muted: 240 4% 45%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family:
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      Roboto,
+      "Helvetica Neue",
+      Arial,
+      sans-serif;
+  }
+}

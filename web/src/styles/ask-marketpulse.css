@@ -6,12 +6,12 @@
   padding: 12px 18px;
   border-radius: 999px;
   border: none;
-  background: linear-gradient(135deg, #2e90fa, #1570ef);
-  color: #fff;
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-hover)) 100%);
+  color: hsl(var(--primary-foreground));
   font-weight: 600;
   font-size: 0.95rem;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(21, 112, 239, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
 .ask-mp-fab:hover {
@@ -42,7 +42,7 @@
   position: relative;
   width: min(420px, 100%);
   max-height: min(560px, 80vh);
-  background: #fff;
+  background: hsl(var(--card));
   border-radius: 16px;
   box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
   display: flex;
@@ -56,7 +56,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 16px;
-  border-bottom: 1px solid #eaecf0;
+  border-bottom: 1px solid hsl(var(--border));
 }
 
 .ask-mp-head h2 {
@@ -70,15 +70,15 @@
   font-size: 1.25rem;
   cursor: pointer;
   line-height: 1;
-  color: #475467;
+  color: hsl(var(--muted-foreground));
 }
 
 .ask-mp-context {
   margin: 0;
   padding: 8px 16px;
   font-size: 0.8rem;
-  color: #667085;
-  background: #f9fafb;
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--muted));
 }
 
 .ask-mp-messages {
@@ -93,7 +93,7 @@
 .ask-mp-hint {
   margin: 0;
   font-size: 0.85rem;
-  color: #667085;
+  color: hsl(var(--muted-foreground));
   line-height: 1.45;
 }
 
@@ -106,7 +106,7 @@
   align-self: flex-end;
   max-width: 92%;
   padding: 10px 12px;
-  background: #eff8ff;
+  background: hsl(var(--muted));
   border-radius: 12px 12px 4px 12px;
 }
 
@@ -125,7 +125,7 @@
   margin: 6px 0 0;
   padding: 8px;
   font-size: 0.72rem;
-  background: #f2f4f7;
+  background: hsl(var(--muted));
   border-radius: 8px;
   overflow-x: auto;
   max-height: 120px;
@@ -134,20 +134,20 @@
 .ask-mp-error {
   padding: 0 16px 8px;
   font-size: 0.85rem;
-  color: #b42318;
+  color: hsl(var(--destructive));
 }
 
 .ask-mp-input-row {
   display: flex;
   gap: 8px;
   padding: 12px 16px;
-  border-top: 1px solid #eaecf0;
+  border-top: 1px solid hsl(var(--border));
 }
 
 .ask-mp-input {
   flex: 1;
   padding: 10px 12px;
-  border: 1px solid #d0d5dd;
+  border: 1px solid hsl(var(--border));
   border-radius: 10px;
   font-size: 0.9rem;
 }
@@ -156,8 +156,8 @@
   padding: 10px 16px;
   border-radius: 10px;
   border: none;
-  background: #1570ef;
-  color: #fff;
+  background: hsl(var(--ring));
+  color: hsl(var(--primary-foreground));
   font-weight: 600;
   cursor: pointer;
 }
@@ -171,7 +171,7 @@
   margin: 0;
   padding: 0 16px 12px;
   font-size: 0.7rem;
-  color: #98a2b3;
+  color: hsl(var(--muted-foreground));
 }
 
 @media (max-width: 520px) {

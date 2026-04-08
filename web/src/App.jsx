@@ -465,6 +465,7 @@ export default function App() {
   return (
     <Router>
       <AuthProvider>
+        <div className="min-h-screen bg-background">
         <AppHeader />
         <Routes>
           <Route path="/signup" element={<RedirectIfAuth><SignUpPage /></RedirectIfAuth>} />
@@ -477,6 +478,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <AskMarketPulse />
+        </div>
       </AuthProvider>
     </Router>
   );

@@ -44,7 +44,7 @@ function MiniCandles({ candles = [] }) {
         const top = Math.min(openY, closeY);
         const bodyHeight = Math.max(1, Math.abs(closeY - openY));
         const up = candle.close >= candle.open;
-        const color = up ? "#16a34a" : "#dc2626";
+        const color = up ? "#166534" : "#b91c1c";
 
         return (
           <g key={`${candle.time || idx}-${idx}`}>

@@ -12,10 +12,10 @@ import "../styles/dashboard.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 const INDEX_BENCHMARKS = [
-  { symbol: "^DJI", label: "DJIA", color: "#6f9735" },
-  { symbol: "^IXIC", label: "NASDAQ", color: "#9b3b73" },
-  { symbol: "^GSPC", label: "S&P 500", color: "#374151" },
-  { symbol: "^RUT", label: "Russell 2000", color: "#cc6b00" },
+  { symbol: "^DJI", label: "DJIA", color: "#18181b" },
+  { symbol: "^IXIC", label: "NASDAQ", color: "#52525b" },
+  { symbol: "^GSPC", label: "S&P 500", color: "#737373" },
+  { symbol: "^RUT", label: "Russell 2000", color: "#a1a1aa" },
 ];
 
 function formatCurrency(value) {
@@ -54,7 +54,7 @@ function dateToTs(date) {
 }
 
 function buildConicGradient(segments) {
-  if (!segments.length) return "conic-gradient(#e5e7eb 0deg, #e5e7eb 360deg)";
+  if (!segments.length) return "conic-gradient(#d4d4d8 0deg, #d4d4d8 360deg)";
 
   let running = 0;
   const parts = segments.map((segment) => {
@@ -198,15 +198,15 @@ function ComparisonChart({ portfolioSeries, benchmarkSeries }) {
           const yPos = y(value);
           return (
             <g key={step}>
-              <line x1={pad.left} y1={yPos} x2={width - pad.right} y2={yPos} stroke="#e5e7eb" strokeWidth="1" />
+              <line x1={pad.left} y1={yPos} x2={width - pad.right} y2={yPos} stroke="#e4e4e7" strokeWidth="1" />
               <text x={6} y={yPos + 4} className="portfolio-axis-label">{value.toFixed(0)}%</text>
             </g>
           );
         })}
 
-        <line x1={pad.left} y1={y(0)} x2={width - pad.right} y2={y(0)} stroke="#94a3b8" strokeDasharray="4 4" strokeWidth="1.2" />
+        <line x1={pad.left} y1={y(0)} x2={width - pad.right} y2={y(0)} stroke="#a1a1aa" strokeDasharray="4 4" strokeWidth="1.2" />
 
-        <path d={pathFromSeries(portfolioSeries)} fill="none" stroke="#0ea5e9" strokeWidth="2.5" />
+        <path d={pathFromSeries(portfolioSeries)} fill="none" stroke="#18181b" strokeWidth="2.5" />
         {benchmarkSeries.map((item) => (
           <path key={item.symbol} d={pathFromSeries(item.series)} fill="none" stroke={item.color} strokeWidth="2" opacity="0.95" />
         ))}
@@ -216,7 +216,7 @@ function ComparisonChart({ portfolioSeries, benchmarkSeries }) {
       </svg>
 
       <div className="portfolio-line-legend">
-        <span><i style={{ background: "#0ea5e9" }} /> Portfolio</span>
+        <span><i style={{ background: "#18181b" }} /> Portfolio</span>
         {benchmarkSeries.map((item) => (
           <span key={item.symbol}><i style={{ background: item.color }} /> {item.label}</span>
         ))}
@@ -377,7 +377,7 @@ export default function PortfolioPage() {
   const pieSegments = useMemo(() => {
     if (totals.value <= 0) return [];
 
-    const palette = ["#2563eb", "#16a34a", "#ea580c", "#9333ea", "#0891b2", "#dc2626", "#475569", "#ca8a04"];
+    const palette = ["#18181b", "#3f3f46", "#52525b", "#71717a", "#a1a1aa", "#d4d4d8", "#09090b", "#27272a"];
     return holdingRows
       .filter((row) => typeof row.marketValue === "number" && row.marketValue > 0)
       .map((row, idx) => ({
