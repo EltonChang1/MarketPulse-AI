@@ -83,7 +83,6 @@ function AuthFlowNavbar() {
 
   const navLinks = [
     { label: "Home", to: "/" },
-    { label: "Briefings", to: "/briefings" },
     { label: "Portfolio", to: "/portfolio" },
     { label: "Classic", to: "/classic" },
   ];

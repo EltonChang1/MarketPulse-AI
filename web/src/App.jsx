@@ -9,7 +9,6 @@ import SignUpPage from "./components/SignUpPage";
 import SignInPage from "./components/SignInPage";
 import HomePage from "./components/HomePage";
 import PortfolioPage from "./components/PortfolioPage";
-import BriefingsPage from "./components/BriefingsPage";
 import AskMarketPulse from "./components/AskMarketPulse";
 import { AuthFlowBackdrop, MarketPulseGlyphLogo, ShellNavLink } from "./components/ui/sign-in-flow-1";
 import { cn } from "./lib/utils";
@@ -462,9 +461,6 @@ function AppHeader() {
         <ShellNavLink to="/" variant={navVariant}>
           Home
         </ShellNavLink>
-        <ShellNavLink to="/briefings" variant={navVariant}>
-          Briefings
-        </ShellNavLink>
         <ShellNavLink to="/portfolio" variant={navVariant}>
           Portfolio
         </ShellNavLink>
@@ -550,7 +546,7 @@ function AppRoutes() {
           <Route path="/" element={<HomePage />} />
           <Route path="/stock/:symbol" element={<StockDetailPage />} />
           <Route path="/portfolio" element={<PortfolioPage />} />
-          <Route path="/briefings" element={<BriefingsPage />} />
+          <Route path="/briefings" element={<Navigate to="/" replace />} />
           <Route path="/classic" element={<ClassicApp />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

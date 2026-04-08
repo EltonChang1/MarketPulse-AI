@@ -8,7 +8,7 @@
 
 ## 1. Summary
 
-Evolve MarketPulse AI from a **feature-stacked dashboard** into a **classy, market-native surface** that feels closer to TradingView: **dense, scannable market data**, **clear hierarchy**, **professional chrome**, and **chart-first** workflows—while keeping MarketPulse’s differentiators (AI analysis, watchlist, portfolio, briefings, custom signals).
+Evolve MarketPulse AI from a **feature-stacked dashboard** into a **classy, market-native surface** that feels closer to TradingView: **dense, scannable market data**, **clear hierarchy**, **professional chrome**, and **chart-first** workflows—while keeping MarketPulse’s differentiators (AI analysis, watchlist, portfolio, custom signals).
 
 ---
 
@@ -26,7 +26,7 @@ Evolve MarketPulse AI from a **feature-stacked dashboard** into a **classy, mark
 | **TradingView-like IA** | Home prioritizes **symbol discovery + market summary + lists** over promotional tiles. |
 | **Elegant density** | More data per viewport without clutter; consistent numeric alignment. |
 | **Chart credibility** | Charts feel primary; controls match pro terminal patterns. |
-| **Brand continuity** | Still unmistakably MarketPulse (AI insights, briefings, portfolio). |
+| **Brand continuity** | Still unmistakably MarketPulse (AI insights, portfolio). |
 | **Accessibility** | WCAG AA for text; keyboard paths for search and lists; reduced motion respected. |
 
 ---
@@ -43,7 +43,7 @@ Evolve MarketPulse AI from a **feature-stacked dashboard** into a **classy, mark
 
 Use as **interaction and layout inspiration**, not pixel copying:
 
-1. **Global wayfinding** — compact top bar: brand, search, primary nav clusters (Markets / Community analogs → our Briefings, Portfolio, Classic).
+1. **Global wayfinding** — compact top bar: brand, search, primary nav clusters (Markets / Community analogs → our Portfolio, Classic).
 2. **Hero restraint** — one strong headline + single primary CTA; avoid competing card grids on first paint.
 3. **Market summary bands** — horizontal **ticker-style or strip modules**: major index, key futures/FX/commodity proxies, rates/inflation **where we have data**.
 4. **Structured lists** — grouped lists (e.g. “Major indices,” “Watchlist movers”) with **symbol, name, last, change %**, optional sparkline.
@@ -56,7 +56,7 @@ Use as **interaction and layout inspiration**, not pixel copying:
 
 - **Home:** Search, commodities section, authenticated watchlist sidebar, optional **markets table** (`FinancialTable`) when watchlist data exists.
 - **Stock detail:** Rich analysis, Candlestick / TradingView, signals, patterns.
-- **Portfolio / Briefings:** Distinct pages with shared `ui` primitives.
+- **Portfolio:** Distinct page with shared `ui` primitives.
 - **Removed from home (this release):** `FinancialDashboard` shell (quick actions / fake activity / services list) — **not required** for product narrative.
 
 ---
@@ -79,7 +79,7 @@ Use as **interaction and layout inspiration**, not pixel copying:
 
 ### Phase 3 — Optional “ideas” / education
 
-- Surface **briefings** or **community** snippets as a slim rail—only if we have stable content.
+- Surface **community** or editorial snippets as a slim rail—only if we have stable content.
 
 ---
 
@@ -87,7 +87,7 @@ Use as **interaction and layout inspiration**, not pixel copying:
 
 | ID | Requirement |
 |----|-------------|
-| FR-1 | Home must not depend on `FinancialDashboard`; navigation to Portfolio, Briefings, Classic remains available from **global header**. |
+| FR-1 | Home must not depend on `FinancialDashboard`; navigation to Portfolio, Classic remains available from **global header**. |
 | FR-2 | Authenticated users see **live watchlist data** in the primary table/grid with existing refresh behavior. |
 | FR-3 | Row selection opens **existing** stock detail route; no duplicate state machines. |
 | FR-4 | Search remains the **primary entry** for guests and signed-in users. |

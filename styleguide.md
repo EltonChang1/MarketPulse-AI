@@ -10,7 +10,7 @@ This guide defines how MarketPulse AI looks and feels: **one product**, not sepa
 
 ## 1) Objectives
 
-- **Single visual system** — Same logo glyph, header chrome, borders, typography, and CTA language on home, stock detail, portfolio, briefings, classic, and auth. No “two different apps.”
+- **Single visual system** — Same logo glyph, header chrome, borders, typography, and CTA language on home, stock detail, portfolio, classic, and auth. No “two different apps.”
 - **Market-native** — Home and key surfaces read like **terminal lite** (search, tables, lists), not marketing tile grids.
 - **Token-driven** — Semantic Tailwind / CSS variables in `web/src/index.css`; charts use `web/src/lib/themeTokens.js` where APIs need raw colors.
 - **Accessible** — Focus rings, contrast, reduced motion (see §10).
@@ -37,7 +37,7 @@ Use this as the checklist when building or refactoring any screen.
 |--------|----------------|------------------------|
 | Bar style | `border-[#333]`, `bg-[#1f1f1f]/90`, `backdrop-blur-md` | Global `AppHeader` in `App.jsx` mirrors auth navbar material. |
 | Brand | **Glyph logo** (four zinc dots) + wordmark **MarketPulse AI** | Shared `MarketPulseGlyphLogo` export from `sign-in-flow-1.jsx`. |
-| Nav links | Muted → white stacked hover, keyboard focus ring | Shared `ShellNavLink` (`variant="dark"` \| `"light"`). **Order:** Home, Briefings, Portfolio, Classic. |
+| Nav links | Muted → white stacked hover, keyboard focus ring | Shared `ShellNavLink` (`variant="dark"` \| `"light"`). **Order:** Home, Portfolio, Classic. |
 | Ghost button | Rounded full, `#333` border, `rgba(31,31,31,0.62)` fill, zinc text | Log In, Logout, theme toggle (dark shell). |
 | Primary CTA | `rounded-full` gradient `from-gray-100 to-gray-300`, black text | Sign Up (and analogous primaries). |
 
@@ -130,7 +130,7 @@ For each change:
 - **Foundation** — `.dark` tokens in `index.css` aligned to black / `#1f1f1f` / `#333`; default theme **dark** (`ThemeContext` + `index.html` inline script).  
 - **Shell** — `App.jsx` uses shared logo + `ShellNavLink` + auth-colored header; dark routes get `AuthFlowBackdrop` under content.  
 - **Home / dashboard** — `dashboard.css` `.dark` overrides for transparent dashboard canvas, pill search, glass commodities + sidebar.  
-- **Other routes** — Portfolio, briefings, stock detail: prefer Tailwind + tokens; extend `.dark` rules if legacy CSS fights the shell.  
+- **Other routes** — Portfolio, stock detail: prefer Tailwind + tokens; extend `.dark` rules if legacy CSS fights the shell.  
 - **Classic** — Legacy `ClassicApp` may retain denser layout; it still lives inside the same global shell and theme.
 
 ---
