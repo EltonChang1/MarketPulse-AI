@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import axios from "axios";
 import { tokenColor } from "@/lib/themeTokens";
 
@@ -111,6 +111,10 @@ function toCardItem(stock = {}) {
   };
 }
 
+function normalizeWatchlistSymbol(symbol) {
+  return String(symbol || "").replace(/^\^/, "").toUpperCase();
+}
+
 function buildFallbackMovers(items = []) {
   const byChangeDesc = [...items].sort((a, b) => (b.changePercent ?? -Infinity) - (a.changePercent ?? -Infinity));
   const byChangeAsc = [...items].sort((a, b) => (a.changePercent ?? Infinity) - (b.changePercent ?? Infinity));
@@ -124,21 +128,44 @@ function buildFallbackMovers(items = []) {
   };
 }
 
-function MarketCard({ item, onSelectStock }) {
+function MarketCard({ item, onSelectStock, watchlistSymbols, isAuthenticated, onAddToWatchlist }) {
+  const wlSym = normalizeWatchlistSymbol(item.symbol);
+  const watchlistSet = useMemo(
+    () => new Set(watchlistSymbols.map((s) => normalizeWatchlistSymbol(s)).filter(Boolean)),
+    [watchlistSymbols]
+  );
+  const inWatchlist = Boolean(wlSym && watchlistSet.has(wlSym));
+  const [adding, setAdding] = useState(false);
+
+  const handleCardBackgroundClick = useCallback(
+    (event) => {
+      if (event.target.closest("button")) return;
+      onSelectStock(item.symbol);
+    },
+    [item.symbol, onSelectStock]
+  );
+
+  const handleWatchlistClick = async (event) => {
+    event.stopPropagation();
+    if (!wlSym || inWatchlist || adding || !onAddToWatchlist) return;
+    setAdding(true);
+    try {
+      await onAddToWatchlist(item.symbol);
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const watchlistLabel = !isAuthenticated
+    ? "Sign in to add to watchlist"
+    : inWatchlist
+      ? "Already in your watchlist"
+      : adding
+        ? "Adding…"
+        : "Add to watchlist";
+
   return (
-    <div
-      key={item.symbol}
-      className="market-card market-card-lg"
-      onClick={() => onSelectStock(item.symbol)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onSelectStock(item.symbol);
-        }
-      }}
-      role="button"
-      tabIndex={0}
-    >
+    <div className="market-card market-card-lg" onClick={handleCardBackgroundClick}>
       <div className="market-card-header">
         <div className="market-symbol">{item.displaySymbol || item.symbol.replace(/^\^/, "")}</div>
         <span className="market-type">{item.type}</span>
@@ -152,16 +179,29 @@ function MarketCard({ item, onSelectStock }) {
         </span>
       </div>
       {typeof item.volume === "number" ? <div className="market-volume">Vol: {formatVolume(item.volume)}</div> : null}
-      <button
-        type="button"
-        className="market-card-btn"
-        onClick={(event) => {
-          event.stopPropagation();
-          onSelectStock(item.symbol);
-        }}
-      >
-        View Analysis →
-      </button>
+      <div className="market-card-actions">
+        <button
+          type="button"
+          className="market-card-btn market-card-btn-secondary"
+          onClick={handleWatchlistClick}
+          disabled={!wlSym || inWatchlist || adding}
+          aria-busy={adding}
+          aria-label={watchlistLabel}
+          title={watchlistLabel}
+        >
+          {!isAuthenticated ? "Sign in to add" : inWatchlist ? "In watchlist" : adding ? "Adding…" : "+ Watchlist"}
+        </button>
+        <button
+          type="button"
+          className="market-card-btn"
+          onClick={(event) => {
+            event.stopPropagation();
+            onSelectStock(item.symbol);
+          }}
+        >
+          View Analysis →
+        </button>
+      </div>
     </div>
   );
 }
@@ -189,7 +229,12 @@ function MoversList({ title, items, onSelectStock }) {
   );
 }
 
-export default function CommoditiesSection({ onSelectStock }) {
+export default function CommoditiesSection({
+  onSelectStock,
+  watchlistSymbols = EMPTY_LIST,
+  isAuthenticated = false,
+  onAddToWatchlist,
+}) {
   const [commodities, setCommodities] = useState(EMPTY_LIST);
   const [marketIndicators, setMarketIndicators] = useState(EMPTY_LIST);
   const [topVolumeStocks, setTopVolumeStocks] = useState(EMPTY_LIST);
@@ -278,7 +323,16 @@ export default function CommoditiesSection({ onSelectStock }) {
       <div className="commodities-subsection">
         <h3>📊 Market Indicators</h3>
         <div className="market-grid">
-          {marketIndicators.map((item) => <MarketCard key={item.symbol} item={item} onSelectStock={onSelectStock} />)}
+          {marketIndicators.map((item) => (
+            <MarketCard
+              key={item.symbol}
+              item={item}
+              onSelectStock={onSelectStock}
+              watchlistSymbols={watchlistSymbols}
+              isAuthenticated={isAuthenticated}
+              onAddToWatchlist={onAddToWatchlist}
+            />
+          ))}
         </div>
       </div>
 
@@ -286,7 +340,16 @@ export default function CommoditiesSection({ onSelectStock }) {
       <div className="commodities-subsection">
         <h3>💰 Commodities</h3>
         <div className="market-grid">
-          {commodities.map((item) => <MarketCard key={item.symbol} item={item} onSelectStock={onSelectStock} />)}
+          {commodities.map((item) => (
+            <MarketCard
+              key={item.symbol}
+              item={item}
+              onSelectStock={onSelectStock}
+              watchlistSymbols={watchlistSymbols}
+              isAuthenticated={isAuthenticated}
+              onAddToWatchlist={onAddToWatchlist}
+            />
+          ))}
         </div>
       </div>
 
@@ -294,7 +357,16 @@ export default function CommoditiesSection({ onSelectStock }) {
       <div className="commodities-subsection">
         <h3>🏆 6 Largest Companies by Market Cap</h3>
         <div className="market-grid">
-          {topVolumeStocks.map((item) => <MarketCard key={item.symbol} item={item} onSelectStock={onSelectStock} />)}
+          {topVolumeStocks.map((item) => (
+            <MarketCard
+              key={item.symbol}
+              item={item}
+              onSelectStock={onSelectStock}
+              watchlistSymbols={watchlistSymbols}
+              isAuthenticated={isAuthenticated}
+              onAddToWatchlist={onAddToWatchlist}
+            />
+          ))}
         </div>
       </div>
 

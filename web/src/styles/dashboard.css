@@ -318,6 +318,13 @@
   font-weight: 600;
 }
 
+.market-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
 .market-card-btn {
   width: 100%;
   padding: 10px;
@@ -328,11 +335,28 @@
   font-weight: 600;
   font-size: 12px;
   cursor: pointer;
-  transition: filter 0.2s ease;
+  transition: filter 0.2s ease, opacity 0.2s ease;
 }
 
-.market-card-btn:hover {
+.market-card-btn:hover:not(:disabled) {
   filter: brightness(1.05);
+}
+
+.market-card-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.market-card-btn-secondary {
+  background: transparent;
+  color: hsl(var(--primary));
+  border: 1px solid hsl(var(--primary) / 0.55);
+}
+
+.market-card-btn-secondary:hover:not(:disabled) {
+  filter: none;
+  background: hsl(var(--primary) / 0.12);
+  border-color: hsl(var(--primary));
 }
 
 .movers-grid {

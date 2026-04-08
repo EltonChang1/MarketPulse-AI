@@ -114,9 +114,28 @@ export default function HomePage() {
   async function handleAddToWatchlist(symbol) {
     const result = await addToWatchlist(symbol);
     if (result.success) {
-      const next = symbol.toUpperCase();
+      const next = String(symbol || "").replace(/^\^/, "").toUpperCase();
       setWatchlist((prev) => (prev.includes(next) ? prev : [...prev, next]));
     }
+    return result;
+  }
+
+  /** Used from market cards: guests go to sign-in; signed-in users persist via API. */
+  async function handleAddMarketCardToWatchlist(symbol) {
+    const sym = String(symbol || "").replace(/^\^/, "").toUpperCase();
+    if (!sym) return { success: false, error: "Invalid symbol" };
+    if (!isAuthenticated) {
+      navigate("/signin");
+      return { success: false, error: "Sign in required" };
+    }
+    if (watchlist.some((s) => String(s || "").replace(/^\^/, "").toUpperCase() === sym)) return { success: true };
+    if (watchlist.length >= 20) {
+      setError("Max 20 symbols in watchlist");
+      return { success: false, error: "Watchlist full" };
+    }
+    const result = await handleAddToWatchlist(sym);
+    if (!result.success && result.error) setError(result.error);
+    return result;
   }
 
   async function handleRemoveFromWatchlist(symbol) {
@@ -146,7 +165,12 @@ export default function HomePage() {
           ) : null}
 
           {/* Commodities & ETFs Section */}
-          <CommoditiesSection onSelectStock={handleSelectStock} />
+          <CommoditiesSection
+            onSelectStock={handleSelectStock}
+            watchlistSymbols={watchlist}
+            isAuthenticated={isAuthenticated}
+            onAddToWatchlist={handleAddMarketCardToWatchlist}
+          />
         </main>
 
         {/* Sidebar - Personal Watchlist */}
