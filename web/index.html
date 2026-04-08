@@ -4,7 +4,9 @@
     <script>
       (function () {
         try {
-          if (localStorage.getItem("marketpulse-theme") === "dark") {
+          if (localStorage.getItem("marketpulse-theme") === "light") {
+            document.documentElement.classList.remove("dark");
+          } else {
             document.documentElement.classList.add("dark");
           }
         } catch (e) {}

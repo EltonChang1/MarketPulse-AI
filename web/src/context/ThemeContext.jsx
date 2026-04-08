@@ -6,12 +6,12 @@ export const THEME_STORAGE_KEY = "marketpulse-theme";
 const ThemeContext = createContext(null);
 
 function readStoredTheme() {
-  if (typeof window === "undefined") return "light";
+  if (typeof window === "undefined") return "dark";
   try {
     const v = localStorage.getItem(THEME_STORAGE_KEY);
-    return v === "dark" ? "dark" : "light";
+    return v === "light" ? "light" : "dark";
   } catch {
-    return "light";
+    return "dark";
   }
 }
 

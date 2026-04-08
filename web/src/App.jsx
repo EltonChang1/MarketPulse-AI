@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation, Link } from "react-router-dom";
 import axios from "axios";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
@@ -11,6 +11,8 @@ import HomePage from "./components/HomePage";
 import PortfolioPage from "./components/PortfolioPage";
 import BriefingsPage from "./components/BriefingsPage";
 import AskMarketPulse from "./components/AskMarketPulse";
+import { AuthFlowBackdrop, MarketPulseGlyphLogo, ShellNavLink } from "./components/ui/sign-in-flow-1";
+import { cn } from "./lib/utils";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 const REFRESH_MS = 60_000;
@@ -396,11 +398,13 @@ function RedirectIfAuth({ children }) {
   return isAuthenticated ? <Navigate to="/" replace /> : children;
 }
 
-// Global header — shows Login/Sign Up when guest, user avatar + name when authenticated
+// Global header — matches signup/auth shell chrome (glyph logo, zinc nav, pill CTAs) per styleguide.
 function AppHeader() {
   const { user, logout, isAuthenticated, loading } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const isDark = theme === "dark";
+  const navVariant = isDark ? "dark" : "light";
 
   const initials = user
     ? (
@@ -418,77 +422,103 @@ function AppHeader() {
       ? `${user.firstName}${user.lastName ? " " + user.lastName : ""}`
       : user?.email || "";
 
+  const headerChrome = isDark
+    ? "border-b border-[#333] bg-[#1f1f1f]/90 text-white backdrop-blur-md"
+    : "border-b border-border bg-card/95 text-foreground shadow-sm backdrop-blur-md";
+
+  const ghostBtn =
+    "rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors sm:px-4 sm:text-sm " +
+    (isDark
+      ? "border-[#333] bg-[rgba(31,31,31,0.62)] text-zinc-300 hover:border-white/50 hover:text-white"
+      : "border-border bg-background text-foreground hover:bg-muted");
+
+  const primaryBtn =
+    "rounded-full px-3 py-1.5 text-xs font-semibold transition-all sm:px-4 sm:text-sm " +
+    (isDark
+      ? "bg-gradient-to-br from-gray-100 to-gray-300 text-black hover:from-gray-200 hover:to-gray-400"
+      : "bg-primary text-primary-foreground hover:opacity-90");
+
   return (
-    <header className="app-header">
-      <div className="app-header-brand" onClick={() => navigate("/")}>
-        📊 <span>MarketPulse AI</span>
-      </div>
-      <div className="app-header-actions">
+    <header className={cn("sticky top-0 z-[100] flex flex-col gap-3 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-4 sm:gap-y-2 sm:px-6", headerChrome)}>
+      <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:justify-start">
+        <Link to="/" className="flex shrink-0 items-center gap-2 no-underline" aria-label="MarketPulse home">
+          <MarketPulseGlyphLogo />
+          <span className={cn("text-base font-bold tracking-tight sm:text-lg", isDark ? "text-white" : "text-foreground")}>
+            MarketPulse AI
+          </span>
+        </Link>
         <button
           type="button"
-          className="header-btn header-btn-outline theme-toggle-btn"
+          className={cn(ghostBtn, "sm:hidden")}
           onClick={toggleTheme}
-          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          aria-pressed={theme === "dark"}
-          title={theme === "dark" ? "Light mode" : "Dark mode"}
+          aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+          aria-pressed={isDark}
         >
-          {theme === "dark" ? "Light" : "Dark"}
+          {isDark ? "Light" : "Dark"}
         </button>
-        {!loading && (
-          isAuthenticated ? (
+      </div>
+
+      <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm sm:flex-1 sm:justify-center md:gap-6" aria-label="Primary">
+        <ShellNavLink to="/" variant={navVariant}>
+          Home
+        </ShellNavLink>
+        <ShellNavLink to="/briefings" variant={navVariant}>
+          Briefings
+        </ShellNavLink>
+        <ShellNavLink to="/portfolio" variant={navVariant}>
+          Portfolio
+        </ShellNavLink>
+        <ShellNavLink to="/classic" variant={navVariant}>
+          Classic
+        </ShellNavLink>
+      </nav>
+
+      <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+        <button
+          type="button"
+          className={cn(ghostBtn, "hidden sm:inline-flex")}
+          onClick={toggleTheme}
+          aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+          aria-pressed={isDark}
+          title={isDark ? "Light mode" : "Dark mode"}
+        >
+          {isDark ? "Light" : "Dark"}
+        </button>
+        {!loading &&
+          (isAuthenticated ? (
             <>
-              <button
-                className="header-btn header-btn-outline"
-                onClick={() => navigate("/portfolio")}
+              <div
+                className={cn(
+                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold",
+                  isDark ? "border-2 border-zinc-500 bg-zinc-800 text-zinc-100" : "border-2 border-primary/30 bg-muted text-foreground"
+                )}
+                title={displayName}
               >
-                My Portfolio
-              </button>
-              <button
-                className="header-btn header-btn-outline"
-                onClick={() => navigate("/briefings")}
+                {initials}
+              </div>
+              <span
+                className={cn(
+                  "max-w-[140px] truncate text-sm font-medium sm:max-w-[160px]",
+                  isDark ? "text-zinc-200" : "text-foreground"
+                )}
+                title={displayName}
               >
-                Briefings
-              </button>
-              <button
-                type="button"
-                className="header-btn header-btn-outline"
-                onClick={() => navigate("/classic")}
-              >
-                Classic
-              </button>
-              <div className="user-avatar" title={displayName}>{initials}</div>
-              <span className="user-display-name">{displayName}</span>
-              <button
-                className="header-btn header-btn-outline"
-                onClick={() => { logout(); navigate("/"); }}
-              >
+                {displayName}
+              </span>
+              <button type="button" className={ghostBtn} onClick={() => { logout(); navigate("/"); }}>
                 Logout
               </button>
             </>
           ) : (
             <>
-              <button
-                className="header-btn header-btn-outline"
-                onClick={() => navigate("/signin")}
-              >
+              <Link to="/signin" className={cn(ghostBtn, "inline-flex items-center justify-center no-underline")}>
                 Log In
-              </button>
-              <button
-                className="header-btn header-btn-primary"
-                onClick={() => navigate("/signup")}
-              >
+              </Link>
+              <Link to="/signup" className={cn(primaryBtn, "inline-flex items-center justify-center no-underline")}>
                 Sign Up
-              </button>
-              <button
-                type="button"
-                className="header-btn header-btn-outline"
-                onClick={() => navigate("/classic")}
-              >
-                Classic
-              </button>
+              </Link>
             </>
-          )
-        )}
+          ))}
       </div>
     </header>
   );
@@ -496,22 +526,36 @@ function AppHeader() {
 
 function AppRoutes() {
   const { pathname } = useLocation();
+  const { theme } = useTheme();
   const authSurface = pathname === "/signup" || pathname === "/signin";
+  const shellDark = theme === "dark";
 
   return (
-    <div className="min-h-screen bg-background">
-      {!authSurface ? <AppHeader /> : null}
-      <Routes>
-        <Route path="/signup" element={<RedirectIfAuth><SignUpPage /></RedirectIfAuth>} />
-        <Route path="/signin" element={<RedirectIfAuth><SignInPage /></RedirectIfAuth>} />
-        <Route path="/" element={<HomePage />} />
-        <Route path="/stock/:symbol" element={<StockDetailPage />} />
-        <Route path="/portfolio" element={<PortfolioPage />} />
-        <Route path="/briefings" element={<BriefingsPage />} />
-        <Route path="/classic" element={<ClassicApp />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-      {!authSurface ? <AskMarketPulse /> : null}
+    <div
+      className={cn(
+        "relative min-h-screen",
+        shellDark && !authSurface ? "bg-black text-zinc-100" : "bg-background text-foreground"
+      )}
+    >
+      {shellDark && !authSurface ? (
+        <div className="pointer-events-none fixed inset-0 z-0" aria-hidden>
+          <AuthFlowBackdrop />
+        </div>
+      ) : null}
+      <div className="relative z-10 min-h-screen">
+        {!authSurface ? <AppHeader /> : null}
+        <Routes>
+          <Route path="/signup" element={<RedirectIfAuth><SignUpPage /></RedirectIfAuth>} />
+          <Route path="/signin" element={<RedirectIfAuth><SignInPage /></RedirectIfAuth>} />
+          <Route path="/" element={<HomePage />} />
+          <Route path="/stock/:symbol" element={<StockDetailPage />} />
+          <Route path="/portfolio" element={<PortfolioPage />} />
+          <Route path="/briefings" element={<BriefingsPage />} />
+          <Route path="/classic" element={<ClassicApp />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+        {!authSurface ? <AskMarketPulse /> : null}
+      </div>
     </div>
   );
 }

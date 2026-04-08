@@ -1114,3 +1114,76 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Dark shell: match signup / auth (black canvas, glass fields, #333 borders) ── */
+.dark .dashboard-container {
+  background: transparent;
+}
+
+.dark .search-input {
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  color: hsl(var(--foreground));
+  box-shadow: none;
+}
+
+.dark .search-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.dark .search-input:focus {
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+
+.dark .search-results {
+  background: rgba(31, 31, 31, 0.97);
+  border-color: #333;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.55);
+}
+
+.dark .search-result-item {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.dark .search-result-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.dark .commodities-section {
+  background: rgba(31, 31, 31, 0.55);
+  border-color: #333;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+}
+
+.dark .dashboard-sidebar {
+  background: rgba(31, 31, 31, 0.55);
+  border-color: #333;
+}
+
+.dark .sidebar-guest-cta {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.dark .watchlist-input {
+  border-radius: 9999px;
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: hsl(var(--foreground));
+}
+
+.dark .watchlist-input:focus {
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.dark .watchlist-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.dark .error-banner {
+  border-color: rgba(248, 113, 113, 0.35);
+  background: rgba(127, 29, 29, 0.28);
+  color: #fecaca;
+}

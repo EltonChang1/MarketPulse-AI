@@ -12,21 +12,50 @@ import { cn } from "@/lib/utils";
  * (no Next.js Link; no WebGL — CSS backdrop for smaller bundle / fewer runtime issues).
  */
 
-function AnimatedNavLink({ to, children }) {
+/** Logo mark (four dots) — use in auth shell and global `AppHeader` for one consistent brand glyph. */
+export function MarketPulseGlyphLogo({ className }) {
+  return (
+    <div className={cn("relative flex h-5 w-5 shrink-0 items-center justify-center", className)} aria-hidden>
+      <span className="absolute left-1/2 top-0 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-zinc-200 opacity-80" />
+      <span className="absolute left-0 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-zinc-200 opacity-80" />
+      <span className="absolute right-0 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-zinc-200 opacity-80" />
+      <span className="absolute bottom-0 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-zinc-200 opacity-80" />
+    </div>
+  );
+}
+
+/**
+ * Auth-style nav link (stacked hover). `variant` matches global header light/dark chrome.
+ */
+export function ShellNavLink({ to, children, variant = "dark" }) {
   const a11yLabel = typeof children === "string" ? children : undefined;
+  const isDark = variant === "dark";
   return (
     <Link
       to={to}
       aria-label={a11yLabel}
-      className="group relative inline-flex h-5 shrink-0 overflow-hidden rounded-sm text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+      className={cn(
+        "group relative inline-flex h-5 shrink-0 overflow-hidden rounded-sm text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+        isDark ? "focus-visible:ring-white/40 focus-visible:ring-offset-black" : "focus-visible:ring-ring focus-visible:ring-offset-background"
+      )}
     >
-      {/* Two fixed-height rows + exact translate so only one label shows in h-5 viewport (avoids “Home Home” overlap). */}
       <span
         aria-hidden={a11yLabel ? true : undefined}
         className="flex h-10 flex-col transition-transform duration-300 ease-out group-hover:-translate-y-5 motion-reduce:transition-none motion-reduce:group-hover:translate-y-0"
       >
-        <span className="flex h-5 shrink-0 items-center whitespace-nowrap text-zinc-400">{children}</span>
-        <span className="flex h-5 shrink-0 items-center whitespace-nowrap text-white">{children}</span>
+        <span
+          className={cn(
+            "flex h-5 shrink-0 items-center whitespace-nowrap",
+            isDark ? "text-zinc-400" : "text-muted-foreground"
+          )}
+        >
+          {children}
+        </span>
+        <span
+          className={cn("flex h-5 shrink-0 items-center whitespace-nowrap", isDark ? "text-white" : "text-foreground")}
+        >
+          {children}
+        </span>
       </span>
     </Link>
   );
@@ -52,15 +81,6 @@ function AuthFlowNavbar() {
     };
   }, [isOpen]);
 
-  const logoElement = (
-    <div className="relative flex h-5 w-5 items-center justify-center">
-      <span className="absolute left-1/2 top-0 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-zinc-200 opacity-80" />
-      <span className="absolute left-0 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-zinc-200 opacity-80" />
-      <span className="absolute right-0 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-zinc-200 opacity-80" />
-      <span className="absolute bottom-0 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-zinc-200 opacity-80" />
-    </div>
-  );
-
   const navLinks = [
     { label: "Home", to: "/" },
     { label: "Briefings", to: "/briefings" },
@@ -77,14 +97,14 @@ function AuthFlowNavbar() {
     >
       <div className="flex w-full items-center justify-between gap-x-6 sm:gap-x-8">
         <Link to="/" className="flex items-center gap-2" aria-label="MarketPulse home">
-          {logoElement}
+          <MarketPulseGlyphLogo />
         </Link>
 
         <nav className="hidden items-center space-x-4 text-sm sm:flex sm:space-x-6">
           {navLinks.map((link) => (
-            <AnimatedNavLink key={link.to} to={link.to}>
+            <ShellNavLink key={link.to} to={link.to}>
               {link.label}
-            </AnimatedNavLink>
+            </ShellNavLink>
           ))}
         </nav>
 
