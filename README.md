@@ -21,52 +21,48 @@ It combines market overview data, commodities, top company tracking, watchlists,
   - comprehensive AI-style analysis
   - latest news monitoring
 
-## Product Walkthrough (Latest Images)
+## Product walkthrough (latest images)
 
-### 1) Market Overview
-![Market Overview](docs/images/1-market-overview.png)
+See **`USERGUIDE.md`** for full explanations. Thumbnails below match `docs/images/` (filenames with numbered prefixes).
 
-### 2) Commodities
-![Commodities](docs/images/2-commodities.png)
+### 1) Sign up
+![Sign up](docs/images/1.Signup_page.png)
 
-### 3) Largest Companies
-![Largest Companies](docs/images/3-largest-companies.png)
+### 2) Home — watchlist screener
+![Watchlist screener](docs/images/2.watchlist_banner.png)
 
-### 4) Market Movers
-![Market Movers](docs/images/4-market-movers.png)
+### 3) Market overview
+![Market overview](docs/images/3.Market_Overview.png)
 
-### 5) Watchlist Sidebar
-![Watchlist Sidebar](docs/images/5-watchlist-sidebar.png)
+### 4) Stock cards & market movers
+![Stocks and movers](docs/images/4.Stocks_with_market_movers.png)
 
-### 6) Personal Portfolio
-![Personal Portfolio](docs/images/6-personal-portfolio.png)
+### 5) Portfolio overview
+![Portfolio](docs/images/5.User_portfolio.png)
 
-### 7) Portfolio Details
-![Portfolio Details](docs/images/7-portfolio-details.png)
+### 6) Holdings & transactions
+![Holdings](docs/images/6.User_holdings%26transaction.png)
 
-### 8) Individual Stock Review
-![Individual Stock Review](docs/images/8-individual-stock-review.png)
+### 7) Stock — predictions
+![Predictions](docs/images/7.Individual_stock_with_prediction.png)
 
-### 9) Individual Stock Chart
-![Individual Stock Chart](docs/images/9-individual-stock-chart.png)
+### 8) Classic — TradingView chart
+![TradingView](docs/images/8.Interactive_stock_chart_from_tradingview.png)
 
-### 10) Individual Stock Reversal Intelligence
-![Individual Stock Reversal Intelligence](docs/images/10-individual-stock-reversal-intelligence.png)
+### 9) Reversal intelligence
+![Key signals](docs/images/9.Individual_stock_key_signals.png)
 
-### 11) Individual Stock Prediction Calculation
-![Individual Stock Prediction Calculation](docs/images/11-individual-stock-prediction-calculation.png)
+### 10) Prediction reasoning & patterns
+![Reasoning](docs/images/10.Prediction_reasoning.png)
 
-### 12) Individual Stock Pattern Match
-![Individual Stock Pattern Match](docs/images/12-individual-stock-pattern-match.png)
+### 11) Technical indicators
+![Indicators](docs/images/11.Technical_indicators.png)
 
-### 13) Individual Stock Technical Indicators
-![Individual Stock Technical Indicators](docs/images/13-individual-stock-technical-indicators.png)
+### 12) Comprehensive analysis
+![Analysis](docs/images/12.Comprehensive_analysis.png)
 
-### 14) Individual Stock Comprehensive Analysis
-![Individual Stock Comprehensive Analysis](docs/images/14-individual-stock-comprehensive-analysis.png)
-
-### 15) Individual Stock Latest News
-![Individual Stock Latest News](docs/images/15-individual-stock-latest-news.png)
+### 13) Latest news
+![News](docs/images/13.Latest_news.png)
 
 ## Architecture
 

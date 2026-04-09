@@ -1,32 +1,28 @@
-# MarketPulse AI Screenshots
+# MarketPulse AI screenshots
 
-This folder contains the latest screenshot set used by project documentation.
+Screenshots referenced by `USERGUIDE.md` and other docs. **Number prefix = suggested reading order** for onboarding.
 
-## Current Screenshot Files (In Order)
+| # | File | What it shows |
+|---|------|----------------|
+| 1 | `1.Signup_page.png` | Sign-up shell: dot backdrop, pill nav (Home · Portfolio · Classic), username/email/password fields, primary **Sign up** CTA, disclaimer. |
+| 2 | `2.watchlist_banner.png` | Home: global header, **search** bar, **Watchlist screener** table (last, chg, vol, mkt cap, sparklines), **My Watchlist** sidebar. |
+| 3 | `3.Market_Overview.png` | **Market Overview**: index cards (DJI, IXIC, …) with mini candles, price, **+ Watchlist** / **View Analysis**, sidebar watchlist + **My Portfolio Stocks**. |
+| 4 | `4.Stocks_with_market_movers.png` | Large **stock cards** (e.g. MSFT, AMZN) + **Market Movers** (Most Active, Gainers, Losers, IPO column). |
+| 5 | `5.User_portfolio.png` | **My Portfolio**: add transaction, performance stats, **Allocation** donut (distinct colors), **Portfolio vs Market Indexes** line chart + legend. |
+| 6 | `6.User_holdings&transaction.png` | **Holdings** table and **Transaction History** (buy/sell pills, delete). |
+| 7 | `7.Individual_stock_with_prediction.png` | Stock detail: symbol, price, **Add to watchlist**, **prediction period** tiles, forecast summary (price, move, direction, confidence). |
+| 8 | `8.Interactive_stock_chart_from_tradingview.png` | **Classic** route: embedded **TradingView** chart (intervals, candlesticks, volume, drawing tools). |
+| 9 | `9.Individual_stock_key_signals.png` | **Reversal Intelligence**: Bollinger position, RSI zone, volume vs avg, ATR, Fibonacci, band touches, RSI/Stoch alignment. |
+| 10 | `10.Prediction_reasoning.png` | **How predictions are calculated** (weighted signals, ADX, volatility bounds) + **pattern matches** used in the model. |
+| 11 | `11.Technical_indicators.png` | **Technical Indicators**: moving averages, momentum, Bollinger Bands, trend + volume (ADX, Aroon, OBV, ATR, …). |
+| 12 | `12.Comprehensive_analysis.png` | **Comprehensive Analysis**: financial summary, news sentiment, risks, opportunities (2×2 cards). |
+| 13 | `13.Latest_news.png` | **Latest News**: headline list with timestamps and sources for the symbol. |
 
-1. **1-market-overview.png** — Market overview dashboard context
-2. **2-commodities.png** — Commodities monitoring section
-3. **3-largest-companies.png** — Largest companies panel
-4. **4-market-movers.png** — Top movers snapshot
-5. **5-watchlist-sidebar.png** — Watchlist sidebar workflow
-6. **6-personal-portfolio.png** — Personal portfolio overview
-7. **7-portfolio-details.png** — Portfolio detail breakdown
-8. **8-individual-stock-review.png** — Individual stock review entry
-9. **9-individual-stock-chart.png** — Stock chart visualization
-10. **10-individual-stock-reversal-intelligence.png** — Reversal intelligence section
-11. **11-individual-stock-prediction-calculation.png** — Prediction calculation details
-12. **12-individual-stock-pattern-match.png** — Pattern match output
-13. **13-individual-stock-technical-indicators.png** — Technical indicators section
-14. **14-individual-stock-comprehensive-analysis.png** — Comprehensive analysis panel
-15. **15-individual-stock-latest-news.png** — Latest news section for the selected stock
+## Naming
 
-## Referenced By
+- Pattern: `N.Short_title.png` (spaces OK in some tools; `&` in file 6 may require URL-encoding in links).
 
-- `README.md`
-- `USERGUIDE.md`
+## Referenced by
 
-## Naming Convention
-
-- Prefix format: `N-feature-name.png`
-- Keep numbers in experience order so docs stay easy to follow
-- When updating screenshots, keep filenames stable unless the flow is intentionally redesigned
+- `USERGUIDE.md` (repo root)
+- `README.md` (if linked)
