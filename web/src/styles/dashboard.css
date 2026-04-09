@@ -854,6 +854,10 @@
   letter-spacing: -0.01em;
 }
 
+.dark .portfolio-card h3 {
+  color: rgba(255, 255, 255, 0.94);
+}
+
 .portfolio-form {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -978,10 +982,15 @@
 }
 
 .portfolio-legend-row i {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   display: inline-block;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+
+.dark .portfolio-legend-row i {
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
 }
 
 .portfolio-chart-wrap {
@@ -995,7 +1004,12 @@
   height: auto;
   background: hsl(var(--card));
   border: 1px solid hsl(var(--border));
-  border-radius: 8px;
+  border-radius: 10px;
+}
+
+.dark .portfolio-line-chart {
+  background: rgba(0, 0, 0, 0.35);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .portfolio-axis-label {
@@ -1003,25 +1017,39 @@
   fill: hsl(var(--muted-foreground));
 }
 
+.dark .portfolio-axis-label {
+  fill: rgba(255, 255, 255, 0.72);
+}
+
 .portfolio-line-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px 14px;
   font-size: 12px;
+  font-weight: 600;
   color: hsl(var(--foreground));
+}
+
+.dark .portfolio-line-legend {
+  color: rgba(255, 255, 255, 0.88);
 }
 
 .portfolio-line-legend span {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .portfolio-line-legend i {
-  width: 18px;
-  height: 3px;
-  border-radius: 6px;
+  width: 26px;
+  height: 5px;
+  border-radius: 999px;
   display: inline-block;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+.dark .portfolio-line-legend i {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
 }
 
 .portfolio-table-wrap {
@@ -1074,6 +1102,18 @@
   background: hsl(var(--destructive) / 0.08);
   color: hsl(var(--destructive));
   border: 1px solid hsl(var(--destructive) / 0.25);
+}
+
+.dark .portfolio-side-pill.buy {
+  background: hsl(var(--positive) / 0.22);
+  color: #86efac;
+  border-color: hsl(var(--positive) / 0.55);
+}
+
+.dark .portfolio-side-pill.sell {
+  background: hsl(var(--destructive) / 0.2);
+  color: #fca5a5;
+  border-color: hsl(var(--destructive) / 0.5);
 }
 
 .portfolio-empty {

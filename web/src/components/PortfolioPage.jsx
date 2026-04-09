@@ -17,6 +17,30 @@ import "../styles/dashboard.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
+/** Allocation donut — saturated, distinct hues (OK on dark or light card backgrounds). */
+const ALLOCATION_PALETTE = [
+  "#38bdf8",
+  "#fbbf24",
+  "#a78bfa",
+  "#4ade80",
+  "#fb7185",
+  "#2dd4bf",
+  "#f97316",
+  "#e879f9",
+  "#22c55e",
+  "#60a5fa",
+];
+
+/** Comparison chart — portfolio vs indexes; each series has a unique hue. */
+const PORTFOLIO_LINE_COLOR = "#22d3ee";
+
+const INDEX_BENCHMARK_DEFS = [
+  { symbol: "^DJI", label: "DJIA", color: "#f59e0b" },
+  { symbol: "^IXIC", label: "NASDAQ", color: "#a855f7" },
+  { symbol: "^GSPC", label: "S&P 500", color: "#22c55e" },
+  { symbol: "^RUT", label: "Russell 2000", color: "#fb7185" },
+];
+
 function formatCurrency(value) {
   if (typeof value !== "number" || Number.isNaN(value)) return "-";
   return new Intl.NumberFormat("en-US", {
@@ -203,11 +227,35 @@ function ComparisonChart({ portfolioSeries, benchmarkSeries, chartColors }) {
           );
         })}
 
-        <line x1={pad.left} y1={y(0)} x2={width - pad.right} y2={y(0)} stroke={chartColors.zeroLine} strokeDasharray="4 4" strokeWidth="1.2" />
+        <line
+          x1={pad.left}
+          y1={y(0)}
+          x2={width - pad.right}
+          y2={y(0)}
+          stroke={chartColors.zeroLine}
+          strokeDasharray="5 5"
+          strokeWidth="1.5"
+        />
 
-        <path d={pathFromSeries(portfolioSeries)} fill="none" stroke={chartColors.portfolio} strokeWidth="2.5" />
+        <path
+          d={pathFromSeries(portfolioSeries)}
+          fill="none"
+          stroke={chartColors.portfolio}
+          strokeWidth="3.25"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
         {benchmarkSeries.map((item) => (
-          <path key={item.symbol} d={pathFromSeries(item.series)} fill="none" stroke={item.color} strokeWidth="2" opacity="0.95" />
+          <path
+            key={item.symbol}
+            d={pathFromSeries(item.series)}
+            fill="none"
+            stroke={item.color}
+            strokeWidth="2.35"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            opacity="0.98"
+          />
         ))}
 
         <text x={pad.left} y={height - 10} className="portfolio-axis-label">{firstDate || "-"}</text>
@@ -228,28 +276,15 @@ export default function PortfolioPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { theme } = useTheme();
-  const chartColors = useMemo(
-    () => ({
-      primary: tokenColor("primary"),
-      foreground: tokenColor("foreground"),
-      mutedForeground: tokenColor("muted-foreground"),
-      border: tokenColor("border"),
-      portfolio: tokenColor("primary"),
-      grid: tokenColor("border"),
-      zeroLine: tokenColor("muted-foreground"),
-      conicEmpty: tokenColor("border"),
-    }),
-    [theme]
-  );
-  const indexBenchmarks = useMemo(
-    () => [
-      { symbol: "^DJI", label: "DJIA", color: chartColors.primary },
-      { symbol: "^IXIC", label: "NASDAQ", color: chartColors.foreground },
-      { symbol: "^GSPC", label: "S&P 500", color: chartColors.mutedForeground },
-      { symbol: "^RUT", label: "Russell 2000", color: chartColors.border },
-    ],
-    [chartColors]
-  );
+  const chartColors = useMemo(() => {
+    const isDark = theme === "dark";
+    return {
+      portfolio: PORTFOLIO_LINE_COLOR,
+      grid: isDark ? "rgba(255, 255, 255, 0.14)" : "rgba(15, 23, 42, 0.12)",
+      zeroLine: isDark ? "rgba(255, 255, 255, 0.42)" : "rgba(15, 23, 42, 0.35)",
+      conicEmpty: isDark ? "rgba(255, 255, 255, 0.08)" : tokenColor("border"),
+    };
+  }, [theme]);
 
   const [transactions, setTransactions] = useState(() => getPortfolioModelForUser(user).transactions || []);
   const [symbolInput, setSymbolInput] = useState("");
@@ -302,7 +337,7 @@ export default function PortfolioPage() {
         setMarketSnapshots(detailMap);
 
         const benchmarkResponses = await Promise.all(
-          indexBenchmarks.map(async (benchmark) => {
+          INDEX_BENCHMARK_DEFS.map(async (benchmark) => {
             const { data } = await axios.get(`${API_BASE_URL}/api/analyze/${encodeURIComponent(benchmark.symbol)}`, {
               params: { markers: 10, perIndicator: 3 },
             });
@@ -366,7 +401,7 @@ export default function PortfolioPage() {
     }
 
     loadPortfolioData();
-  }, [transactions, indexBenchmarks]);
+  }, [transactions]);
 
   const holdingRows = useMemo(() => {
     return holdings.map((holding) => {
@@ -399,25 +434,15 @@ export default function PortfolioPage() {
   const pieSegments = useMemo(() => {
     if (totals.value <= 0) return [];
 
-    const palette = [
-      chartColors.primary,
-      chartColors.foreground,
-      chartColors.mutedForeground,
-      chartColors.border,
-      tokenColor("secondary"),
-      tokenColor("accent"),
-      tokenColor("card-foreground", chartColors.foreground),
-      tokenColor("primary-hover", chartColors.primary),
-    ];
     return holdingRows
       .filter((row) => typeof row.marketValue === "number" && row.marketValue > 0)
       .map((row, idx) => ({
         symbol: row.symbol,
         value: row.marketValue,
         percentage: (row.marketValue / totals.value) * 100,
-        color: palette[idx % palette.length],
+        color: ALLOCATION_PALETTE[idx % ALLOCATION_PALETTE.length],
       }));
-  }, [holdingRows, totals.value, chartColors]);
+  }, [holdingRows, totals.value]);
 
   function clearInputs() {
     setSymbolInput("");
