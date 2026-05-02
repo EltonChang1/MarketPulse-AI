@@ -1,6 +1,6 @@
-# MarketPulse AI
+# MarketPulse
 
-MarketPulse AI is a full-stack market intelligence and portfolio platform.
+MarketPulse is a full-stack market intelligence and portfolio platform.
 
 Feel free to check it out here: [text](https://marketpulse-ai-rho.vercel.app/)
 
