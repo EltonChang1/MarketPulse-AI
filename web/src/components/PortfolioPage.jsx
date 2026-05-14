@@ -6,10 +6,13 @@ import { useTheme } from "@/context/ThemeContext";
 import { tokenColor } from "@/lib/themeTokens";
 import {
   derivePortfolioHoldings,
-  getPortfolioModelForUser,
-  savePortfolioModelForUser,
   sortPortfolioTransactions,
 } from "../context/portfolioStore";
+import {
+  fetchPortfolio,
+  addTransactionApi,
+  deleteTransactionApi,
+} from "../lib/portfolioApi";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Card, CardContent } from "./ui/card";
@@ -274,7 +277,7 @@ function ComparisonChart({ portfolioSeries, benchmarkSeries, chartColors }) {
 
 export default function PortfolioPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, token, isAuthenticated } = useAuth();
   const { theme } = useTheme();
   const chartColors = useMemo(() => {
     const isDark = theme === "dark";
@@ -286,7 +289,7 @@ export default function PortfolioPage() {
     };
   }, [theme]);
 
-  const [transactions, setTransactions] = useState(() => getPortfolioModelForUser(user).transactions || []);
+  const [transactions, setTransactions] = useState([]);
   const [symbolInput, setSymbolInput] = useState("");
   const [quantityInput, setQuantityInput] = useState("");
   const [priceInput, setPriceInput] = useState("");
@@ -298,16 +301,33 @@ export default function PortfolioPage() {
   const [marketSnapshots, setMarketSnapshots] = useState({});
   const [comparisonSeries, setComparisonSeries] = useState({ portfolio: [], benchmarks: [] });
 
+  // Load portfolio from backend whenever the auth token changes
   useEffect(() => {
-    setTransactions(getPortfolioModelForUser(user).transactions || []);
-  }, [user?.email]);
-
-  useEffect(() => {
-    savePortfolioModelForUser(user, {
-      transactions,
-      updatedAt: new Date().toISOString(),
-    });
-  }, [transactions, user]);
+    if (!isAuthenticated || !token) {
+      setTransactions([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await fetchPortfolio(token);
+        if (!cancelled) {
+          setTransactions(sortPortfolioTransactions(data.transactions || []));
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(
+            loadError?.response?.data?.message ||
+              loadError.message ||
+              "Unable to load portfolio"
+          );
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, isAuthenticated]);
 
   const holdings = useMemo(() => derivePortfolioHoldings(transactions), [transactions]);
 
@@ -491,16 +511,15 @@ export default function PortfolioPage() {
       }
 
       const tx = {
-        id: `${Date.now()}_${Math.random().toString(16).slice(2)}`,
         side: sideInput,
         symbol,
         quantity,
         price: tradePrice,
         date,
-        createdAt: new Date().toISOString(),
       };
 
-      setTransactions((prev) => sortPortfolioTransactions([...prev, tx]));
+      const result = await addTransactionApi(token, tx);
+      setTransactions(sortPortfolioTransactions(result.transactions));
       clearInputs();
     } catch (addError) {
       setError(addError?.response?.data?.message || addError.message || `Unable to add transaction for ${symbol}`);
@@ -509,8 +528,17 @@ export default function PortfolioPage() {
     }
   }
 
-  function handleDeleteTransaction(id) {
-    setTransactions((prev) => prev.filter((tx) => tx.id !== id));
+  async function handleDeleteTransaction(id) {
+    try {
+      const result = await deleteTransactionApi(token, id);
+      setTransactions(sortPortfolioTransactions(result.transactions));
+    } catch (deleteError) {
+      setError(
+        deleteError?.response?.data?.message ||
+          deleteError.message ||
+          "Unable to delete transaction"
+      );
+    }
   }
 
   const chartBackground = buildConicGradient(pieSegments, chartColors.conicEmpty);

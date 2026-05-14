@@ -11,6 +11,8 @@ import searchRoutes from "./routes/search.js";
 import agentRoutes from "./routes/agent.js";
 import reportRoutes from "./routes/reports.js";
 import internalMarketpulseRoutes from "./routes/internalMarketpulse.js";
+import portfolioRoutes from "./routes/portfolio.js";
+import groupRoutes from "./routes/groups.js";
 import { scheduleReportCron, registerCronHttpTrigger } from "./jobs/reportCron.js";
 
 dotenv.config();
@@ -248,6 +250,8 @@ app.use(express.json());
 // Auth & Watchlist Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/watchlist", watchlistRoutes);
+app.use("/api/portfolio", portfolioRoutes);
+app.use("/api/groups", groupRoutes);
 app.use("/api", searchRoutes);
 app.use("/api/agent", agentRoutes);
 app.use("/api/reports", reportRoutes);
